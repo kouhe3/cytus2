@@ -261,7 +261,9 @@ def test_punctuation_variant_matches_by_the_existing_page_title() -> None:
 
     assert match.matched is True
     assert match.title == "CODE:RED"
-    assert match.source == "snapshot:title"
+    # The identity key now folds the full-width colon too, so the match is
+    # reported as a plain snapshot hit rather than a title-only fallback.
+    assert match.source == "snapshot"
 
     entry = plan_patches([page], snapshot)["song/alpha001_000"]
     assert entry.patch is not None

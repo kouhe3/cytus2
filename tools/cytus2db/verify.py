@@ -32,6 +32,7 @@ from .wiki.patches import (
     load_snapshot,
     template_parameters,
 )
+from .wiki.titles import IGNORED_TARGET_PREFIXES, normalise_title
 
 DEFAULT_LIVE_API = "https://wiki.biligame.com/cytus2/api.php"
 
@@ -48,14 +49,6 @@ PAGE_TYPE_CATEGORY = {
     "gallery_item": "gallery",
 }
 
-_IGNORED_NAMESPACES = (
-    "file:",
-    "image:",
-    "category:",
-    "文件:",
-    "图像:",
-    "分类:",
-)
 _IGNORED_EXTERNAL_PREFIXES = (
     "http://",
     "https://",
@@ -125,11 +118,30 @@ def verify_wiki(
     if not isinstance(raw_pages, list):
         raise InputError(f"{wiki / 'report.json'}: pages must be a list")
 
-    article_titles = {_normalise_title(title) for title in snapshot.articles}
-    redirect_titles = {_normalise_title(title) for title in snapshot.redirects}
+    article_titles = {normalise_title(title) for title in snapshot.articles}
+    redirect_titles = {normalise_title(title) for title in snapshot.redirects}
     snapshot_pages: dict[str, list[SnapshotPage]] = {}
     for page in snapshot.pages:
-        snapshot_pages.setdefault(_normalise_title(page.title), []).append(page)
+        snapshot_pages.setdefault(normalise_title(page.title), []).append(page)
+    # Full pages emitted by this run will exist once it is published, so a
+    # link to one is not a red link even though the snapshot predates it.
+    # Counted up front: two full pages with the same title key would publish
+    # as one page, which is the overwrite this ticket forbids.
+    generated_counts: dict[str, int] = {}
+    for raw in raw_pages:
+        if not isinstance(raw, dict):
+            continue
+        raw_title = raw.get("title")
+        if raw.get("file") is None or not isinstance(raw_title, str) or not raw_title:
+            continue
+        key = normalise_title(raw_title)
+        if key:
+            generated_counts[key] = generated_counts.get(key, 0) + 1
+    generated_titles = set(generated_counts)
+    duplicate_titles = {
+        key for key, count in generated_counts.items() if count > 1
+    }
+    known_missing = _load_known_missing(snapshot_dir)
 
     entries: list[dict[str, Any]] = []
     rendered: list[tuple[dict[str, Any], str]] = []
@@ -142,12 +154,20 @@ def verify_wiki(
             article_titles=article_titles,
             redirect_titles=redirect_titles,
             snapshot_pages=snapshot_pages,
+            generated_titles=generated_titles,
+            duplicate_titles=duplicate_titles,
+            known_missing=known_missing,
         )
         entries.append(entry)
         if text is not None:
             rendered.append((entry, text))
 
     global_checks = _verify_report_shape(raw_pages, raw_report)
+    known_check = _verify_known_missing(
+        known_missing, article_titles, redirect_titles
+    )
+    global_checks.errors.extend(known_check.errors)
+    global_checks.details["known_missing"] = known_check.details
     artifact_check = _verify_artifacts(wiki, entries)
 
     live_report = {"enabled": False}
@@ -200,6 +220,7 @@ def verify_wiki(
 
     counts = _counts(entries, artifact_check)
     red_links = _red_link_index(entries)
+    known_red_links = _known_red_link_index(entries, known_missing)
     report = {
         "schema_version": 1,
         "kind": "wiki_verify",
@@ -214,6 +235,7 @@ def verify_wiki(
         "report_check": global_checks.as_dict(),
         "pages": entries,
         "red_links": red_links,
+        "known_red_links": known_red_links,
         "errors": list(artifact_check.errors) + list(global_checks.errors),
         "ok": False,
     }
@@ -273,7 +295,13 @@ def format_summary(report: Mapping[str, Any], *, limit: int = 20) -> str:
             f"{counts['red_link_targets']} target(s) "
             f"(checked {counts['links_checked']}: "
             f"{counts['links_articles']} article, "
-            f"{counts['links_redirects']} redirect)"
+            f"{counts['links_redirects']} redirect, "
+            f"{counts['links_generated']} new page)"
+        ),
+        (
+            f"  known missing: {counts['known_red_links']} occurrence(s) / "
+            f"{counts['known_red_link_targets']} target(s) "
+            "(explicitly listed in snapshot/known_missing.json)"
         ),
         f"  artifacts: {mark('artifacts')}",
     ]
@@ -296,6 +324,14 @@ def format_summary(report: Mapping[str, Any], *, limit: int = 20) -> str:
     remaining = len(report.get("red_links", [])) - limit
     if remaining > 0:
         lines.append(f"    ... and {remaining} more red-link target(s)")
+    for target in report.get("known_red_links", [])[:limit]:
+        sources = ", ".join(target["sources"][:3])
+        if target["count"] > 3:
+            sources += ", ..."
+        lines.append(
+            f"    KNOWN MISSING [[{target['target']}]] <- {sources}"
+            f" ({target.get('reason', '')})"
+        )
 
     failures: list[str] = []
     for entry in report.get("pages", []):
@@ -331,6 +367,60 @@ def _read_report(wiki: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise InputError(f"{path}: report must be a JSON object")
     return data
+
+
+def _load_known_missing(snapshot_dir: Path | str) -> dict[str, dict[str, str]]:
+    """Load the explicit list of red-link targets that have no page at all.
+
+    The file is optional.  It exists so that a target the game data names but
+    the wiki never created is *listed* rather than silently tolerated; every
+    entry needs a human-written reason.
+    """
+    path = Path(snapshot_dir) / "known_missing.json"
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except OSError as exc:
+        raise InputError(f"cannot read {path}: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise InputError(f"invalid JSON in {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise InputError(f"{path}: document must be a JSON object")
+    titles = data.get("titles")
+    if not isinstance(titles, list):
+        raise InputError(f"{path}: titles must be a list")
+    result: dict[str, dict[str, str]] = {}
+    for index, entry in enumerate(titles):
+        if not isinstance(entry, dict):
+            raise InputError(f"{path}: titles[{index}] must be an object")
+        title = entry.get("title")
+        reason = entry.get("reason")
+        if not isinstance(title, str) or not title.strip():
+            raise InputError(f"{path}: titles[{index}].title must be a string")
+        if not isinstance(reason, str) or not reason.strip():
+            raise InputError(f"{path}: titles[{index}].reason must be a string")
+        result[normalise_title(title)] = {"title": title, "reason": reason}
+    return result
+
+
+def _verify_known_missing(
+    known_missing: Mapping[str, Mapping[str, str]],
+    article_titles: set[str],
+    redirect_titles: set[str],
+) -> _Check:
+    """Fail when an entry in the hand-written list has since gained a page."""
+    check = _Check()
+    stale: list[str] = []
+    for key, record in sorted(known_missing.items()):
+        if key in article_titles or key in redirect_titles:
+            stale.append(record.get("title", key))
+            check.fail(
+                f"known-missing title {record.get('title', key)!r} exists in "
+                "the snapshot; remove it from known_missing.json"
+            )
+    check.details = {"checked": len(known_missing), "stale": stale}
+    return check
 
 
 def _verify_report_shape(
@@ -479,8 +569,11 @@ def _counts(
         "links_checked": 0,
         "links_articles": 0,
         "links_redirects": 0,
+        "links_generated": 0,
         "red_links": 0,
         "red_link_targets": 0,
+        "known_red_links": 0,
+        "known_red_link_targets": 0,
         "ignored_links": 0,
         "ignored_file_links": 0,
         "ignored_category_links": 0,
@@ -520,6 +613,8 @@ def _counts(
         counts["links_checked"] += links.get("checked", 0)
         counts["links_articles"] += links.get("articles", 0)
         counts["links_redirects"] += links.get("redirects", 0)
+        counts["links_generated"] += links.get("generated", 0)
+        counts["known_red_links"] += len(links.get("known_missing", []))
         counts["red_links"] += sum(1 for item in _flatten_missing(links))
         ignored = links.get("ignored", {})
         counts["ignored_links"] += sum(ignored.values())
@@ -528,6 +623,9 @@ def _counts(
         counts["ignored_external_links"] += ignored.get("external", 0)
         counts["ignored_anchor_links"] += ignored.get("anchor", 0)
     counts["red_link_targets"] = len(_red_link_index(materialized))
+    counts["known_red_link_targets"] = len(
+        _known_red_link_index(materialized, {})
+    )
     return counts
 
 
@@ -551,6 +649,31 @@ def _red_link_index(entries: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]
     return [index[target] for target in sorted(index)]
 
 
+def _known_red_link_index(
+    entries: Iterable[Mapping[str, Any]],
+    known_missing: Mapping[str, Mapping[str, str]],
+) -> list[dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        links = entry["checks"]["links"]["details"]
+        for item in links.get("known_missing", []):
+            target = str(item)
+            record = index.setdefault(
+                target,
+                {
+                    "target": target,
+                    "count": 0,
+                    "sources": [],
+                    "reason": known_missing.get(target, {}).get("reason", ""),
+                },
+            )
+            record["count"] += 1
+            source = entry.get("entity")
+            if isinstance(source, str) and source not in record["sources"]:
+                record["sources"].append(source)
+    return [index[target] for target in sorted(index)]
+
+
 # ------------------------------------------------------------------ one page
 def _verify_entry(
     raw: Any,
@@ -561,6 +684,9 @@ def _verify_entry(
     article_titles: set[str],
     redirect_titles: set[str],
     snapshot_pages: Mapping[str, list[SnapshotPage]],
+    generated_titles: set[str],
+    duplicate_titles: set[str],
+    known_missing: Mapping[str, Mapping[str, str]],
 ) -> tuple[dict[str, Any], str | None]:
     report_check = _Check()
     params_check = _Check()
@@ -714,6 +840,7 @@ def _verify_entry(
         title=title if isinstance(title, str) else "",
         article_titles=article_titles,
         redirect_titles=redirect_titles,
+        duplicate_titles=duplicate_titles,
         page_text=page_text,
         patch_data=patch_data,
         check=page_output_check,
@@ -729,6 +856,8 @@ def _verify_entry(
         patch_params=patch_params,
         article_titles=article_titles,
         redirect_titles=redirect_titles,
+        generated_titles=generated_titles,
+        known_missing=known_missing,
         check=links_check,
     )
 
@@ -862,7 +991,7 @@ def _verify_required(
             candidates = [
                 page
                 for page in snapshot_pages.get(
-                    _normalise_title(patch_title), []
+                    normalise_title(patch_title), []
                 )
                 if page.template == template.name
             ]
@@ -961,7 +1090,7 @@ def _verify_patch_target(
 
     existing: SnapshotPage | None = None
     status = "ok"
-    title_key = _normalise_title(title) if title else ""
+    title_key = normalise_title(title) if title else ""
     if not title:
         status = "invalid"
     elif title_key in article_titles:
@@ -1027,6 +1156,7 @@ def _verify_page_output(
     title: str,
     article_titles: set[str],
     redirect_titles: set[str],
+    duplicate_titles: set[str],
     page_text: str | None,
     patch_data: Mapping[str, Any] | None,
     check: _Check,
@@ -1035,6 +1165,12 @@ def _verify_page_output(
         check.fail("page entry has both a full page and a patch")
     if file_relative is not None and page_text is None:
         check.fail("full page was reported but could not be read")
+    if file_relative is not None:
+        title_key = normalise_title(title)
+        if title_key in duplicate_titles:
+            check.fail(
+                f"full page title {title!r} is shared by more than one page"
+            )
     if patch_relative is not None and patch_data is None:
         check.fail("patch was reported but could not be read")
     if matched is True:
@@ -1043,7 +1179,7 @@ def _verify_page_output(
         if patch_relative is None:
             check.fail("matched page has no patch")
     elif matched is False:
-        title_key = _normalise_title(title)
+        title_key = normalise_title(title)
         if file_relative is not None and (
             title_key in article_titles or title_key in redirect_titles
         ):
@@ -1097,6 +1233,8 @@ def _verify_links(
     patch_params: Mapping[str, str],
     article_titles: set[str],
     redirect_titles: set[str],
+    generated_titles: set[str],
+    known_missing: Mapping[str, Mapping[str, str]],
     check: _Check,
 ) -> None:
     segments: list[str] = []
@@ -1105,13 +1243,19 @@ def _verify_links(
     segments.extend(patch_params.values())
     targets, ignored = _extract_links(segments)
     missing: list[str] = []
+    known: list[str] = []
     articles = 0
     redirects = 0
+    generated = 0
     for target in targets:
         if target in article_titles:
             articles += 1
         elif target in redirect_titles:
             redirects += 1
+        elif target in generated_titles:
+            generated += 1
+        elif target in known_missing:
+            known.append(target)
         else:
             missing.append(target)
     for target in missing:
@@ -1120,6 +1264,8 @@ def _verify_links(
         "checked": len(targets),
         "articles": articles,
         "redirects": redirects,
+        "generated": generated,
+        "known_missing": known,
         "missing": missing,
         "ignored": ignored,
     }
@@ -1142,9 +1288,9 @@ def _extract_links(
                 ignored["anchor"] += 1
                 continue
             lowered = target.casefold()
-            if any(lowered.startswith(item) for item in _IGNORED_NAMESPACES):
+            if any(lowered.startswith(item) for item in IGNORED_TARGET_PREFIXES):
                 prefix = next(
-                    item for item in _IGNORED_NAMESPACES if lowered.startswith(item)
+                    item for item in IGNORED_TARGET_PREFIXES if lowered.startswith(item)
                 )
                 if prefix in ("file:", "image:", "文件:", "图像:"):
                     ignored["file"] += 1
@@ -1154,24 +1300,12 @@ def _extract_links(
             if any(lowered.startswith(item) for item in _IGNORED_EXTERNAL_PREFIXES):
                 ignored["external"] += 1
                 continue
-            normalised = _normalise_title(target)
+            normalised = normalise_title(target)
             if not normalised:
                 ignored["anchor"] += 1
                 continue
             targets.append(normalised)
     return targets, ignored
-
-
-def _normalise_title(title: str) -> str:
-    text = " ".join(title.replace("_", " ").split())
-    # MediaWiki capitalises the first letter of a title; everything else is
-    # case-sensitive.  Keep this Unicode-aware so titles such as ``βinαrΨ``
-    # match their capitalised form, without altering multi-character folds.
-    if text:
-        first = text[0].upper()
-        if len(first) == 1:
-            text = first + text[1:]
-    return text
 
 
 def _category_targets(text: str) -> list[str]:
@@ -1181,7 +1315,7 @@ def _category_targets(text: str) -> list[str]:
         namespace = match.group(1).strip()
         if namespace.casefold() not in ("分类", "category"):
             continue
-        name = _normalise_title(match.group(2))
+        name = normalise_title(match.group(2))
         if name:
             found.append(f"分类:{name}")
     return found

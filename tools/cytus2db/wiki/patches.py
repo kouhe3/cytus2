@@ -22,6 +22,12 @@ template                key                               tie-breakers
 
 An iM post whose title is still ambiguous falls back to ``<标题>（<post id>）``
 so the historical title variants on the site are preserved untouched.
+
+Identity parameters and titles are compared through
+``cytus2db.wiki.titles``: the strict key catches MediaWiki-equivalent
+spellings (``illMenate``/``IllMenate``), and the loose key recovers the site
+spelling for case, parenthesis spacing, dashes and similarly known variants.
+A loose match is only accepted when it selects exactly one page.
 """
 
 from __future__ import annotations
@@ -30,12 +36,14 @@ import json
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from ..errors import BuildError, InputError
 from .bili import RenderedPage
 from .model import Conflict
+from .titles import match_key, normalise_title
 
 
 class PatchError(BuildError):
@@ -60,9 +68,24 @@ class Snapshot:
     pages: tuple[SnapshotPage, ...] = ()
     redirects: frozenset[str] = frozenset()
 
+    @cached_property
+    def article_keys(self) -> frozenset[str]:
+        return frozenset(normalise_title(title) for title in self.articles)
+
+    @cached_property
+    def redirect_keys(self) -> frozenset[str]:
+        return frozenset(normalise_title(title) for title in self.redirects)
+
     def has_title(self, title: str) -> bool:
-        """True when a page or redirect already owns ``title``."""
-        return title in self.articles or title in self.redirects
+        """True when a page or redirect already owns ``title``'s title key.
+
+        MediaWiki treats the first letter case-insensitively and underscores
+        as spaces, so a full page for ``illMenate`` would overwrite the
+        existing ``IllMenate`` page.  The shared key makes that collision
+        visible before anything is written.
+        """
+        key = normalise_title(title)
+        return key in self.article_keys or key in self.redirect_keys
 
 
 @dataclass(frozen=True)
@@ -376,49 +399,83 @@ def match_pages(
 
 def _build_index(
     records: Iterable[SnapshotPage],
-) -> tuple[dict[tuple[str, ...], list[SnapshotPage]], dict[str, list[SnapshotPage]]]:
+) -> tuple[
+    dict[tuple[str, ...], list[SnapshotPage]],
+    dict[str, list[SnapshotPage]],
+    dict[tuple[str, ...], list[SnapshotPage]],
+    dict[str, list[SnapshotPage]],
+]:
     by_key: dict[tuple[str, ...], list[SnapshotPage]] = defaultdict(list)
     by_first: dict[str, list[SnapshotPage]] = defaultdict(list)
+    by_loose: dict[tuple[str, ...], list[SnapshotPage]] = defaultdict(list)
+    by_loose_first: dict[str, list[SnapshotPage]] = defaultdict(list)
     for record in sorted(records, key=lambda item: item.title):
         rule = _RULES.get(record.template)
         if rule is None:
             continue
-        key = tuple(_key_value(name, record.params.get(name, "")) for name in rule.key)
+        key = tuple(
+            _strict_value(record.params.get(name, "")) for name in rule.key
+        )
+        loose = tuple(
+            _key_value(record.params.get(name, "")) for name in rule.key
+        )
         by_key[key].append(record)
         by_first[key[0]].append(record)
-    return dict(by_key), dict(by_first)
+        by_loose[loose].append(record)
+        by_loose_first[loose[0]].append(record)
+    return (
+        dict(by_key),
+        dict(by_first),
+        dict(by_loose),
+        dict(by_loose_first),
+    )
 
 
 def _match_one(
     page: PatchPage,
     snapshot: Snapshot,
     by_template: dict[str, list[SnapshotPage]],
-    indexes: dict[str, tuple[dict, dict]],
+    indexes: dict[str, tuple[dict, dict, dict, dict]],
     claimed: set[str],
 ) -> PageMatch:
     rule = _RULES.get(page.template)
     conflicts: list[Conflict] = []
-    empty_index: tuple[dict, dict] = ({}, {})
-    by_key, by_first = indexes.get(page.template, empty_index)
+    empty_index: tuple[dict, dict, dict, dict] = ({}, {}, {}, {})
+    by_key, by_first, by_loose, by_loose_first = indexes.get(
+        page.template, empty_index
+    )
 
     exact_all = [
         item
         for item in by_template.get(page.template, ())
-        if _title_value(page.template, item.title)
-        == _title_value(page.template, page.title)
+        if normalise_title(item.title) == normalise_title(page.title)
         and item.title not in claimed
     ]
 
     key_candidates: list[SnapshotPage] = []
+    normalised_key = False
     if rule is not None:
-        key = tuple(_key_value(name, page.params.get(name, "")) for name in rule.key)
-        key_candidates = by_key.get(key, [])
+        strict_key = tuple(
+            _strict_value(page.params.get(name, "")) for name in rule.key
+        )
+        loose_key = tuple(
+            _key_value(page.params.get(name, "")) for name in rule.key
+        )
+        key_candidates = by_key.get(strict_key, [])
+        if not key_candidates:
+            key_candidates = by_loose.get(loose_key, [])
+            normalised_key = bool(key_candidates)
         if not key_candidates and len(rule.key) == 2:
             # Older OA pages carry no 所属角色 parameter; fall back to the
             # filename when exactly one page owns it.
-            loose = by_first.get(key[0], [])
+            loose = by_first.get(strict_key[0], [])
             if len(loose) == 1:
                 key_candidates = loose
+            else:
+                loose = by_loose_first.get(loose_key[0], [])
+                if len(loose) == 1:
+                    key_candidates = loose
+                    normalised_key = True
 
     if page.template != "Im/帖" and len(exact_all) == 1:
         same_as_key = (
@@ -437,7 +494,7 @@ def _match_one(
     if len(available) == 1:
         return PageMatch(
             title=available[0].title,
-            source="snapshot",
+            source="snapshot:normalised" if normalised_key else "snapshot",
             matched=True,
             keep_page=False,
             existing=available[0],
@@ -559,20 +616,14 @@ def _disambiguated(
     )
 
 
-def _key_value(name: str, value: str) -> str:
-    """Normalise a match key; file names treat ``_`` as MediaWiki space."""
-    text = _match_value(value)
-    if name in ("文件名", "所属角色"):
-        text = " ".join(text.replace("_", " ").split()).casefold()
-    return text
+def _strict_value(value: str) -> str:
+    """Return the MediaWiki title key of an identity parameter value."""
+    return normalise_title(_match_value(value))
 
 
-def _title_value(template: str, title: str) -> str:
-    """Compare titles case-insensitively for file-named page families."""
-    text = _match_value(title)
-    if template in ("Os/文件", "Oa/文件", "Gallery文件"):
-        text = " ".join(text.replace("_", " ").split()).casefold()
-    return text
+def _key_value(value: str) -> str:
+    """Return the loose match key of an identity parameter value."""
+    return match_key(_match_value(value))
 
 
 def _match_value(value: str) -> str:
@@ -610,7 +661,7 @@ def plan_patches(
                 if (
                     rule is not None
                     and name in rule.key
-                    and _key_value(name, current) == _key_value(name, value)
+                    and _key_value(current) == _key_value(value)
                 ):
                     # Same identity under the matching normalisation (case,
                     # underscores, template markup): keep the site spelling.

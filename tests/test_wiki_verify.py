@@ -686,3 +686,143 @@ def test_cli_exit_codes(tmp_path: Path, entry_name: str) -> None:
     result = run_verify(wiki)
 
     assert result.returncode == expected, result.stdout + result.stderr
+
+
+# ------------------------------------------------- title normalisation (#20)
+SONG_OMITTED = (
+    {"param": "曲绘", "field": "illustration", "reason": "conditional_omitted"},
+    {"param": "曲绘版本", "field": "illustration_version", "reason": "conditional_omitted"},
+    {"param": "曲绘文件", "field": "illustration_file", "reason": "conditional_omitted"},
+)
+
+
+def test_link_to_a_page_created_in_the_same_run_is_not_red(tmp_path: Path) -> None:
+    source_text = (
+        "{{歌曲\n"
+        "|曲名=Source\n"
+        "|获取方式=解锁 [[New Song]]。\n"
+        "}}\n"
+        "[[分类:歌曲]]\n"
+    )
+    target_text = "{{歌曲\n|曲名=New Song\n}}\n[[分类:歌曲]]\n"
+    entries = [
+        page_entry(
+            "song/source",
+            "song",
+            "Source",
+            "歌曲",
+            file="pages/song/source.wikitext",
+            emitted=("曲名", "获取方式"),
+            omitted=SONG_OMITTED,
+        ),
+        page_entry(
+            "song/new",
+            "song",
+            "New Song",
+            "歌曲",
+            file="pages/song/new.wikitext",
+            emitted=("曲名",),
+            omitted=SONG_OMITTED,
+        ),
+    ]
+    wiki = write_wiki(
+        tmp_path,
+        entries,
+        {
+            "pages/song/source.wikitext": source_text,
+            "pages/song/new.wikitext": target_text,
+        },
+    )
+
+    result = run_verify(wiki)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = read_report(wiki)
+    assert report["counts"]["links_generated"] == 1
+    assert report["counts"]["red_links"] == 0
+    assert report["red_links"] == []
+
+
+def test_known_missing_targets_are_listed_but_do_not_fail(tmp_path: Path) -> None:
+    snapshot = tmp_path / "snapshot"
+    shutil.copytree(SNAPSHOT, snapshot)
+    (snapshot / "known_missing.json").write_text(
+        json.dumps(
+            {
+                "titles": [
+                    {
+                        "title": "VOEZ Collection I",
+                        "reason": "CAPSO 曲包无对应页面",
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    wiki = single_page_wiki(
+        tmp_path,
+        CHARACTER_PAGE + "[[VOEZ Collection I]]\n",
+        emitted=("角色名", "拥有系统"),
+    )
+
+    result = run_verify(wiki, snapshot=snapshot)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = read_report(wiki)
+    assert report["counts"]["red_links"] == 0
+    assert report["counts"]["known_red_links"] == 1
+    assert report["counts"]["known_red_link_targets"] == 1
+    assert report["known_red_links"] == [
+        {
+            "target": "VOEZ Collection I",
+            "count": 1,
+            "sources": ["character/alpha_new"],
+            "reason": "CAPSO 曲包无对应页面",
+        }
+    ]
+    assert "KNOWN MISSING [[VOEZ Collection I]]" in result.stdout
+
+
+def test_two_full_pages_with_the_same_title_key_fail(tmp_path: Path) -> None:
+    text = "{{歌曲\n|曲名=Dupe\n}}\n[[分类:歌曲]]\n"
+    entries = [
+        page_entry(
+            "song/alpha",
+            "song",
+            "Dupe",
+            "歌曲",
+            file="pages/song/alpha.wikitext",
+            emitted=("曲名",),
+        ),
+        page_entry(
+            "song/beta",
+            "song",
+            "dupe",
+            "歌曲",
+            file="pages/song/beta.wikitext",
+            emitted=("曲名",),
+        ),
+    ]
+    wiki = write_wiki(
+        tmp_path,
+        entries,
+        {
+            "pages/song/alpha.wikitext": text,
+            "pages/song/beta.wikitext": text,
+        },
+    )
+
+    result = run_verify(wiki)
+
+    assert result.returncode == 1
+    report = read_report(wiki)
+    assert report["checks"]["page_output"] is False
+    errors = [
+        error
+        for page in report["pages"]
+        for error in page["checks"]["page_output"]["errors"]
+    ]
+    assert any("shared by more than one page" in error for error in errors)

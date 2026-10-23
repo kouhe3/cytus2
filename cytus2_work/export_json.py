@@ -534,7 +534,9 @@ def main():
             }
         for d in oa.get("Descriptions", []):
             body = (d.get("Contents") or [""] * 6)[slot]
-            body = re.sub(r"</p>", "\n\n", body).replace("<p>", "")
+            # 游戏原文以 `</p>` + 换行分隔段落，作者还会用 `---` 当分隔线（数据里就是三个连字符）
+            body = re.sub(r"</p>\s*<p>", "\n\n", body)
+            body = re.sub(r"</?p>", "", body)
             def _conds(items):
                 out = []
                 for c in items or []:

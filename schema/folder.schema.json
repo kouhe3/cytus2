@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "folder.schema.json",
+  "title": "folder (OS timeline chapter folder)",
+  "description": "An OS timeline folder from osdata TimelineChapter.Folder. This is the organizational dimension, not the Backup Database gallery folder (which belongs to gallery_folder).",
+  "type": "object",
+  "required": ["id", "type", "game_id", "name", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^folder/[a-z0-9-]+$"
+    },
+    "type": {
+      "const": "folder"
+    },
+    "game_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

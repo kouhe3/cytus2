@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "subtitle_line.schema.json",
+  "title": "subtitle_line",
+  "description": "One audio_subtitle cue with all five language texts; the game stores no per-line timings in this table.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "character",
+    "voice_asset_id",
+    "text",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^subtitle_line/[^\\s]+$"
+    },
+    "type": {
+      "const": "subtitle_line"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "character": {
+      "type": "string"
+    },
+    "voice_asset_id": {
+      "type": "string",
+      "pattern": "^asset/voice/[^\\s]+$"
+    },
+    "text": {
+      "$ref": "common.schema.json#/$defs/texts"
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

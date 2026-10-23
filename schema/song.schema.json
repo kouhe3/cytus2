@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "song.schema.json",
+  "title": "song",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "name",
+    "artist",
+    "pack_id",
+    "category",
+    "is_hidden",
+    "download_only",
+    "hide_when_locked",
+    "search_terms",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^song/[^@\\s]+$"
+    },
+    "type": {
+      "const": "song"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": ["string", "null"]
+    },
+    "artist": {
+      "type": ["string", "null"]
+    },
+    "pack_id": {
+      "type": "string",
+      "pattern": "^pack/[^\\s]+$"
+    },
+    "category": {
+      "type": ["string", "null"]
+    },
+    "is_hidden": {
+      "type": "boolean"
+    },
+    "download_only": {
+      "type": "boolean"
+    },
+    "hide_when_locked": {
+      "type": "boolean"
+    },
+    "search_terms": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common.schema.json",
+  "title": "Cytus II canonical DB - shared definitions",
+  "$defs": {
+    "provenance_entry": {
+      "type": "object",
+      "required": ["kind", "locator"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["text_asset", "rva", "manual", "external"]
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/provenance_entry"
+      }
+    },
+    "texts": {
+      "type": "object",
+      "required": ["en", "ja", "zh-Hant", "ko", "zh-Hans"],
+      "additionalProperties": false,
+      "properties": {
+        "en": {"type": "string"},
+        "ja": {"type": "string"},
+        "zh-Hant": {"type": "string"},
+        "ko": {"type": "string"},
+        "zh-Hans": {"type": "string"}
+      }
+    }
+  }
+}

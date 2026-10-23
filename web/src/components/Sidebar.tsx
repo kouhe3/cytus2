@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { to: "/backup", label: "Backup Database", testId: "nav-backup" },
   { to: "/story", label: "Story", testId: "nav-story" },
   { to: "/shop", label: "Shop", testId: "nav-shop" },
+  { to: "/extras", label: "Extras", testId: "nav-extras" },
 ] as const;
 
 export function Sidebar({

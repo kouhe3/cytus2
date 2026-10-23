@@ -793,6 +793,116 @@ try {
   check(bundle.items > 0, "bundle detail links its character items");
   check(bundle.tiers === 20, `bundle detail lists its 20 IAP tiers (got ${bundle.tiers})`);
 
+  // ---------------------------------------------------------------- extras
+  await cdp.navigate(`${appBase}/extras`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="extras-index"]'))`,
+    "extras hub loads",
+  );
+  const extrasIndex = await cdp.evaluate(`(() => ({
+    cards: document.querySelectorAll('[data-testid="extras-index"] .collection-card').length,
+    assistantsHref: document.querySelector('[data-testid="extras-assistants-card"]')?.getAttribute('href'),
+    titlesHref: document.querySelector('[data-testid="extras-titles-card"]')?.getAttribute('href'),
+    stats: document.querySelector('[data-testid="extras-stats"]')?.textContent ?? '',
+  }))()`);
+  check(extrasIndex.cards === 2, "extras hub links both appendix families");
+  check(
+    extrasIndex.assistantsHref === "/extras/assistants",
+    "extras hub links the assistant dialogues",
+  );
+  check(
+    extrasIndex.titlesHref === "/extras/titles",
+    "extras hub links the title screens",
+  );
+  check(
+    extrasIndex.stats.includes("19 assistant groups") &&
+      extrasIndex.stats.includes("10 titles"),
+    "extras hub reports the canonical assistant and title counts",
+  );
+  await cdp.screenshot("extras-hub.png");
+
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="extras-assistants-card"]').click()`,
+  );
+  await cdp.waitFor(
+    `location.pathname === '/extras/assistants' && Boolean(document.querySelector('[data-testid="assistants-view"]'))`,
+    "assistant dialogues route loads",
+  );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="assistant-page"]').length === 30`,
+    "assistant pages render",
+  );
+  const assistants = await cdp.evaluate(`(() => ({
+    groups: document.querySelectorAll('[data-testid="assistant-group"]').length,
+    pages: document.querySelectorAll('[data-testid="assistant-page"]').length,
+    targets: document.querySelectorAll('[data-testid="assistant-target"]').length,
+    bodies: document.querySelectorAll('[data-testid="assistant-group"] [data-testid="entity-body"]').length,
+    firstGroup: document.querySelector('[data-testid="assistant-group"]')?.dataset.groupId ?? '',
+  }))()`);
+  check(assistants.groups === 19, `assistants view lists 19 groups (got ${assistants.groups})`);
+  check(assistants.pages === 30, `assistants view renders 30 pages (got ${assistants.pages})`);
+  check(assistants.targets > 0, "assistant groups link a resolvable target");
+  check(assistants.bodies === 19, "every assistant group loads its text record");
+  check(
+    assistants.firstGroup === "assistant_dialogue/assistant_tutorial",
+    "assistant groups are ordered by progress",
+  );
+  await cdp.screenshot("extras-assistants.png");
+  await cdp.evaluate(SET_LANGUAGE("ja"));
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="assistant-group"] [data-testid="entity-body"][data-lang="ja"]').length === 19`,
+    "assistant bodies switch to ja",
+  );
+  check(true, "assistant dialogues follow the language switch");
+  await cdp.evaluate(SET_LANGUAGE("zh-Hans"));
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="assistant-group"] [data-testid="entity-body"][data-lang="zh-Hans"]').length === 19`,
+    "assistant bodies switch back to zh-Hans",
+  );
+  await cdp.evaluate(`document.querySelector('[data-testid="nav-extras"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/extras' && Boolean(document.querySelector('[data-testid="extras-index"]'))`,
+    "extras nav returns to the hub",
+  );
+
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="extras-titles-card"]').click()`,
+  );
+  await cdp.waitFor(
+    `location.pathname === '/extras/titles' && Boolean(document.querySelector('[data-testid="titles-view"]'))`,
+    "title screens route loads",
+  );
+  await cdp.waitFor(
+    `(() => {
+      const videos = [...document.querySelectorAll('[data-testid="title-video"]')];
+      const missing = document.querySelectorAll('[data-testid="title-video-missing"]').length;
+      if (videos.length + missing !== 13) return false;
+      if (missing === 13) return true;
+      return videos.length === 13 && videos.every((video) => video.readyState >= 1 || Boolean(video.error));
+    })()`,
+    "title clips settle (metadata or missing-export note)",
+  );
+  const titles = await cdp.evaluate(`(() => ({
+    rows: document.querySelectorAll('[data-testid="title-row"]').length,
+    videos: document.querySelectorAll('[data-testid="title-video"]').length,
+    missing: document.querySelectorAll('[data-testid="title-video-missing"]').length,
+    conditions: document.querySelectorAll('[data-testid="title-condition"]').length,
+    firstConditionHref: document.querySelector('[data-testid="title-condition"]')?.getAttribute('href') ?? '',
+    firstClip: document.querySelector('[data-testid="title-video"]')?.dataset.clip ?? document.querySelector('[data-testid="title-video-missing"]')?.dataset.clip ?? '',
+  }))()`);
+  check(titles.rows === 10, `titles view lists 10 titles (got ${titles.rows})`);
+  check(
+    titles.videos + titles.missing === 13,
+    `titles view accounts for all 13 clips (videos ${titles.videos}, missing ${titles.missing})`,
+  );
+  check(titles.conditions === 9, `titles view links 9 story unlocks (got ${titles.conditions})`);
+  check(
+    titles.firstConditionHref.startsWith("/story_node/"),
+    "title unlock conditions link their story node",
+  );
+  check(titles.firstClip === "title01", "first title plays its title01 clip");
+  await cdp.screenshot("extras-titles.png");
+
   // ----------------------------------------------------------------- search
   await cdp.navigate(`${appBase}/search?q=paff`);
   await cdp.waitFor(

@@ -30,6 +30,17 @@ function Block({ block }: { block: TextBlock }) {
     }
     case "narration":
       return <p className="block narration">{readString(block, "text")}</p>;
+    case "page": {
+      const page = typeof block["page"] === "number" ? block["page"] : null;
+      return (
+        <div className="block assistant-page" data-testid="assistant-page">
+          {page === null ? null : (
+            <span className="page-index">Page {page}</span>
+          )}
+          <p>{readString(block, "text")}</p>
+        </div>
+      );
+    }
     case "mail":
       return (
         <div className="block mail">

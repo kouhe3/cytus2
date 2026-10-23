@@ -1,5 +1,6 @@
 import { localizedValue } from "./language";
 import type {
+  AssistantDialogueEntity,
   BaseEntity,
   BossStageEntity,
   CapsoShopItemEntity,
@@ -29,6 +30,7 @@ import type {
   StoryNodeEntity,
   SubtitleLineEntity,
   TextSummary,
+  TitleScreenEntity,
 } from "../types";
 
 type Json = Record<string, unknown>;
@@ -130,6 +132,16 @@ export function isShopBundle(entity: BaseEntity): entity is ShopBundleEntity {
 
 export function isSubtitleLine(entity: BaseEntity): entity is SubtitleLineEntity {
   return entity.type === "subtitle_line";
+}
+
+export function isAssistantDialogue(
+  entity: BaseEntity,
+): entity is AssistantDialogueEntity {
+  return entity.type === "assistant_dialogue";
+}
+
+export function isTitleScreen(entity: BaseEntity): entity is TitleScreenEntity {
+  return entity.type === "title_screen";
 }
 
 export function isReadingOrder(entity: BaseEntity): entity is ReadingOrderRow {

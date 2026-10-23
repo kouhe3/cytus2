@@ -330,6 +330,38 @@ export interface ShopBundleEntity extends BaseEntity {
   readonly provenance: ProvenanceEntry[];
 }
 
+export interface AssistantDialoguePage {
+  readonly page: number;
+  readonly assistant_id: number;
+  readonly image_id: string;
+  readonly sound_id: string;
+}
+
+export interface AssistantDialogueEntity extends BaseEntity {
+  readonly type: "assistant_dialogue";
+  readonly game_id: string;
+  readonly trigger: number;
+  readonly target: string | null;
+  readonly version: string;
+  readonly progress: number;
+  readonly page_count: number;
+  readonly pages: AssistantDialoguePage[];
+  readonly text_ref: string;
+  readonly missing_languages: Lang[];
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface TitleScreenEntity extends BaseEntity {
+  readonly type: "title_screen";
+  readonly game_id: string;
+  readonly number: number;
+  readonly name: string;
+  readonly unlock_conditions: ConditionEntry[];
+  readonly video_clips: string[];
+  readonly text_ref: string;
+  readonly provenance: ProvenanceEntry[];
+}
+
 export interface SubtitleLineEntity extends BaseEntity {
   readonly type: "subtitle_line";
   readonly game_id: string;

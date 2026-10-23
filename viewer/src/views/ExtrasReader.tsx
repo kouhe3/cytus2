@@ -414,7 +414,7 @@ function SongSection({
                         .join("、");
                       const osHit = (catalog.osCharts[song.id] ?? []).find((x) => x.d === d);
                       const oaHit = (catalog.oaCharts[song.id] ?? []).find((x) => x.d === d);
-                      const note = (catalog.notes[song.id] ?? []).find((x) => x.d.includes(d));
+                      const notes = (catalog.notes[song.id] ?? []).filter((x) => x.d.includes(d));
                       const story = (catalog.storyCharts[song.id] ?? []).find((x) => x.d === d);
                       const capso = capsoIndex.get(song.id);
                       const gacha = (gachaIndex[song.id] ?? []).find((x) => x.d === d);
@@ -488,23 +488,28 @@ function SongSection({
                             </span>
                           ) : pack.iap ? (
                             <span style={{ color: "var(--muted)" }}>购买曲包后解锁</span>
-                          ) : note ? null : (
+                          ) : notes.length ? null : (
                             <span style={{ color: "var(--muted)" }}>需解锁 · 本地无记录</span>
                           )}
-                          {note ? (
+                          {notes.length ? (
                             <span style={{ color: "var(--muted)" }}>
                               {hit || osHit || oaHit || story || gacha ? " · " : ""}
-                              {hit || osHit || oaHit || story || gacha ? "" : "外部资料："}
-                              {note.text}
-                              {note.story ? (
-                                <>
-                                  {" "}
-                                  <button type="button" className="chip chip-btn" onClick={() => onNavigate("gates", note.story!)}>
-                                    {note.story}
-                                  </button>
-                                </>
-                              ) : null}
-                              {note.source ? `（${note.source}）` : ""}
+                              {notes.length > 1 ? "外部资料（记载冲突）：" : "外部资料："}
+                              {notes.map((n, i) => (
+                                <span key={i}>
+                                  {i ? "；" : ""}
+                                  {n.text}
+                                  {n.source ? `（${n.source}）` : ""}
+                                  {n.story ? (
+                                    <>
+                                      {" "}
+                                      <button type="button" className="chip chip-btn" onClick={() => onNavigate("gates", n.story!)}>
+                                        {n.story}
+                                      </button>
+                                    </>
+                                  ) : null}
+                                </span>
+                              ))}
                             </span>
                           ) : null}
                         </div>

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "chapter.schema.json",
+  "title": "chapter",
+  "type": "object",
+  "required": ["id", "type", "game_id", "name", "category", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^chapter/[0-9]+$"
+    },
+    "type": {
+      "const": "chapter"
+    },
+    "game_id": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "category": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

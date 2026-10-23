@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "asset.schema.json",
+  "title": "asset",
+  "description": "A media resource referenced by a structure entity: illustration sprite bundle, voice clip, background-movie prefab, or an OS content image/audio/video reference. Keys keep the resource name losslessly (percent-encoded when it contains whitespace).",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "kind",
+    "name",
+    "bundle",
+    "character_id",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^asset/[a-z]+/[^\\s]+$"
+    },
+    "type": {
+      "const": "asset"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": ["illustration", "voice", "bgmovie", "image", "audio", "video", "bundle"]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bundle": {
+      "type": ["string", "null"]
+    },
+    "character_id": {
+      "type": ["string", "null"],
+      "pattern": "^character/[^\\s]+$"
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

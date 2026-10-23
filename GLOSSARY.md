@@ -75,6 +75,10 @@ _Avoid_: 黑市（作实体）
 
 ## 模型
 
+**Spoiler Alert** (`spoiler_alert`):
+角色内容的剧透提醒：在条件满足前不要读。`SpoilerAlertTable` 只有 4 条（ivy001、cherry002、vanessa001、bobo001），条件为若干角色的等级。阅读顺序按条件等级**延后**内容，而不是禁止。
+_Avoid_: 把剧透门当成硬锁
+
 **Reading order** (`reading_order`):
 模拟 5.3 新玩家的三阶段广度优先顺序：免费（free）→ 付费（paid）→ 联动/支线（side）。同阶段内所有角色等级同步推进（受 `IsLevelLocked` 硬上限约束），每次升级后立刻阅读已解锁的 iM 与 OS。
 _Avoid_: 把按章节或按版本当成默认顺序

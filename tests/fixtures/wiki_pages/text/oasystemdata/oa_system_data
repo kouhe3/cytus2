@@ -1,0 +1,50 @@
+{
+  "Objects": [
+    {
+      "ObjectId": "alpha001_obj001",
+      "Names": ["Alpha Device", "アルファ装置", "阿爾法裝置", "알파 장치", "阿爾法裝置", "阿尔法装置"],
+      "CharacterId": "alpha001",
+      "Details": ["An alpha device.", "アルファの装置。", "阿爾法的裝置。", "알파 장치.", "阿爾法的裝置。", "阿尔法的装置。"],
+      "OASystemLocks": [],
+      "AnalyzeTypeId": "",
+      "AnalyzeType": 0
+    }
+  ],
+  "Descriptions": [],
+  "Documents": [
+    {
+      "DocumentId": "alpha001_obj001_oa001",
+      "CharacterId": "alpha001",
+      "MissionId": "alpha001_obj001_mission001",
+      "Names": ["Alpha_Doc", "Alpha_Doc", "Alpha_Doc", "Alpha_Doc", "Alpha_Doc", "Alpha_Doc"],
+      "Contents": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "##conversation=Alpha\nHello OA\n##sound=Beep,Beep sound\n##text\nOA document body.\n"
+      ],
+      "DigitLock": null
+    }
+  ],
+  "Missions": [
+    {
+      "MissionId": "alpha001_obj001_mission001",
+      "ObjectId": "alpha001_obj001",
+      "Type": "play_song",
+      "Args": "beta001_000",
+      "Titles": ["Alpha_Doc", "Alpha_Doc", "Alpha_Doc", "Alpha_Doc", "Alpha_Doc", "Alpha_Doc"],
+      "Details": [
+        "Play the beta song.",
+        "ベータをプレイ。",
+        "遊玩貝塔。",
+        "베타 플레이.",
+        "遊玩貝塔。",
+        "游玩以下曲目的任意难度："
+      ],
+      "IsHidden": false
+    }
+  ],
+  "Rewards": []
+}

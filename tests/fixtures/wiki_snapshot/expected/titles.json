@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kind": "titles",
+  "site": "https://wiki.biligame.com/cytus2",
+  "namespace": 0,
+  "fetched_at": "2026-01-01T00:00:00+00:00",
+  "source_query": "action=query&list=allpages&apnamespace=0&aplimit=500&apfilterredir=nonredirects|redirects",
+  "article_definition": "main-namespace pages that are not redirects (list=allpages&apfilterredir=nonredirects)",
+  "counts": {
+    "articles": 2,
+    "redirects": 1,
+    "total": 3
+  },
+  "articles": [
+    "Alpha",
+    "Gamma"
+  ],
+  "redirects": [
+    "Beta"
+  ]
+}

@@ -77,7 +77,7 @@ export function OsReader({
           );
           return story ? (
             <NavChip tone="warn" onClick={() => onNavigate("gates", story.id)} title="这条档案会触发剧情">
-              ⚑ 触发剧情 · {story.id}
+              ⚑ 读后触发剧情：{story.id}
             </NavChip>
           ) : null;
         })()}
@@ -97,7 +97,7 @@ export function OsReader({
 
       {sync.length > 0 ? (
         <>
-          <h3>同一刻解锁的 iM 帖</h3>
+          <h3>同一等级同时解锁的 iM 帖</h3>
           <div className="chips">
             {sync.map((s) =>
               s.im.map((id) => (

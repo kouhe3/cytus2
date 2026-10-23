@@ -27,7 +27,8 @@ export function GateReader({
   // TRIGGER_TOPIC_ID 有时指向 OS 档案（如 hos027），按真实归属决定标签与跳转目标
   const topicId = event?.trigger_topic_id ?? event?.start_topic_id ?? "";
   const topicSrc = topicId ? sourceOf(index, topicId) : "";
-  const topicLabel = topicSrc === "os" ? "触发 OS 档案" : topicSrc === "gallery" ? "触发 gallery" : "触发 iM 帖";
+  const topicLabel =
+    topicSrc === "os" ? "触发源（OS 档案）" : topicSrc === "gallery" ? "触发源（gallery）" : "触发源（iM 帖）";
   const jumpFor = (id: string) => {
     switch (sourceOf(index, id)) {
       case "os":
@@ -65,6 +66,9 @@ export function GateReader({
         <Chip tone={isEnding ? "warn" : undefined}>{isEnding ? "结局" : "剧情节点"}</Chip>
       </div>
       <h2>{gateId}</h2>
+      <p className="lede">
+        「触发源」= 读它 / 玩它会让这段剧情开始；「前置」= 必须先完成这段剧情，那些条目才可读。
+      </p>
 
       {event ? (
         <table className="grid" style={{ marginBottom: 14 }}>
@@ -82,7 +86,7 @@ export function GateReader({
               <td>{topicId ? linkFor(topicId) : <span className="mono">—</span>}</td>
             </tr>
             <tr>
-              <td className="mono" style={{ width: 130, color: "var(--muted)" }}>角色曲包</td>
+              <td className="mono" style={{ width: 130, color: "var(--muted)" }}>所属曲包</td>
               <td>
                 {event.trigger_os_id ? (
                   <button
@@ -98,7 +102,7 @@ export function GateReader({
               </td>
             </tr>
             <tr>
-              <td className="mono" style={{ width: 130, color: "var(--muted)" }}>触发 gallery</td>
+              <td className="mono" style={{ width: 130, color: "var(--muted)" }}>触发源（gallery）</td>
               <td>
                 {event.trigger_gallery_file_location
                   ? linkFor(event.trigger_gallery_file_location)
@@ -130,7 +134,7 @@ export function GateReader({
 
       {event?.imTopics?.length ? (
         <>
-          <h3>本剧情用到的 iM 帖</h3>
+          <h3>触发本剧情的 iM 帖</h3>
           <div className="lang" style={{ gap: 6 }}>
             {event.imTopics.map((id) => (
               <button key={id} type="button" className="chip chip-btn" onClick={() => onNavigate("im", id)}>
@@ -141,7 +145,7 @@ export function GateReader({
         </>
       ) : null}
 
-      <h3>以它为前置的 iM 帖</h3>
+      <h3>需先完成本剧情的 iM 帖（前置关系）</h3>
       {gate && gate.topics.length > 0 ? (
         <table className="grid">
           <tbody>
@@ -162,7 +166,7 @@ export function GateReader({
           </tbody>
         </table>
       ) : (
-        <p className="mono">没有 iM 帖以它为前置条件（它是剧情触发点，不是闸）。</p>
+        <p className="mono">没有 iM 帖需要先完成这段剧情（它是被触发的一方，不是别人的前置）。</p>
       )}
     </div>
   );

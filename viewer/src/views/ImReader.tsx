@@ -99,7 +99,7 @@ export function ImReader({
         items={[
           ["点赞", meta.likes],
           ["回复", meta.replies],
-          ["剧情闸", meta.gate || "无"],
+          ["前置剧情", meta.gate || "无"],
         ]}
       />
 
@@ -110,8 +110,8 @@ export function ImReader({
           </NavChip>
         ))}
         {gate ? (
-          <NavChip tone="warn" onClick={() => onNavigate("gates", gate.id)}>
-            由 {gate.id} 解锁
+          <NavChip tone="warn" onClick={() => onNavigate("gates", gate.id)} title="必须先完成这段剧情，本帖才可读">
+            🗝 前置剧情：{gate.id}
           </NavChip>
         ) : null}
         {meta.storyTrigger ? (
@@ -120,7 +120,7 @@ export function ImReader({
             title="该帖是剧情触发点：触发后可能从 iM 列表移除"
             onClick={() => onNavigate("gates", meta.storyTrigger!.story)}
           >
-            ⚑ 剧情触发帖 · {meta.storyTrigger.story}
+            ⚑ 读后触发剧情：{meta.storyTrigger.story}
           </NavChip>
         ) : null}
         {meta.attachments.map((a) => (
@@ -152,7 +152,7 @@ export function ImReader({
 
       {sync.length > 0 ? (
         <>
-          <h3>同一刻解锁的 OS 条目</h3>
+          <h3>同一等级同时解锁的 OS 档案</h3>
           <div className="chips">
             {sync.map((s) =>
               s.os.map((id) => (

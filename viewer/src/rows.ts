@@ -259,7 +259,7 @@ export function rowsFor(
           view: "im",
           id: t.id,
           title: t.titles[lang] || t.id,
-          sub: `${t.storyTrigger ? "⚑ " : ""}#${t.readIndex ?? "?"}${t.cost ? ` · 解锁成本 ${t.cost}` : ""}${
+          sub: `${t.storyTrigger ? "⚑ 触发帖 · " : ""}#${t.readIndex ?? "?"}${t.cost ? ` · 解锁成本 ${t.cost}` : ""}${
             t.external ? ` · 外部：${t.external}` : ""
           }${t.branch ? ` · 分支：${t.branch}` : ""} · ${t.author} · ${t.replies} 回复`,
           group: `阶段 ${t.stage ?? "?"}${t.lockLevel ? `（≤Lv${t.lockLevel}）` : ""}`,
@@ -284,10 +284,10 @@ export function rowsFor(
         const topicId = e.trigger_topic_id ?? "";
         const topicSrc = topicId ? sourceOf(index, topicId) : "";
         const bits = [
-          topicId ? `${topicSrc === "os" ? "OS" : "帖"} ${topicId}` : "",
+          topicId ? `由${topicSrc === "os" ? " OS 档案" : " iM 帖"} ${topicId} 触发` : "",
           e.trigger_os_id ? `曲包 ${e.trigger_os_id}` : "",
           "boss_stage_id" in e && e.boss_stage_id ? `BOSS ${e.boss_stage_id}` : "",
-          topics.length ? `锁 ${topics.length} 帖` : "",
+          topics.length ? `前置（${topics.length} 帖）` : "",
         ].filter(Boolean);
         return {
           key: e.id,

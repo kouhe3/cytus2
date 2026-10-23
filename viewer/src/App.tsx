@@ -108,12 +108,15 @@ export default function App() {
   const rows = useMemo<Row[]>(() => {
     if (!index) return [];
     if (q.length >= 2) return searchRows(index, lang, im ?? null, os ?? null, extra ?? null, q);
+    // 细节视图（os）没有自己的列表，复用时间线的「按角色」列表，保证左侧能看到当前档案
+    const listView = view === "os" ? "timeline" : view;
+    const listMode = view === "os" ? "version" : timelineMode;
     return rowsFor(
       index,
-      view,
+      listView,
       lang,
       view === "timeline" ? activeFilters : filters,
-      timelineMode,
+      listMode,
       view === "im" ? imFilter : "",
     );
   }, [index, view, lang, q, im, os, extra, filters, activeFilters, timelineMode, imFilter]);
@@ -127,7 +130,8 @@ export default function App() {
       navigate("timeline");
       return;
     }
-    navigate(row.view, row.id);
+    // os 视图复用时间线列表，选中后仍留在 os 路由
+    navigate(view === "os" && row.view === "timeline" ? "os" : row.view, row.id);
   };
 
   if (indexAsync.state === "loading") {

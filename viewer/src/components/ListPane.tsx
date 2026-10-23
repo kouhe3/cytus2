@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Row } from "../rows";
 import { Avatar } from "./Avatar";
 
@@ -20,6 +20,13 @@ export function ListPane({
       </div>
     );
   }
+  // 直接打开某条详情（#/os/<id> 等）时，把当前条目滚进可视区
+  const listRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = listRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    el?.scrollIntoView({ block: "center" });
+  }, [activeKey, rows.length]);
+
   // 分组可折叠：所有列表（时间线 / iM / 剧情事件 / 分支）共用同一套行为
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggle = (key: string) =>
@@ -37,7 +44,7 @@ export function ListPane({
     groups.get(key)!.push(row);
   }
   return (
-    <div className="list" role="list" aria-label="条目列表">
+    <div className="list" role="list" aria-label="条目列表" ref={listRef}>
       {[...groups.entries()].map(([group, items]) => (
         <div key={group}>
           {group ? (

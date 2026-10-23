@@ -615,13 +615,23 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
                      "charts":{"Easy":{"Level":"6"},"Hard":{"Level":"10"},"Chaos":{"Level":"15+"}}}]}]}
 ```
 
-`export_song_catalog.py` 把它与两处解锁信息合并：
+每个难度还带 `NeedUnlock`，这是唯一的「本来就解锁」判据（反编译
+`SongInfoExtension.GetChartInformation` 的 lambda：`locked = NeedUnlock && !record.IsUnlocked`）：
+
+- `false` → 拥有曲包即解锁，永远不会被锁（页面上写「默认解锁」）
+- `true` → 需要一次解锁事件写入谱面记录
+
+`export_song_catalog.py` 把目录与三类解锁事件合并：
 
 | 来源 | 字段 |
 |:--|:--|
 | iM 帖 | `im_topic_data.UnlockCharts`（SongId + Difficulty）+ 该帖的 `LevelLocks` / `StoryLockId` |
 | 分支节点 | `branchingosdata.UnlockedCharts` + `UnlockCondition.Level` |
+| 通关剧情 | `chartunlock.ab` 的 TextAsset `storychartunlock`：`{storyId:[{SongId,Difficulty}]}` |
 
-输出 `data/songs.json`：27 个曲包 / 461 首歌 / 53 首有获取方式，附录「歌曲与获取方式」按曲包折叠展示，
-每个难度一行：`简单：NEKO#ΦωΦ Lv18 后阅读 iM 帖「高昏！爽wwww」`、`困难：…`；
-没有记录的难度写「未记录」（Wiki 上也多是空的）。
+输出 `data/songs.json`：27 个曲包 / 461 首歌 / 53 首有帖子或节点来源 / 8 首有通关解锁。
+附录「歌曲与获取方式」按曲包折叠，每个难度一行，状态共五种：
+`iM 帖` / `分支节点` / `通关剧情` / `默认解锁（NeedUnlock=false）` / `需解锁 · 本地无记录`。
+
+实测统计（1402 个谱面）：默认解锁 472、iM 帖或分支节点 145、通关剧情 8、付费包购买 413、
+无本地记录 364（135 首，集中在 `hasIM=false` 的曲包，例如 BO BO / Cherry II / Vanessa）。

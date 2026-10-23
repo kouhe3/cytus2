@@ -214,6 +214,8 @@ export interface SongInfo {
   name: string;
   artist: string;
   charts: Record<string, string>;
+  /** false = 拥有曲包即解锁；true = 需要额外解锁 */
+  needUnlock: Record<string, boolean>;
 }
 
 export interface SongPack {
@@ -230,6 +232,8 @@ export interface SongCatalog {
   packs: SongPack[];
   other: SongInfo[];
   unlocks: Record<string, SongUnlock[]>;
+  /** 通关剧情解锁的谱面：songId → [{d, story}] */
+  storyCharts: Record<string, { d: number; story: string }[]>;
 }
 
 export interface IndexData {

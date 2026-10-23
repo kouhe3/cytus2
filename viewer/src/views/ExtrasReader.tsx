@@ -364,10 +364,13 @@ function SongSection({
       </div>
       <h2>歌曲与获取方式</h2>
       <p className="lede">
-        {catalog.packs.length} 个曲包 / {total} 首歌，曲名与难度等级来自 sharedassets0 的{" "}
-        <span className="mono">song_pack_data</span>；「获取方式」来自 iM 帖的{" "}
-        <span className="mono">UnlockCharts</span> 与分支节点的 <span className="mono">UnlockedCharts</span>
-        （没有记录的写「未记录」）。
+        {catalog.packs.length} 个曲包 / {total} 首歌。曲名与难度来自 sharedassets0 的{" "}
+        <span className="mono">song_pack_data</span>，每个难度带 <span className="mono">NeedUnlock</span>
+        ：false = 拥有曲包即解锁（「默认解锁」），true = 需要一次解锁事件。解锁来源共三类，全部来自本地数据：
+        iM 帖的 <span className="mono">UnlockCharts</span>、分支节点的{" "}
+        <span className="mono">UnlockedCharts</span>、通关剧情的{" "}
+        <span className="mono">storychartunlock</span>。付费曲包的谱面购买即解锁；剩下的写「需解锁 · 本地无记录」，
+        表示数据里没有对应解锁事件（角色/曲包整体开放或活动内容）。
       </p>
       {catalog.packs.map((pack) => (
         <details key={pack.id} style={{ marginBottom: 10 }}>
@@ -397,6 +400,8 @@ function SongSection({
                         .filter(([, lv]) => lv > 0)
                         .map(([pack2, lv]) => `${characterName(index, pack2)} Lv${lv}`)
                         .join("、");
+                      const story = (catalog.storyCharts[song.id] ?? []).find((x) => x.d === d);
+                      const free = !(song.needUnlock?.[key] ?? false);
                       return (
                         <div key={key} className="mono" style={{ lineHeight: 1.7 }}>
                           {DIFF_LABEL[d]}：
@@ -412,8 +417,19 @@ function SongSection({
                                 {hit.names?.[lang] || hit.names?.["zh-Hans"] || hit.ref}
                               </button>
                             </>
+                          ) : story ? (
+                            <>
+                              通关剧情{" "}
+                              <button type="button" className="chip chip-btn" onClick={() => onNavigate("gates", story.story)}>
+                                {story.story}
+                              </button>
+                            </>
+                          ) : free ? (
+                            <span style={{ color: "var(--muted)" }}>默认解锁（NeedUnlock=false）</span>
+                          ) : pack.iap ? (
+                            <span style={{ color: "var(--muted)" }}>购买曲包后解锁</span>
                           ) : (
-                            <span style={{ color: "var(--muted)" }}>未记录</span>
+                            <span style={{ color: "var(--muted)" }}>需解锁 · 本地无记录</span>
                           )}
                         </div>
                       );

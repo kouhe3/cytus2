@@ -11,6 +11,10 @@
 获取方式来自两处（都带 Difficulty，0=Easy 1=Hard 2=Chaos）：
   * `imdata/im_topic_data` → UnlockCharts：帖子 + 该帖的等级锁 / 剧情锁
   * `branchingosdata/tairitsu001` → UnlockedCharts：分支节点 + UnlockCondition.Level
+
+另外两件事决定「默认解锁」与「通关解锁」：
+  * `song_pack_data` 的每个难度带 `NeedUnlock`：false = 拥有曲包即解锁（默认解锁），true = 需要额外解锁
+  * `chartunlock.ab` 的 TextAsset `storychartunlock`：{storyId: [{SongId, Difficulty}]}，通关该剧情时解锁
 """
 import json, os, subprocess, zipfile
 
@@ -36,6 +40,25 @@ def assemble_shared0() -> str:
         for p in parts:
             fh.write(z.read(p))
     return dst
+
+
+def read_story_chart_unlock() -> dict:
+    """chartunlock.ab → {songId: [{d, story}]}（storychartunlock）"""
+    import UnityPy
+
+    env = UnityPy.load(os.path.join(TMP, "chartunlock.ab"))
+    out = {}
+    for obj in env.objects:
+        if obj.type.name != "TextAsset":
+            continue
+        ta = obj.read()
+        if ta.m_Name != "storychartunlock":
+            continue
+        raw = ta.m_Script
+        for story, charts in json.loads(raw if isinstance(raw, str) else bytes(raw).decode("utf-8")).items():
+            for c in charts:
+                out.setdefault(c["SongId"], []).append({"d": c.get("Difficulty"), "story": story})
+    return out
 
 
 def main():
@@ -70,13 +93,18 @@ def main():
                     "name": s.get("song_name"),
                     "artist": s.get("artist"),
                     "charts": {k: v.get("Level") for k, v in (s.get("charts") or {}).items()},
+                    # false = 拥有曲包即解锁；true = 需要额外解锁
+                    "needUnlock": {
+                        k: bool(v.get("NeedUnlock")) for k, v in (s.get("charts") or {}).items()
+                    },
                 }
                 for s in p.get("song_info_list") or []
             ],
         })
     other = [
         {"id": s["song_id"], "name": s.get("song_name"), "artist": s.get("artist"),
-         "charts": {k: v.get("Level") for k, v in (s.get("charts") or {}).items()}}
+         "charts": {k: v.get("Level") for k, v in (s.get("charts") or {}).items()},
+         "needUnlock": {k: bool(v.get("NeedUnlock")) for k, v in (s.get("charts") or {}).items()}}
         for s in catalog.get("other_song_info_list") or []
     ]
 
@@ -120,10 +148,14 @@ def main():
                 "story": "",
             })
 
-    data = {"packs": packs, "other": other, "unlocks": unlocks}
+    data = {"packs": packs, "other": other, "unlocks": unlocks, "storyCharts": read_story_chart_unlock()}
     json.dump(data, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     songs = sum(len(p["songs"]) for p in packs) + len(other)
-    print(f"{len(packs)} 个曲包 / {songs} 首歌 / {len(unlocks)} 首有获取方式 → {os.path.relpath(OUT, HERE)}")
+    n_story = len(data["storyCharts"])
+    print(
+        f"{len(packs)} 个曲包 / {songs} 首歌 / {len(unlocks)} 首有帖子或节点获取方式 / "
+        f"{n_story} 首有通关解锁 → {os.path.relpath(OUT, HERE)}"
+    )
 
 
 if __name__ == "__main__":

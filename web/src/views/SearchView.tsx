@@ -148,6 +148,8 @@ export function SearchView() {
             <section
               key={group.type}
               className="search-group"
+              role="group"
+              aria-label={group.label}
               data-testid="search-group"
               data-group-type={group.type}
             >

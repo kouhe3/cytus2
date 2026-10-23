@@ -129,30 +129,32 @@ export interface StoryEntry {
   readonly title: string;
   readonly snippet: string;
   readonly sortKey: string;
-  readonly hasSortMeta: boolean;
 }
 
 function storySortKey(
   row: ReadingOrderRow | null,
   sort: StorySort,
   levelOrder: number,
-): { key: string; hasMeta: boolean } {
+): string {
   // The effective level gate is the spoiler-deferred position. It stays the
   // primary key in every mode so version/chapter sorting never promotes a
   // node ahead of its prerequisites.
   if (sort === "level") {
-    return { key: String(levelOrder).padStart(8, "0"), hasMeta: true };
+    return String(levelOrder).padStart(8, "0");
   }
   const gate = String(row?.level_gate ?? 9999).padStart(4, "0");
   const order = String(levelOrder).padStart(8, "0");
   if (sort === "version") {
     if (row?.version) {
       const version = row.version_order.length
-        ? row.version_order.map((part) => String(part).padStart(2, "0")).join("-")
-        : row.version;
-      return { key: `${gate}\u00000\u0000${row.version}\u0000${version}`, hasMeta: true };
+        ? row.version_order.map((part) => String(part).padStart(4, "0")).join("-")
+        : row.version
+            .split(".")
+            .map((part) => String(Number(part) || 0).padStart(4, "0"))
+            .join(".");
+      return `${gate}\u00000\u0000${version}`;
     }
-    return { key: `${gate}\u00001\u0000${order}`, hasMeta: false };
+    return `${gate}\u00001\u0000${order}`;
   }
   if (sort === "chapter") {
     if (row?.chapter_id) {
@@ -160,14 +162,11 @@ function storySortKey(
         row.chapter_order === null
           ? 9999
           : row.chapter_order;
-      return {
-        key: `${gate}\u00000\u0000${String(chapterOrder).padStart(6, "0")}\u0000${row.chapter_id}`,
-        hasMeta: true,
-      };
+      return `${gate}\u00000\u0000${String(chapterOrder).padStart(6, "0")}\u0000${row.chapter_id}`;
     }
-    return { key: `${gate}\u00001\u0000${order}`, hasMeta: false };
+    return `${gate}\u00001\u0000${order}`;
   }
-  return { key: order, hasMeta: true };
+  return order;
 }
 
 export function storyEntries(
@@ -183,15 +182,17 @@ export function storyEntries(
       continue;
     }
     const row = db.readingOrderByEntity.get(node.id) ?? null;
+    if (sort === "level" && row?.chapter === "test01") {
+      continue;
+    }
     const levelOrder = row?.order ?? 100000 + entries.length;
-    const { key, hasMeta } = storySortKey(row, sort, levelOrder);
+    const sortKey = storySortKey(row, sort, levelOrder);
     entries.push({
       node,
       row,
       title: entityTitle(db, node, lang),
       snippet: node.text_ref ? textSnippet(db, node.text_ref, lang) : "",
-      sortKey: key,
-      hasSortMeta: hasMeta,
+      sortKey,
     });
   }
   entries.sort(

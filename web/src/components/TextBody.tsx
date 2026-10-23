@@ -12,7 +12,9 @@ type TextState =
 
 function readString(block: TextBlock, key: string): string {
   const value = block[key];
-  return typeof value === "string" ? value : "";
+  return typeof value === "string"
+    ? value.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ")
+    : "";
 }
 
 function Block({ block }: { block: TextBlock }) {
@@ -70,7 +72,13 @@ function Block({ block }: { block: TextBlock }) {
 }
 
 function bodyParagraphs(text: string): string[] {
-  const cleaned = text.replace(/^\s*##\w+.*$/gm, "").trim();
+  const cleaned = text
+    .replace(/^\s*##\w+.*$/gm, "")
+    .replace(/<\s*br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
   return cleaned.split(/\n{2,}/).filter((paragraph) => paragraph.trim() !== "");
 }
 

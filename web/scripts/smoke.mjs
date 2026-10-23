@@ -7,8 +7,11 @@
  *
  * It drives the real app through the DevTools protocol: history routing,
  * reading-order cards, the level slider, type/tier filters, the Ctrl+K command
- * palette, a chart page reached from a card, an unlock-source jump, and the
- * return to the timeline. Screenshots are written to web/.shots/.
+ * palette, a chart page reached from a card, the chart → post → chart round
+ * trip, OA archives and documents, backup media, story nodes, CAPSO/gacha/shop
+ * bundles, grouped full-text search with keyboard navigation, and the
+ * five-language switch including its missing-language fallback.
+ * Screenshots are written to web/.shots/.
  *
  * CDP_ENDPOINT defaults to http://127.0.0.1:9333 (the edge-cdp service).
  * Pass a different app URL as the first argument.
@@ -584,6 +587,7 @@ try {
   await cdp.evaluate(`document.querySelector('[data-testid="oa-document-link"]').click()`);
   await cdp.waitFor(
     `location.pathname.startsWith('/oa_document/') &&
+     Boolean(document.querySelector('[data-testid="entity-view"][data-entity-type="oa_document"]')) &&
      Boolean(document.querySelector('[data-testid="entity-body"]'))`,
     "OA document detail loads",
   );
@@ -684,7 +688,10 @@ try {
     cards: document.querySelectorAll('[data-testid="story-node-card"]').length,
     kinds: [...new Set([...document.querySelectorAll('[data-testid="story-node-card"]')].map(card => card.dataset.kind))].sort(),
   }))()`);
-  check(storyIndex.cards === 91, `story index lists 91 nodes (got ${storyIndex.cards})`);
+  check(
+    storyIndex.cards === 90,
+    `default story sequence hides the test01 staging node (got ${storyIndex.cards})`,
+  );
   check(
     JSON.stringify(storyIndex.kinds) === JSON.stringify(["branch", "event"]),
     "story index contains events and Branching OS nodes",

@@ -86,7 +86,6 @@ interface SearchRow {
   fallback: boolean;
   snippet: string;
   title: string;
-  entity: Json | null;
 }
 
 type TextMatcher = (text: string) => boolean;
@@ -382,7 +381,11 @@ class TextStore {
     return null;
   }
 
-  search(matchers: readonly TextMatcher[], tokens: readonly string[], lang: Lang): SearchRow[] {
+  search(
+    matchers: readonly TextMatcher[],
+    tokens: readonly string[],
+    lang: Lang,
+  ): SearchRow[] {
     const rows: SearchRow[] = [];
     for (const [ref, byLang] of this.searchable) {
       const type = this.refTypes.get(ref);
@@ -417,7 +420,6 @@ class TextStore {
         fallback: langCode !== lang,
         snippet: matchSnippet(text.raw, tokens),
         title: "",
-        entity: null,
       });
     }
     return rows;
@@ -628,7 +630,6 @@ class ProjectionStore {
         fallback: langCode !== lang,
         snippet: matchSnippet(plain, tokens),
         title: `${doc.character || "Voice"} · ${doc.gameId}`,
-        entity: null,
       });
     }
     return rows;
@@ -657,7 +658,6 @@ class ProjectionStore {
         fallback: false,
         snippet: title,
         title,
-        entity: record,
       });
     }
     return rows;

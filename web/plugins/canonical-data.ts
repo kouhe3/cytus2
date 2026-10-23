@@ -107,7 +107,7 @@ class TextStore {
 
   async ensure(): Promise<void> {
     const signature = await this.currentSignature();
-    if (signature === this.signature) {
+    if (signature !== "missing" && signature === this.signature) {
       return;
     }
     if (!this.loading) {

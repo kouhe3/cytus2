@@ -16,13 +16,16 @@ The builder emits only fields the canonical DB can justify:
     Song pack ``theme_color`` without the leading ``#``.
 ``imid``
     Distinct account names that authored the character's iM posts.
+``max_level``
+    Highest 0-based level from the character's ``exp_table``, displayed as
+    ``max_level + 1`` because the game UI is 1-based.
 ``unlock_method``
     Song pack price for IAP packs, ``免费`` otherwise.
 
 Everything else in ``模板:角色`` (sorting, genre, profile, intro, images,
 comments, trivia) has no APK source and stays out per ADR-0003.  ``最高等级``
-needs the per-pack exp table, which the canonical DB does not carry yet, so it
-is omitted rather than copied from the wiki.
+is omitted for characters whose exp table is missing rather than copied from
+the wiki.
 
 A song may carry the same title as its character (``Miku``).  The page title
 then takes the ``（角色）`` suffix so the two pages stay distinct; the
@@ -104,7 +107,11 @@ def build(db: Database) -> list[PageModel]:
         if unlock_method:
             fields.append(Field("unlock_method", Text.of(unlock_method)))
 
-        omitted["max_level"] = "exp_table_not_extracted"
+        max_level = character.get("max_level")
+        if isinstance(max_level, int) and not isinstance(max_level, bool):
+            fields.append(Field("max_level", Text.of(str(max_level + 1))))
+        else:
+            omitted["max_level"] = "exp_table_not_extracted"
 
         pages.append(
             PageModel(

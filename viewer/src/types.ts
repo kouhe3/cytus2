@@ -63,6 +63,8 @@ export interface ImMeta {
   storyTrigger?: { story: string; step: string } | null;
   /** 阅读顺序阶段（export_im_order.py 推导：角色等级 + 剧情 + 帖子依赖） */
   stage?: number;
+  /** 阶段内的阅读序号（触发帖 → 本阶段活跃账号 → 其余主角 → 其他） */
+  readIndex?: number;
 }
 
 export interface OsMeta {

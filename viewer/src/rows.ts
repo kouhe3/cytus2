@@ -253,13 +253,13 @@ export function rowsFor(
       // 按阅读阶段排序（阶段由脚本推导：角色等级硬上限 + 剧情触发 + 帖子依赖）
       return [...index.im]
         .filter((t) => match(t.avatar))
-        .sort((a, b) => (a.stage ?? 99) - (b.stage ?? 99))
+        .sort((a, b) => (a.readIndex ?? 10_000) - (b.readIndex ?? 10_000))
         .map((t) => ({
           key: t.id,
           view: "im",
           id: t.id,
           title: t.titles[lang] || t.id,
-          sub: `阶段 ${t.stage ?? "?"} · ${t.author} · ${t.replies} 回复`,
+          sub: `#${t.readIndex ?? "?"} 阶段 ${t.stage ?? "?"} · ${t.author} · ${t.replies} 回复`,
           badge: t.id,
           avatar: t.avatar,
         }));

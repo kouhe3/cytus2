@@ -144,6 +144,45 @@ def main():
         "osStories": OS_STORIES,
         "expTables": {p: len(exp.get(p, [])) for p in packs},
     }
+    # ---- 同阶段内的交错顺序：触发帖 → 本阶段活跃账号 → 三主角 → 其余主角 → 其他 ----
+    triggers_by_stage = {}
+    for i, st in enumerate(stages):
+        for tid in st["posts"]:
+            if tid in triggers:
+                triggers_by_stage.setdefault(i, []).append(tid)
+
+    # 剧情 → 主要账号（用于把「本阶段剧情所属账号」排前）
+    STORY_ACCOUNT = {
+        "story01_new": "paff", "story03": "paff", "story02": "robo",
+        "story_neko02": "neko", "story05": "robo", "story_ending02": "xenon",
+        "story04": "neko", "story_cherry02": "cherry",
+    }
+    MAIN = ["paff", "neko", "robo"]
+    OTHER_MAIN = ["ivy", "xenon", "conner", "cherry", "joe"]
+
+    def account_of(avatar: str) -> str:
+        return avatar.split("_")[0].lower()
+
+    read_index, seq = {}, 0
+    # topics 的键就是帖子 id；用最新版 index 里的顺序当兜底
+    data_order = {tid: t.get("order", 10_000) for tid, t in topics.items()}
+    for i, st in enumerate(stages):
+        active = {STORY_ACCOUNT.get(triggers[t]) for t in st["posts"] if t in triggers} - {None}
+        def key(tid):
+            acc = account_of((topics.get(tid) or {}).get("AvatarId") or "")
+            if tid in triggers:
+                grp = 0
+            elif acc in active:
+                grp = 1
+            elif acc in MAIN or acc in OTHER_MAIN:
+                grp = 2
+            else:
+                grp = 3
+            return (grp, data_order.get(tid, 10_000))
+        for tid in sorted(st["posts"], key=key):
+            seq += 1
+            read_index[tid] = seq
+
     json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
     # 把阶段号写回 index.json，前端 iM 列表按它排序
@@ -151,6 +190,7 @@ def main():
     idx = json.load(open(idx_path, encoding="utf-8"))
     for t in idx["im"]:
         t["stage"] = out["order"].get(t["id"], 99)
+        t["readIndex"] = read_index.get(t["id"], 10_000)
     json.dump(idx, open(idx_path, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 
     print(f"packs: {packs}")

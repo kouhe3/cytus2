@@ -17,8 +17,20 @@ OA 探索档案的角色、可点击物件，以及挂在物件下的文件。
 _Avoid_: 联动章节
 
 **Story Node** (`story_node`):
-叙事单元，`kind` 为 `event`（剧情事件）或 `branch`（分支节点）。剧情闸不是节点，是 `requires_story` 边。
-_Avoid_: 剧情闸（作实体）、备份节点（作独立实体）
+叙事单元，`kind` 为 `event`（剧情事件）或 `branch`（Branching OS 节点）。剧情闸不是节点，是 `requires_story` 边。
+_Avoid_: 剧情闸（作实体）、把 Branching OS 节点叫「备份节点」
+
+**Branching OS** (`story_node`，`kind=branch`):
+新角色的分支式 OS：节点按曲包等级与分支状态解锁，和备份数据库不是同一套东西。
+_Avoid_: 备份数据库、backup
+
+**Backup Database** (`gallery_item`):
+备份数据库里的一条媒体条目：影片、图片或 boss stage，按 `folder` 组织并带解锁条件。
+_Avoid_: 备份节点、branching node
+
+**Boss Stage** (`boss_stage`):
+剧情里的特殊演出关卡（曲目 + 难度 + 舞台）；既属于剧情事件，也作为备份数据库条目出现。
+_Avoid_: boss 曲、活动曲
 
 **Character** (`character`):
 游戏角色 / 曲包身份。

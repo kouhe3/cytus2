@@ -8,6 +8,10 @@
 iM 社群的一条帖子：作者、头像、多语言标题与正文、回复树、附件。
 _Avoid_: 帖子、article、topic
 
+**IM Reply** (`im_reply`):
+帖子下的一条回复。游戏内没有楼中楼：323 帖共 4155 条回复，全部扁平（最大深度 1）。
+_Avoid_: 楼中楼、嵌套回复
+
 **OS Log** (`os_log`):
 OS 档案中的一条记录：所属文件、编号、日期、正文 blocks、影片引用。
 _Avoid_: OS 文件、entry、archive（泛指文件时）

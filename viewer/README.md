@@ -698,7 +698,7 @@ VanessaAudio / NoExitAudio / OutroAudio），行数与内容都吻合：
 | **OS 档案** | `text/osdata/<packId>` 里每个档案的 `UnlockCharts` + `OSLockCondition.LevelLocks`（261 个档案带谱面，覆盖 555 个谱面） |
 | 分支节点 | `branchingosdata.UnlockedCharts` + `UnlockCondition.Level` |
 | 通关剧情 | `chartunlock.ab` 的 TextAsset `storychartunlock`：`{storyId:[{SongId,Difficulty}]}` |
-| CAPSO 商店 | `capsoshopdata.ab` 的 `capsoshoppacks`：条目 `songId_0,1,2`（下划线后是难度） |
+| CAPSO 商店 | `capsoshopdata.ab` 的 `capsoshoppacks`：`ItemType 0` 是谱面条目 `songId_0,1,2`（下划线后是难度），`ItemType 1` 是 CAPSO 限定造型（如 `neko001_s003`「Chelsea」、`xenon001_s002`「Ocean」、`sagar001_s001`「Yuko?」，均 `available:false`） |
 | CAPSO! 抽奖 | `gacharewarddata.ab`（**split_assets_pack_1**，不在 assetpack）：`gachareward` 里 `Type:0` 是谱面，`Id` 形如 `robo001_001_3`；`gachamachines` 只有 `capso`（The CAPSO!，$9.99） |
 | 购买曲包 / DLC | `song_pack_data.is_iap_pack`；DLC 曲目另在 `expansion_pack_data`（50 包 252 首，不在离线曲库里） |
 
@@ -728,6 +728,11 @@ CAPSO! 抽奖 103、付费包购买 25、OA 分析记录 68（补上了 Who Am I
 | 剧情事件 → 曲目 | 同上（`storychartunlock`） | `#/extras/songs\|<songId>` |
 | 分支节点 → 曲目 | 同上（`UnlockedCharts`） | `#/extras/songs\|<songId>` |
 | 曲包（等级解锁）→ 曲目 | 展开该曲包 | `#/extras/songs\|<packId>` |
+| 曲目 · CAPSO 商店 | 本页 CAPSO 表对应包的行高亮 | `#/extras/songs\|capso:<capsoshopXXX>` |
+| 曲目 · CAPSO! 抽奖 | 展开「抽奖限定谱面」列表 | `#/extras/songs\|gacha` |
+| CAPSO 商店曲目 → 曲目行 | 展开所属曲包 + 行高亮 | `#/extras/songs\|<songId>` |
+| CAPSO 限定造型（`ItemType 1`）→ 立绘 | 角色立绘卡片高亮并滚到视口 | `#/extras/illustrations\|<立绘 id>` |
+| 立绘卡片（CAPSO 造型）→ CAPSO 表 | 对应商店行高亮 | `#/extras/songs\|capso:<capsoshopXXX>` |
 
 落点用 `data-pack` / `data-song` 定位：先展开 `<details>` 再把目标行滚到视口中间并加 `song-hit` 背景，
 所以隐式打开的曲包也能直接定位（深链冷启动同样有效）。

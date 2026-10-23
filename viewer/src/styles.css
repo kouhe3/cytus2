@@ -216,6 +216,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .row-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; min-width: 0; }
 /* 从 iM / OS / OA / 剧情跳进「歌曲与获取方式」时定位到具体曲目 */
 tr.song-hit td { background: var(--accent-dim); }
+.logo-card.ill-hit { background: var(--accent-dim); }
 .song-pack-focus > summary { color: var(--accent); }
 
 .row-title {

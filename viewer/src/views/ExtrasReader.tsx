@@ -13,7 +13,8 @@ import {
   formatClock,
 } from "../data";
 import { Video } from "../components/Media";
-import { Skeleton } from "../components/ui";
+import { NavChip, Skeleton } from "../components/ui";
+import { DIFF_LABEL as DIFF_NAME, songIndex, songsRoute } from "../songs";
 
 /** title_info.Type -> video_title_* 片段（依据 Title01..Title06 与特殊命名的先后关系推断） */
 const TITLE_CLIPS: Record<number, string[]> = {
@@ -31,12 +32,33 @@ const TITLE_CLIPS: Record<number, string[]> = {
 
 function IllustrationSection({
   index,
+  focus,
   onNavigate,
 }: {
   index: IndexData;
+  /** 反向引用落点：立绘 id（CAPSO 商店的造型条目会链到这里） */
+  focus?: string;
   onNavigate: (view: string, id?: string) => void;
 }) {
   const manifest = useManifest();
+  // CAPSO 商店包里的 ItemType=1 条目就是这些造型，反查回去给个入口
+  const songsAsync = useAsync(loadSongs, []);
+  const capsoOf = (id: string) =>
+    songsAsync.state === "ready" ? songsAsync.data.capso.find((p) => p.extras.includes(id)) : undefined;
+  useEffect(() => {
+    if (!focus) return;
+    // 立绘是懒加载：上方图片撑开高度会把目标顶走，所以定位后再补两次
+    const scroll = () =>
+      document.querySelector(`[data-ill="${CSS.escape(focus)}"]`)?.scrollIntoView({ block: "center" });
+    const raf = requestAnimationFrame(scroll);
+    const t1 = setTimeout(scroll, 350);
+    const t2 = setTimeout(scroll, 1000);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [focus]);
   const byChar = new Map<string, typeof index.illustrations>();
   for (const item of index.illustrations) {
     if (!byChar.has(item.characterName)) byChar.set(item.characterName, []);
@@ -64,7 +86,11 @@ function IllustrationSection({
               {items.map((item) => {
                 const entry = manifest?.illustrations?.[`illustration_${item.id}`];
                 return (
-                  <figure key={item.id} className="logo-card">
+                  <figure
+                    key={item.id}
+                    data-ill={item.id}
+                    className={`logo-card${item.id === focus ? " ill-hit" : ""}`}
+                  >
                     {entry ? (
                       <a href={MEDIA_BASE + encodeURI(entry.file)} target="_blank" rel="noreferrer">
                         <img
@@ -82,6 +108,19 @@ function IllustrationSection({
                         {item.id}
                         {entry ? ` · ${entry.w}×${entry.h}` : ""}
                       </span>
+                      {(() => {
+                        const capso = capsoOf(item.id);
+                        return capso ? (
+                          <button
+                            type="button"
+                            className="chip chip-btn"
+                            onClick={() => onNavigate("extras", songsRoute(`capso:${capso.id}`))}
+                            title={`${capso.id} · CAPSO 商店条目`}
+                          >
+                            CAPSO 商店「{capso.name}」
+                          </button>
+                        ) : null;
+                      })()}
                     </figcaption>
                   </figure>
                 );
@@ -441,6 +480,20 @@ function SongSection({
   // 从别处跳进来：先展开目标曲包，再把目标行滚到视口中间（隐藏的 details 里滚不动）
   useEffect(() => {
     if (!focus) return;
+    if (focus.startsWith("capso:")) {
+      requestAnimationFrame(() => {
+        document
+          .querySelector(`tr[data-capso="${CSS.escape(focus.slice(6))}"]`)
+          ?.scrollIntoView({ block: "center" });
+      });
+      return;
+    }
+    if (focus === "gacha") {
+      const el = document.getElementById("gacha-charts") as HTMLDetailsElement | null;
+      if (el) el.open = true;
+      requestAnimationFrame(() => el?.scrollIntoView({ block: "center" }));
+      return;
+    }
     if (focusPack) {
       const el = document.querySelector<HTMLDetailsElement>(`details[data-pack="${CSS.escape(focusPack.id)}"]`);
       if (el) el.open = true;
@@ -460,6 +513,7 @@ function SongSection({
     for (const item of pack.songs) capsoIndex.set(item.id, { pack, diffs: item.diffs });
   }
   const gachaIndex = catalog.gacha.charts;
+  const songMeta = songIndex(catalog);
   const capsoLabel = (entry: { pack: import("../types").CapsoPack }) =>
     `CAPSO 商店「${entry.pack.name}」· ${entry.pack.price}${entry.pack.capsoPrice ? ` / ${entry.pack.capsoPrice} CAPSO` : ""}`;
 
@@ -585,14 +639,22 @@ function SongSection({
                               ) : null}
                             </>
                           ) : capso && capso.diffs.includes(d) ? (
-                            <span>{capsoLabel(capso)}</span>
+                            <NavChip
+                              onClick={() => onNavigate("extras", songsRoute(`capso:${capso.pack.id}`))}
+                              title={`${capso.pack.id} · CAPSO 商店条目`}
+                            >
+                              {capsoLabel(capso)}
+                            </NavChip>
                           ) : gacha ? (
-                            <span>
+                            <NavChip
+                              onClick={() => onNavigate("extras", songsRoute("gacha"))}
+                              title="CAPSO! 抽奖限定谱面列表"
+                            >
                               {gacha.machineName} 抽奖
                               {gacha.weight ? `（权重 ${gacha.weight}` : "（"}
                               {gacha.secret ? " · 隐藏" : ""}
                               {gacha.price ? ` · ${gacha.price}` : ""}）
-                            </span>
+                            </NavChip>
                           ) : pack.iap ? (
                             <span style={{ color: "var(--muted)" }}>购买曲包后解锁</span>
                           ) : notes.length ? null : (
@@ -667,15 +729,21 @@ function SongSection({
 
       <h3 style={{ marginTop: 18 }}>CAPSO 商店与抽奖机</h3>
       <p className="lede">
-        曲目以 <span className="mono">{`songId_难度`}</span> 形式挂在 CAPSO 包里，可用 CAPSO 点数或 IAP 购买。
+        曲目以 <span className="mono">{`songId_难度`}</span> 形式挂在 CAPSO 包里（<span className="mono">ItemType 0</span>），
+        可用 CAPSO 点数或 IAP 购买。包内还有 <span className="mono">ItemType 1</span> 的造型条目（如{" "}
+        <span className="mono">neko001_s003</span>），那是 CAPSO 限定立绘，已链到角色立绘页。
         抽奖机配置在 <span className="mono">gacharewarddata.ab</span>（split_assets_pack_1）：
         <b>{catalog.gacha.machines.map((m) => `${m.Name}（${m.DefaultPrice}）`).join("、")}</b>
-        ，共 {Object.values(catalog.gacha.charts).reduce((n, v) => n + v.length, 0)} 个抽奖限定谱面。
+        ，共 {Object.values(catalog.gacha.charts).reduce((n, v) => n + v.length, 0)} 个抽奖限定谱面（见下表下方列表）。
       </p>
       <table className="grid">
         <tbody>
           {catalog.capso.map((pack) => (
-            <tr key={pack.id}>
+            <tr
+              key={pack.id}
+              data-capso={pack.id}
+              className={focus === `capso:${pack.id}` ? "song-hit" : undefined}
+            >
               <td style={{ width: 260 }}>
                 <b>{pack.name}</b>
                 <div className="mono" style={{ color: "var(--muted)" }}>
@@ -686,14 +754,74 @@ function SongSection({
                 {pack.price || "—"}
                 {pack.capsoPrice ? ` / ${pack.capsoPrice} CAPSO` : ""}
               </td>
-              <td className="mono">
-                {pack.songs.map((x) => `${x.id}（${x.diffs.join(",")}）`).join("、") || "—"}
-                {pack.extras.length ? ` · 其他：${pack.extras.join("、")}` : ""}
+              <td>
+                <div className="chips">
+                  {pack.songs.map((x) => {
+                    const info = songMeta.get(x.id);
+                    return (
+                      <NavChip
+                        key={x.id}
+                        onClick={() => onNavigate("extras", songsRoute(x.id))}
+                        title={`${x.id} · 打开该曲的全部获取方式`}
+                      >
+                        {info ? `${info.name}（${x.diffs.join(",")}）` : `${x.id}（${x.diffs.join(",")}）`}
+                      </NavChip>
+                    );
+                  })}
+                  {!pack.songs.length ? <span className="mono">—</span> : null}
+                </div>
+                {pack.extras.length ? (
+                  <div className="chips" style={{ marginTop: 4 }}>
+                    <span className="mono" style={{ color: "var(--muted)" }}>
+                      CAPSO 限定造型：
+                    </span>
+                    {pack.extras.map((id) => {
+                      const ill = index.illustrations.find((i) => i.id === id);
+                      return (
+                        <NavChip
+                          key={id}
+                          onClick={() => onNavigate("extras", `illustrations|${id}`)}
+                          title={`${id} · 角色立绘`}
+                        >
+                          {ill ? `${ill.costume || id}（${id}）` : id}
+                        </NavChip>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      <details id="gacha-charts" style={{ marginTop: 14 }}>
+        <summary className="mono">
+          CAPSO! 抽奖限定谱面（{Object.values(catalog.gacha.charts).reduce((n, v) => n + v.length, 0)} 个 ·{" "}
+          {Object.keys(catalog.gacha.charts).length} 首）
+        </summary>
+        <p className="lede" style={{ marginTop: 8 }}>
+          <span className="mono">gachareward</span> 里 <span className="mono">Type 0</span> 的谱面奖励，只有抽到才写入存档；
+          点曲目回到上面对应的曲包行。
+        </p>
+        <div className="chips">
+          {Object.entries(catalog.gacha.charts).map(([song, list]) => {
+            const info = songMeta.get(song);
+            const diffs = list
+              .map((x) => `${DIFF_NAME[x.d] ?? `难度 ${x.d}`}${x.secret ? " 隐藏" : ""}`)
+              .join(" / ");
+            return (
+              <NavChip
+                key={song}
+                onClick={() => onNavigate("extras", songsRoute(song))}
+                title={`${song} · 打开该曲的全部获取方式`}
+              >
+                {info ? info.name : song} · {diffs}
+              </NavChip>
+            );
+          })}
+        </div>
+      </details>
     </div>
   );
 }
@@ -779,7 +907,7 @@ export function ExtrasReader({
     );
   }
   if (section === "illustrations") {
-    return <IllustrationSection index={index} onNavigate={onNavigate} />;
+    return <IllustrationSection index={index} focus={focus} onNavigate={onNavigate} />;
   }
   if (section === "logos") {
     return <LogoSection onNavigate={onNavigate} />;

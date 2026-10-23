@@ -75,6 +75,13 @@ _Avoid_: 黑市（作实体）
 
 ## 模型
 
+**Reading order** (`reading_order`):
+模拟 5.3 新玩家的三阶段广度优先顺序：免费（free）→ 付费（paid）→ 联动/支线（side）。同阶段内所有角色等级同步推进（受 `IsLevelLocked` 硬上限约束），每次升级后立刻阅读已解锁的 iM 与 OS。
+_Avoid_: 把按章节或按版本当成默认顺序
+
+**Character tier**:
+角色分组 `free | paid | side`，来自 `characterTiers`；决定阅读顺序的阶段。
+
 **Edge**:
 类型化关系 `(source, relation, target)`，如 `requires_story`、`unlocks_chart`、`same_level`；由管线派生，不手工维护。
 

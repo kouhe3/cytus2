@@ -602,6 +602,21 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 
 分支剧情每个节点页顶部都有这张图（可横向滚动），点方块直接跳转；当前节点用 accent 描边。
 
+### 4.0 结局的 OA 场景是 Unity 场景，不是视频
+
+`StoryEnding04MainAction.CutsceneAfterClickOS.get_NextScene()` 返回字面量 **`C2_Interactive`**
+（`SceneName.EndingShow`），对应 build settings 第 31 个场景 → `assets/bin/Data/level31`：
+
+| 组成 | 内容 |
+|:--|:--|
+| 场景本体 | 933 个 GameObject、213 个 MonoBehaviour、24 个 AudioSource、29 个 ParticleSystem（发光地板、柱子、物件、UI 都是实时对象） |
+| 人物 | 2 个 VideoPlayer，引用 `ChaVer11Purple` / `ChaVer11Red`：2048×1024、4 秒、H.264 无音轨，黑底 additive 叠加（截图里 PAFF 坐姿 + Vanessa 站姿就是这两段视频） |
+| 对白 | 57 条 AudioClip（`sharedassets31`）+ srt 字幕，CE02–CE09 八个段落 |
+
+视频只有三段：`vos7501.mp4`（进场景前）、`vos075_bossstage.mp4`（离场后）、
+`Complete EndingCutscene.mp4`（尾声）。两段人物视频可从 `sharedassets31.resource` 直接切出
+（`ChaVer11Purple` offset 8471360 size 721758，`ChaVer11Red` offset 9193120 size 592067）。
+
 ### OA 对白（audio_subtitle）
 
 `text/audiosubtitledata/audio_subtitle` 是 OA 空间的语音台词（57 条 / 8 组 CE02–CE09），

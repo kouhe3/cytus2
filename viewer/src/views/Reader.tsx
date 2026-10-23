@@ -107,6 +107,7 @@ export function Reader(props: ReaderProps) {
           section={id}
           extra={props.extra}
           loading={props.loadingExtra}
+          lang={props.lang}
           onNavigate={onNavigate}
         />
       );

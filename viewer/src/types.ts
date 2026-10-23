@@ -199,6 +199,39 @@ export interface StoryEvent {
   imTopics?: string[];
 }
 
+export interface SongUnlock {
+  /** 0 Easy / 1 Hard / 2 Chaos */
+  d: number;
+  src: "im" | "branch";
+  ref: string;
+  names?: Record<string, string>;
+  levels?: [string, number][];
+  story?: string;
+}
+
+export interface SongInfo {
+  id: string;
+  name: string;
+  artist: string;
+  charts: Record<string, string>;
+}
+
+export interface SongPack {
+  id: string;
+  name: string;
+  iap: boolean;
+  hasIM: boolean;
+  category: string;
+  price?: string;
+  songs: SongInfo[];
+}
+
+export interface SongCatalog {
+  packs: SongPack[];
+  other: SongInfo[];
+  unlocks: Record<string, SongUnlock[]>;
+}
+
 export interface IndexData {
   meta: Meta;
   chapters: Chapter[];

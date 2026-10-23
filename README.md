@@ -51,6 +51,7 @@ python export_json.py             # index.json + content.<lang>.{im,os,extra}.js
 python export_subs_index.py       # 字幕正文索引（55 组 / 4718 条 cue）
 python export_endplay_map.py      # 结场演出：视频 ← 曲目（读 il2cppdumper/dump.cs）
 python export_story_events.py     # 全部剧情事件（Story 类 + Action 常量）→ index.storyEvents
+python export_song_catalog.py     # 曲库（sharedassets0 的 song_pack_data）+ 获取方式 → data/songs.json
 python export_endplay_audio.py    # 给无声的结场动画配曲目音轨（songdata_<曲> 的 AudioClip）
 ```
 

@@ -601,3 +601,27 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 | `UnlockCondition.Level` / `StateValue` | 方块 tooltip（`taos010 · Lv10 · 分支 收束`） |
 
 分支剧情每个节点页顶部都有这张图（可横向滚动），点方块直接跳转；当前节点用 accent 描边。
+
+### 歌曲目录与获取方式
+
+曲名/难度不在 `songdata_*.ab`（那里面只有谱面 JSON 与 AudioClip），而在
+`split_base_assets.apk` 的 `assets/bin/Data/sharedassets0.assets`（分片 `.splitN`）里的 TextAsset **`song_pack_data`**：
+
+```json
+{"offline_song_pack_list":[{"song_pack_id":"tairitsu001","song_pack_name":"Tairitsu",
+  "is_iap_pack":true,"hasIM":false,"price":"$9.99",
+  "song_info_list":[{"song_id":"tairitsu001_001","song_name":"Grievous Lady",
+                     "artist":"Team Grimoire vs Laur",
+                     "charts":{"Easy":{"Level":"6"},"Hard":{"Level":"10"},"Chaos":{"Level":"15+"}}}]}]}
+```
+
+`export_song_catalog.py` 把它与两处解锁信息合并：
+
+| 来源 | 字段 |
+|:--|:--|
+| iM 帖 | `im_topic_data.UnlockCharts`（SongId + Difficulty）+ 该帖的 `LevelLocks` / `StoryLockId` |
+| 分支节点 | `branchingosdata.UnlockedCharts` + `UnlockCondition.Level` |
+
+输出 `data/songs.json`：27 个曲包 / 461 首歌 / 53 首有获取方式，附录「歌曲与获取方式」按曲包折叠展示，
+每个难度一行：`简单：NEKO#ΦωΦ Lv18 后阅读 iM 帖「高昏！爽wwww」`、`困难：…`；
+没有记录的难度写「未记录」（Wiki 上也多是空的）。

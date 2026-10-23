@@ -1,7 +1,8 @@
-import type { ExtraContent, IndexData } from "../types";
+import type { ExtraContent, IndexData, Lang } from "../types";
 import { useState } from "react";
 import { MEDIA_BASE, findMovie, findVideoWithSong, useManifest } from "../media";
-import { loadEndplayMap, loadSubsIndex, useAsync, formatClock } from "../data";
+import type { SongCatalog } from "../types";
+import { characterName, loadEndplayMap, loadSongs, loadSubsIndex, useAsync, formatClock } from "../data";
 import { Video } from "../components/Media";
 import { Skeleton } from "../components/ui";
 
@@ -333,17 +334,114 @@ function CutsceneSection({ onNavigate }: { onNavigate: (view: string, id?: strin
   );
 }
 
+// Difficulties 枚举顺序（dump.cs）：0 Easy / 1 Hard / 2 Chaos / 3 Glitch / 4 Crash / 5 Dream / 6 Drop
+const DIFF_KEYS = ["Easy", "Hard", "Chaos", "Glitch", "Crash", "Dream", "Drop"] as const;
+const DIFF_LABEL = ["简单", "困难", "混沌", "Glitch", "Crash", "Dream", "Drop"] as const;
+
+/** 歌曲目录（song_pack_data）+ 获取方式（iM 帖 / 分支节点） */
+function SongSection({
+  index,
+  lang,
+  onNavigate,
+}: {
+  index: import("../types").IndexData;
+  lang: import("../types").Lang;
+  onNavigate: (view: string, id?: string) => void;
+}) {
+  const songs = useAsync(loadSongs, []);
+  if (songs.state === "loading") return <Skeleton rows={8} />;
+  if (songs.state === "error") return <p className="state">歌曲目录加载失败。</p>;
+  const catalog: SongCatalog = songs.data;
+
+  const total = catalog.packs.reduce((n, p) => n + p.songs.length, 0) + catalog.other.length;
+
+  return (
+    <div className="reader-inner">
+      <div className="crumbs">
+        <button type="button" className="chip chip-btn" onClick={() => onNavigate("extras")}>
+          附录
+        </button>
+      </div>
+      <h2>歌曲与获取方式</h2>
+      <p className="lede">
+        {catalog.packs.length} 个曲包 / {total} 首歌，曲名与难度等级来自 sharedassets0 的{" "}
+        <span className="mono">song_pack_data</span>；「获取方式」来自 iM 帖的{" "}
+        <span className="mono">UnlockCharts</span> 与分支节点的 <span className="mono">UnlockedCharts</span>
+        （没有记录的写「未记录」）。
+      </p>
+      {catalog.packs.map((pack) => (
+        <details key={pack.id} style={{ marginBottom: 10 }}>
+          <summary className="mono">
+            {pack.name}（{pack.id}）· {pack.songs.length} 首
+            {pack.iap ? ` · 付费 ${pack.price ?? ""}` : " · 免费"}
+            {pack.hasIM ? "" : " · 无 iM"}
+          </summary>
+          <table className="grid" style={{ marginTop: 6 }}>
+            <tbody>
+              {pack.songs.map((song) => (
+                <tr key={song.id}>
+                  <td style={{ width: 240 }}>
+                    <b>{song.name}</b>
+                    <div className="mono" style={{ color: "var(--muted)" }}>
+                      {song.id} · {song.artist}
+                    </div>
+                  </td>
+                  <td style={{ width: 120 }} className="mono">
+                    {Object.entries(song.charts).map(([k, lv]) => `${k} ${lv}`).join(" / ")}
+                  </td>
+                  <td>
+                    {DIFF_KEYS.map((key, d) => {
+                      if (!(key in song.charts)) return null;
+                      const hit = (catalog.unlocks[song.id] ?? []).find((u) => u.d === d);
+                      const lvText = (hit?.levels ?? [])
+                        .filter(([, lv]) => lv > 0)
+                        .map(([pack2, lv]) => `${characterName(index, pack2)} Lv${lv}`)
+                        .join("、");
+                      return (
+                        <div key={key} className="mono" style={{ lineHeight: 1.7 }}>
+                          {DIFF_LABEL[d]}：
+                          {hit ? (
+                            <>
+                              {lvText ? `${lvText} 后` : ""}阅读
+                              {hit.src === "im" ? " iM 帖 " : " 分支节点 "}
+                              <button
+                                type="button"
+                                className="chip chip-btn"
+                                onClick={() => onNavigate(hit.src === "im" ? "im" : "branching", hit.ref)}
+                              >
+                                {hit.names?.[lang] || hit.names?.["zh-Hans"] || hit.ref}
+                              </button>
+                            </>
+                          ) : (
+                            <span style={{ color: "var(--muted)" }}>未记录</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      ))}
+    </div>
+  );
+}
+
 export function ExtrasReader({
   index,
   section,
   extra,
   loading,
+  lang,
   onNavigate,
 }: {
   index: IndexData;
   section: string;
   extra?: ExtraContent;
   loading: boolean;
+  lang: Lang;
   onNavigate: (view: string, id?: string) => void;
 }) {
   if (loading) {
@@ -414,6 +512,9 @@ export function ExtrasReader({
   }
   if (section === "logos") {
     return <LogoSection onNavigate={onNavigate} />;
+  }
+  if (section === "songs") {
+    return <SongSection index={index} lang={lang} onNavigate={onNavigate} />;
   }
   if (section === "cutscenes") {
     return <CutsceneSection onNavigate={onNavigate} />;

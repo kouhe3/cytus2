@@ -44,6 +44,10 @@ export function loadExtra(lang: Lang): Promise<ExtraContent> {
 /** 字幕正文索引：{ 字幕 key: { lang: [start, end, text][] } } */
 export type SubsIndex = Record<string, Record<string, [number, number, string][]>>;
 
+export function loadSongs(): Promise<import("./types").SongCatalog> {
+  return loadJson<import("./types").SongCatalog>("songs.json");
+}
+
 export function loadSubsIndex(): Promise<SubsIndex> {
   return loadJson<SubsIndex>("subs-index.json");
 }

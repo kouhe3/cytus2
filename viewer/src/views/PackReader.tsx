@@ -22,7 +22,7 @@ export function PackReader({
     <div className="reader-inner">
       <div className="crumbs">
         <button type="button" className="chip chip-btn" onClick={() => onNavigate("packs")}>
-          曲包阶梯
+          角色
         </button>{" "}
         <Chip>同步点 {pack.syncCount}</Chip>
       </div>
@@ -35,8 +35,8 @@ export function PackReader({
         ) : null}
       </h2>
       <p className="lede">
-        曲包 <span className="mono">{pack.id}</span> · 角色 {characterName(index, pack.id)}。
-        同一 level 上，iM 帖与 OS 条目同时解锁 —— 这是两条轨道之间唯一可验证的交点。
+        角色 <b>{characterName(index, pack.id)}</b>，等级载体是曲包 <span className="mono">{pack.id}</span>。
+        每个等级同时解锁 iM 帖与 OS 条目 —— 这是两条轨道之间唯一可验证的交点。
       </p>
       <Facts
         items={[

@@ -642,8 +642,12 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 CAPSO! 抽奖 103、付费包购买 25、OA 分析记录 68（补上了 Who Am I? 的 Glitch）、无本地记录 3（1 首：vanessa001_023 Cocytus，`HideWhenLocked: true`）。
 
 本地数据完全没有触发点、但游戏里确实能解锁的谱面，写进 **`cytus2_work/song_notes.json`**（入仓库的
-手工资料，不是派生数据），导出时并入 `songs.json.notes`，页面标「外部资料」。现有条目：`ivy001_049` Heroic Age —— bili wiki 写「Ivy Lv88 + 打通 A 结局」，Fandom 写
-「All Difficulties · Ivy Lv.90」（`ivy001` exp 表长 90，即满级），两条都保留，页面标「外部资料（记载冲突）」。
+手工资料，不是派生数据），导出时并入 `songs.json.notes`，页面标「外部资料」。现有条目：`ivy001_049` Heroic Age —— 链是「Ivy 结局剧情（等级门槛 88 / 90 两说）→ 制作人员名单播完 → 自动获得」。
+等级阈值两版 wiki 不一致（bili 88、Fandom 90）；数据侧的旁证是 `global-metadata.dat` 里有字符串字面量
+`ivy001_049_0,1,2`，说明它是代码里直接发放的，不经过任何解锁表。
+
+附带的彩蛋（不属于曲目数据）：Cytus I 皮肤要在 bad ending 的制作人员名单里点击逐渐淡出的字母拼出
+`CYTUS I` 才能拿到，`global-metadata.dat` 里没有这条判定字符串。
 各来源两两重叠为 0，可以按优先级判定。
 
 等级 +1 已用 Fandom 交叉验证：Aroma（`paff002`）7 首的 15 个解锁等级全部吻合

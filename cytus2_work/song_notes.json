@@ -3,14 +3,9 @@
   "ivy001_049": [
     {
       "d": [0, 1, 2],
-      "text": "Ivy 等级达到 Lv88 后打通「A 结局」",
+      "text": "Ivy 结局剧情（等级门槛 88 或 90，两版 wiki 不一致）→ 制作人员名单播完自动获得",
       "story": "story_ending02",
-      "source": "bili wiki"
-    },
-    {
-      "d": [0, 1, 2],
-      "text": "Ivy 等级达到 Lv90（满级，exp 表长 90）",
-      "source": "Fandom"
+      "source": "bili wiki / Fandom + 代码内字面量 ivy001_049_0,1,2"
     }
   ]
 }

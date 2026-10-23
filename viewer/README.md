@@ -1,0 +1,160 @@
+# Cytus II 剧情阅览器
+
+把 `cytus2_story/` 里的剧情文本以结构化 JSON 的形式在浏览器里阅读。暗色为默认主题，可切换亮色。
+
+- 技术栈：Vite 8 + React 19 + TypeScript 7（`pnpm init` 起步，无 UI 框架依赖，样式为手写 CSS + CSS 变量令牌）
+- 数据：`public/data/index.json`（结构索引）+ 按语言 / 按视图拆分的 `content.<lang>.{im,os,extra}.json`
+- 路由：hash 路由（`#/timeline/pos001`、`#/im/P0101`、`#/packs/paff001`），可直接分享链接、支持前进后退
+
+## 运行
+
+```bash
+cd viewer
+pnpm install
+pnpm dev          # http://127.0.0.1:5183
+pnpm build        # tsc --noEmit && vite build -> dist/
+pnpm preview      # 预览生产构建 http://127.0.0.1:5184
+```
+
+数据由 `cytus2_work/export_json.py` 从 `cytus2_work/text/`（AssetBundle 导出的 TextAsset）生成：
+
+```bash
+cd cytus2_work && python export_json.py    # 写入 ../viewer/public/data/
+```
+
+## 视图
+
+| 视图 | 左侧列表 | 右侧阅读面 |
+|:--|:--|:--|
+| 时间线 | 三个游戏视图里的两个：**TIMELINE CHAPTER** = 章节列表（17 章）→ 章节内按 **FOLDER**（`TimelineChapter.Folder`，含 `Rin & Sagar`、`Ivy & Vanessa` 这类联合文件夹）分组；**TIMELINE BY VERSION** = 选版本号（默认最新）→ 按 **角色**（osdata 文件名 → `gallerydata/folder` 显示名）分组。两个维度不混用，筛选器也随之切换（章节视图筛文件夹、版本视图筛角色）。游戏里第三个视图「点角色 → 按版本分组」等价于版本视图里先选角色、版本留「全部版本」——此时列表自动改为按版本号分组，无需单独入口 | 档案全文（对话 / 旁白 / 邮件 / 插图 / 影片占位），同文件前后翻页；章节视图里右栏显示章节统计 |
+| 曲包阶梯 | 26 个曲包，标题显示角色名（`paff003` → `PΛFF`），编号作为右侧 ID | 每个 level 一行：同一刻解锁的 iM 帖与 OS 条目（可点跳） |
+| iM 社群 | 323 帖（游戏内顺序） | 帖子正文 + 嵌套回复 + 剧情闸 + 同 level 的 OS 交叉链接 |
+| 结局闸 | 8 个 `StoryLockId` | 该闸解锁的帖子列表 |
+| OA 系统 | 12 个角色，列表与页头显示角色名（编号作为 ID） | 物件 / 描述 / 文件（结构化脚本块） |
+| 备份数据库 | `gallerydata` 的 25 个角色文件夹 | 每角色影片 / 插图 / Boss 舞台清单（含解锁条件、可直接播放或看大图） |
+| 分支剧情 | Tairitsu 线 48 个节点 | 节点正文 + 前驱后继（`LinkedFileIds`） |
+| 附录 | 语音字幕 / iM 助手 / 标题画面 / **角色立绘** / **图标与 LOGO** | 对应表格或图片网格（点图下载原图） |
+
+搜索覆盖当前语言的 iM 正文 + OS 全文（标题、ID、章节名、正文），结果按 iM / OS 分组。
+
+## JSON 结构
+
+`index.json`（≈630 KB，首屏一次加载）：
+
+```jsonc
+{
+  "meta":    { "languages": [{ "code": "zh-Hans", "label": "简体中文" }], "counts": { … } },
+  "chapters":[ { "id": 4, "name": "The Lost", "category": 0, "count": 138,
+                 "index": [6001, 6138], "date": ["693_06_03 19:14", "702_10_25 …"],
+                 "folders": ["…"], "packs": [["cherry001", 29]], "inversions": 43,
+                 "entries": ["chos001", "…"] } ],
+  "folders": [ { "name": "PAFF", "count": 57, "chapters": ["The Silence"], "entries": […] } ],
+  "packs":   [ { "id": "paff001", "levels": [ { "level": 35, "im": ["P…"], "os": ["pos001"] } ] } ],
+  "im":      [ { "id": "P0101", "order": 1, "titles": { "zh-Hans": "新曲发表。" },
+                 "gate": "story01", "packs": [["paff001", 0]], "charts": […], "replies": 21 } ],
+  "os":      [ { "id": "pos001", "file": "paff001", "chapter": "cyTus", "folder": "PAFF",
+                 "index": 3006, "date": "693_03_16 14:18", "category": "1.4", "type": 3,
+                 "packs": [["paff001", 35]], "fileLock": "", "movies": [] } ],
+  "gates":   [ { "id": "story_ending02", "topics": ["O8401", "…"] } ],
+  "sync":    [ { "pack": "neko001", "level": 24, "im": ["R2201"], "os": ["chos031"] } ],
+  "timeline":[ "ivos002", "vos039", "…" ],          // 世界时间序
+  "oa":      [ { "character": "alice001", "objects": […], "documents": […] } ],
+  "backup":  [ { "id": "taos001a", "position": 1, "next": ["taos002a"], "branch": "a" } ],
+  "titleInfo": [ { "Type": 1, "Name": "Core of cyTus", "Conditions": [ … ] } ]
+}
+```
+
+内容文件按语言拆分，按需加载（`zh-Hans` 三份合计 ≈5.6 MB）：
+
+```jsonc
+// content.zh-Hans.im.json
+{ "lang": "zh-Hans",
+  "im": { "P0101": { "title": "新曲发表。", "text": "New Song Released.",
+                     "replies": [ { "id": "P0102", "author": "iluvpuf", "avatar": "paffsp_01",
+                                    "text": "…", "attachments": [], "replies": [] } ] } } }
+
+// content.zh-Hans.os.json
+{ "lang": "zh-Hans",
+  "os": { "pos001": { "name": "Show_693_03_16", "blocks": [
+      { "kind": "dialogue", "speaker": "主持人", "text": "接下来，第 12 号表演者……" },
+      { "kind": "narration", "text": "……" },
+      { "kind": "image", "id": "pos0101" },
+      { "kind": "movie", "id": "pos0901" },
+      { "kind": "mail", "title": "…", "from": "…", "to": "…", "body": "…" },
+      { "kind": "imageviewer", "id": "pos2401_19201280", "viewer": "imageviewer" },
+      { "kind": "note", "directive": "…", "value": "…" } ] } } }
+
+// content.zh-Hans.extra.json
+{ "lang": "zh-Hans", "oa": { … }, "backup": { "taos001a": { "blocks": […] } },
+  "audio": [ { "id": "CE0202", "character": "PAFF", "text": "…" } ],
+  "assistants": [ { "id": "assistant_breakdown", "pages": ["…"] } ] }
+```
+
+OS 文本是**块结构**而不是 Markdown：游戏脚本里的 `##conversation` / `##text` / `##image` / `##movie` / `##mail` / `##json` 指令在导出阶段就被拆成 `dialogue` / `narration` / `image` / `movie` / `mail` / `imageviewer` / `note` 七种块，渲染层只负责样式，不再解析文本。
+
+## 媒体（图片 / 影片 / 音频）
+
+`public/media/` 由 `cytus2_work/export_media.py` 从 AssetBundle 导出，`manifest.json` 是 id → 文件的映射：
+
+| 目录 | 来源 | 说明 |
+|:--|:--|:--|
+| `avatars/` | `imavatars.ab` | 254 个 iM 账户头像（80×80，`AvatarId` → 文件） |
+| `gallery-icons/` | `galleryicons.ab` | 31 个备份数据库角色图标（`AvatarId` → 文件；`Avatar` 组件的第二回退） |
+| `illustrations/` | `illustration_*.ab`、`broken_illustration_*.ab` | 70 张角色立绘（按造型，如 Default / Kimono / Idol / Concerto）+ 14 张**全灭结局**立绘（`broken_illustration_*`，bad ending 用），均 640×852（`full_illustration` 层） |
+| `oa/` | `split_base_assets.apk` → `assets/bin/Data` | 94 张 OA 美术：`oas_<角色>_<物件序号>_<1..3>` 物件面板图（布面 + 符号的 3 个状态，即游戏里物件扫描动画的画面）、`<角色>_objNNN` 物件主图、`<角色>_l` 角色 LOGO（舞台上合成的那种白字标志） |
+| `logos/` | `split_base_assets.apk` → `assets/bin/Data` | 52 个曲包 / 联名 / 品牌标志（`pack_icon_000-028`、`capsopack_icon_*`、`RayarkLogo_White`、`C2Logo`…），附录「图标与 LOGO」 |
+| `illustrations/` | `illustration_*.ab`、`broken_illustration_*.ab` | 84 个备份数据库插图（640×852，`<char>_<NNN>` 别名映射到 `_s<NNN>` bundle） |
+| `os-attachments/` | `osattachments_*.ab` | OS 档案插图（`##image=` / `##json=imageviewer`） |
+| `im-attachments/` | `imattachments_*.ab` | iM 帖子附件 |
+| `videos/` | `video_{story,trueend,endplay,oasystem}_*.ab` | 116 个 mp4（1111 MB），原始 H.264 + AAC 流，直接切 `VideoClip` 的 `.resource` 段 |
+| `titles/` | `video_title_*.ab` | 12 段标题画面动画（1136×852 等，附录「标题画面演进」按 Type 挂载） |
+| `covers/` | `galleryimageviewer.ab` | 23 张备份数据库图（Format 3 / `icon_image`）。贴图是方形画布，但游戏按 gallerydata 的 `Location`（`"宽,高"`）拉伸显示，故导出时缩放到该尺寸：neko 组 2048×1365（3:2）、paff 组 3072×1134（2.71:1）、`rayark_10th` 2048×1365 |
+| `subs/` | `srtfile_{cn,zh,en,ja,ko}.ab` | 55 部过场影片的字幕，SRT → WebVTT（273 个文件），按语言切换 |
+| `audio/sound/` | `ossounds.ab` | `##sound=` 音效（WAV → MP3 VBR） |
+| `audio/bgm/` | `osbgms.ab` | `##bgm=` 背景音乐（WAV → MP3 VBR） |
+
+```jsonc
+{
+  "avatars": { "nekosp_01": { "file": "avatars/nekosp_01.png", "w": 80, "h": 80 } },
+  "images": { "aos1101": [ { "file": "os-attachments/aos1101.png", "w": 512, "h": 512, "bundle": "osattachments_aos1101" } ] },
+  "videos": { "story04_1": { "file": "videos/story04_1.mp4", "w": 1136, "h": 852, "fps": 24, "frames": 227 } },
+  "movies": { "pos0901": { "file": "videos/…mp4" } },          // ##movie=pos0901 → 影片
+  "audio":  { "sound": { "Mic_Drop": { "file": "audio/sound/Mic_Drop.mp3", "seconds": 1.2 } },
+              "bgm":   { "Node_04": { "…" } } }
+}
+```
+
+### 内联插图统一尺寸
+
+`components/Media.tsx` 的 `InlineImage` 是所有内联图的唯一入口（iM 附件、OS 档案 `##image` / `##json`、OA 文档、分支剧情静帧）：
+
+```
+displayAspect = 1.5 × (贴图宽 / 贴图高)      // 基准框 240×160，拉伸填充，不裁切
+width = min(100%, 560px × displayAspect)    // 高度预算 560px，竖图不占满整屏
+```
+
+依据 IL2CPP（`ThumbnailButton.SetThumbnail`, RVA 0x21A18F8）：`sizeDelta = (rt.sizeDelta.x * bounds.w/h, rt.sizeDelta.y)`，prefab `ThumbnailButton` 的 RectTransform 为 240×160。实测：512×512 → 1.50，231×512 → 0.68。
+
+### 插图按 Sprite 裁切
+
+AssetBundle 里的 `Texture2D` 往往是**补成正方形**的画布（透明留边），真正的画面由同 bundle 的 `Sprite.m_RD.textureRect` 指定。导出器因此优先取 Sprite 的图像：`taos0101` 的纹理是 512×512，实际插图为 231×512（竖构图），旧版本按纹理直出会得到一张带大片透明的正方形 PNG。清单里的 `w/h` 是裁切后尺寸。
+
+游戏本身也给少数条目发了占位图：分支线 `taos011` / `taos020` / `taos021` 的 9 张插图是深蓝底红字 **DUMMY**，导出器按「≥60% 像素为 `#060B4A`」把它们标成 `placeholder: true`，阅读面在 caption 里注明「占位素材（游戏内为 DUMMY）」。
+
+## 构建产物体积
+
+`pnpm build` 会把 `public/`（`data/` 17 MB + `media/` 1.35 GB）原样复制进 `dist/`，`dist` 约 1.38 GB——媒体是主体。只做本地阅读用 `pnpm dev` 或 `pnpm preview` 即可；要发布到没有媒体目录的静态托管，删掉 `dist/media` 后页面会退回显示资源 id 的占位 chip。
+
+## 兼容性 / 无障碍
+
+- 键盘：`/` 聚焦搜索，`Esc` 清空；所有可点元素都是 `<button>`（列表用 `aria-selected`，导航用 `aria-current`）。
+- 主题：`<html data-theme>` 切换，`color-scheme` 同步；默认暗色，选择写入 `localStorage`。
+- 响应式：≤900px 单列（导航横向滚动、列表与阅读面上下排列），1440px 双栏。
+- 状态：加载中骨架、空列表、搜索无结果、数据缺失错误页均已覆盖。
+
+## 参考
+
+- Vite `public/` 目录与静态资源：[vite.dev/guide/assets](https://vite.dev/guide/assets) — 放在 `public/` 的文件以根绝对路径引用，构建时原样复制到 `dist/`
+- React 19 客户端渲染入口：[react.dev/reference/react-dom/client/createRoot](https://react.dev/reference/react-dom/client/createRoot)
+- Vite 配置文件与 `defineConfig`：[vite.dev/config/](https://vite.dev/config/)
+- `@vitejs/plugin-react` 用法（`plugins: [react()]`）：[npmjs.com/package/@vitejs/plugin-react](https://www.npmjs.com/package/@vitejs/plugin-react)

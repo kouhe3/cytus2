@@ -1,0 +1,59 @@
+# --- Cytus II 项目：本仓库只放复现脚本与阅览器源码 ---
+# 游戏资产（媒体 / 剧情文本 / 各种派生索引）一律不进库，按 README 的管线在本地重新生成。
+
+# 原始 APK（约 3.8 GB，放在仓库根目录）
+/base.apk
+/split_*.apk
+/icon.png
+/viewer/dist.zip
+
+# 生成物：剧情文本图 / 媒体
+/cytus2_story/
+viewer/public/media/
+viewer/public/data/
+
+# 中间产物：AssetBundle 副本 / TextAsset dump / 反编译输出
+cytus2_work/ab/
+cytus2_work/text/
+cytus2_work/apktool_out/
+cytus2_work/meta/
+cytus2_work/media_bundles/
+cytus2_work/libil2cpp/
+cytus2_work/il2cppdumper/
+cytus2_work/uidata/
+cytus2_work/uidata_all/
+cytus2_work/ui_probe/
+cytus2_work/dump_out/
+cytus2_work/list1.txt
+cytus2_work/list2.txt
+cytus2_work/ab_list.txt
+
+# 派生数据（由脚本现场生成：扫描 / 反汇编辅助 / 比对结果）
+cytus2_work/ui_textures.json
+cytus2_work/story_triggers.json
+cytus2_work/text_manifest.json
+cytus2_work/rva_map.json
+# 脚本现场生成的索引 / 比对结果一律不入库
+cytus2_work/*.json
+cytus2_work/il2cpp_str.txt
+cytus2_work/il2cppdumper_release.json
+
+# 探测目录
+cytus2_work/*_test/
+cytus2_work/img_probe/
+cytus2_work/cover_probe/
+cytus2_work/title_probe/
+cytus2_work/oa_probe*/
+cytus2_work/probe*/
+cytus2_work/sys_probe/
+cytus2_work/gif_probe/
+cytus2_work/*.zip
+
+# 前端
+viewer/node_modules/
+viewer/dist/
+viewer/.shots/
+
+# 其它
+*.log
+__pycache__/

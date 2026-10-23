@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -10,6 +11,7 @@ from pathlib import Path
 from .build import build_database
 from .errors import BuildError, ValidationError
 from .wiki.build import render_wiki
+from .verify import DEFAULT_LIVE_API, format_summary, verify_wiki
 
 DEFAULT_WORK = os.environ.get("CYTUS2_WORK", "C:/tmp/workspace/cytus2/cytus2_work")
 _MAX_REPORTED_ERRORS = 50
@@ -68,6 +70,57 @@ def build_parser() -> argparse.ArgumentParser:
         default="wiki/snapshot",
         help="wiki snapshot directory used by --patches (default: %(default)s)",
     )
+    verify = commands.add_parser(
+        "verify",
+        help="verify rendered wiki pages, patches and links",
+    )
+    verify.add_argument(
+        "--wiki",
+        default="build/wiki",
+        help="wiki output directory to verify (default: %(default)s)",
+    )
+    verify.add_argument(
+        "--profile",
+        default="wiki/profiles/bili.json",
+        help="hand-written wiki profile (default: %(default)s)",
+    )
+    verify.add_argument(
+        "--snapshot",
+        default="wiki/snapshot",
+        help="committed site snapshot directory (default: %(default)s)",
+    )
+    verify.add_argument(
+        "--report",
+        default=None,
+        help="JSON report path (default: <wiki>/verify.json)",
+    )
+    verify.add_argument(
+        "--live",
+        action="store_true",
+        help=(
+            "opt-in: render sampled full pages through action=parse; "
+            "the default run never touches the network"
+        ),
+    )
+    verify.add_argument(
+        "--live-sample",
+        type=int,
+        default=7,
+        help="number of full pages to render with --live (default: %(default)s)",
+    )
+    verify.add_argument(
+        "--live-api",
+        default=DEFAULT_LIVE_API,
+        help="MediaWiki api.php URL used by --live (default: %(default)s)",
+    )
+    verify.add_argument(
+        "--live-helper",
+        default=None,
+        help=(
+            "optional command that fetches {url} for --live when the wiki "
+            "WAF blocks plain HTTP"
+        ),
+    )
     return parser
 
 
@@ -105,6 +158,40 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote pages -> {Path(args.out) / 'pages'}")
         print(f"wrote report -> {Path(args.out) / 'report.json'}")
         return 0
+
+    if args.command == "verify":
+        try:
+            report = verify_wiki(
+                Path(args.wiki),
+                Path(args.profile),
+                Path(args.snapshot),
+                live=args.live,
+                live_sample=args.live_sample,
+                live_api=args.live_api,
+                live_helper=args.live_helper,
+            )
+        except BuildError as exc:
+            print(f"cytus2db: {exc}", file=sys.stderr)
+            return 1
+        report_path = (
+            Path(args.report)
+            if args.report is not None
+            else Path(args.wiki) / "verify.json"
+        )
+        try:
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(
+                json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)
+                + "\n",
+                encoding="utf-8",
+                newline="\n",
+            )
+        except OSError as exc:
+            print(f"cytus2db: cannot write {report_path}: {exc}", file=sys.stderr)
+            return 1
+        print(format_summary(report))
+        print(f"wrote verification report -> {report_path}")
+        return 0 if report["ok"] else 1
 
     try:
         counts = build_database(Path(args.input), Path(args.out), clean=args.clean)

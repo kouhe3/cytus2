@@ -70,6 +70,9 @@ pnpm build
 渲染约定（详见 `viewer/README.md`）：内联图统一拉伸成 `1.5 × (w/h)`、页签自动换行、
 档案正文 1px 蓝边框、暗色为默认。
 
+新的本地 SPA 在 `web/`：读取 `python -m cytus2db build` 生成的投影，一条命令
+`cd web && pnpm dev` 启动（详见 `web/README.md`）。旧 `viewer/` 已冻结。
+
 ## 4. 逆向辅助
 
 `libil2cpp.so` 这类大库不需要开 IDA 也能问「这个分支为什么走这条路」：

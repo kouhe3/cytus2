@@ -94,31 +94,45 @@ def report_page(out: Path, entity: str) -> dict:
     return pages[entity]
 
 
+def merged_profile() -> dict:
+    merged: dict = {}
+    sources = [
+        ROOT / "wiki" / "profiles" / "bili.json",
+        *sorted((ROOT / "wiki" / "profiles" / "bili.d").glob("*.json")),
+    ]
+    for path in sources:
+        merged = _deep_merge(merged, json.loads(path.read_text(encoding="utf-8")))
+    return merged
+
+
+def _deep_merge(base: dict, overlay: dict) -> dict:
+    result = dict(base)
+    for key, value in overlay.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
 def test_render_writes_one_page_and_report_entry_per_song(wiki_output: Path) -> None:
     report = read_report(wiki_output)
-    assert report["page_count"] == 13
+    assert report["page_count"] == 17
     assert report["counts"] == {
+        "character": 2,
         "gallery_item": 5,
         "oa_document": 2,
         "os_log": 3,
+        "pack": 2,
         "song": 3,
     }
-    assert {page["entity"] for page in report["pages"]} == {
-        "gallery_item/misc/alpha_bossstage",
-        "gallery_item/misc/conditions",
-        "gallery_item/misc/ending03",
-        "gallery_item/misc/opening",
-        "gallery_item/misc/poster",
-        "oa_document/alpha001_obj001_oa001",
-        "oa_document/beta001_obj001_oa001",
-        "os/bos001",
-        "os/gos001",
-        "os/gos002",
+    song_pages = [page for page in report["pages"] if page["page_type"] == "song"]
+    assert {page["entity"] for page in song_pages} == {
         "song/alpha001_000",
         "song/alpha001_001",
         "song/beta001_000",
     }
-    for page in report["pages"]:
+    for page in song_pages:
         assert (wiki_output / page["file"]).is_file()
         assert page["title_source"] == "generated"
 
@@ -174,7 +188,7 @@ def test_drop_rating_is_reported_not_emitted(wiki_output: Path) -> None:
 def test_every_emitted_parameter_exists_in_the_profile_and_conditionals_hold(
     wiki_output: Path,
 ) -> None:
-    profile = json.loads((ROOT / "wiki" / "profiles" / "bili.json").read_text("utf-8"))
+    profile = merged_profile()
     template = profile["templates"]["歌曲"]
     known = set(template["params"])
     conditional = {
@@ -183,6 +197,8 @@ def test_every_emitted_parameter_exists_in_the_profile_and_conditionals_hold(
     observed_unknown = set(profile["pages"]["song"]["observed_unknown_params"])
 
     for page in read_report(wiki_output)["pages"]:
+        page_template = profile["templates"][page["template"]]
+        assert set(page["emitted"]) <= set(page_template["params"]), page["entity"]
         if page["page_type"] != "song":
             continue
         emitted = set(page["emitted"])

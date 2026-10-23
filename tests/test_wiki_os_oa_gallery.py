@@ -95,12 +95,14 @@ def report_page(out: Path, entity: str) -> dict:
 def test_page_counts_for_os_oa_and_gallery(page_output: Path) -> None:
     report = read_report(page_output)
     assert report["counts"] == {
+        "character": 2,
         "gallery_item": 5,
         "oa_document": 1,
         "os_log": 3,
+        "pack": 2,
         "song": 3,
     }
-    assert report["page_count"] == 12
+    assert report["page_count"] == 16
 
 
 def test_golden_os_page(page_output: Path) -> None:

@@ -78,3 +78,17 @@ _Avoid_: 黑市（作实体）
 
 **Derived artifact**:
 任何可由管线重建的产物：正文、边、索引、wiki 页面、SPA 数据。
+
+## Wiki 导出
+
+**Page model**:
+实体到页面结构的中间表示：section 顺序、信息框字段、链接目标、分类。渲染器只负责把它变成某站方言。
+
+**Wiki renderer**:
+把 Page model 渲染成某站 wikitext 的适配器；本批只有 BiliGame 一个实现。
+
+**Parameter patch**:
+对已有页面只替换模板参数块的最小写入单元；整页只用于新建页面。
+
+**Red link check**:
+用目标站 `allpages`（区分条目与重定向）判定输出中的 `[[链接]]` 是否有对应页面。

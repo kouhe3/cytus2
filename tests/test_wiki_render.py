@@ -94,11 +94,35 @@ def report_page(out: Path, entity: str) -> dict:
     return pages[entity]
 
 
+def merged_profile() -> dict:
+    merged: dict = {}
+    sources = [
+        ROOT / "wiki" / "profiles" / "bili.json",
+        *sorted((ROOT / "wiki" / "profiles" / "bili.d").glob("*.json")),
+    ]
+    for path in sources:
+        merged = _deep_merge(merged, json.loads(path.read_text(encoding="utf-8")))
+    return merged
+
+
+def _deep_merge(base: dict, overlay: dict) -> dict:
+    result = dict(base)
+    for key, value in overlay.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
 def test_render_writes_one_page_and_report_entry_per_song(wiki_output: Path) -> None:
     report = read_report(wiki_output)
+    counts = report["counts"]
+    assert counts["character"] == 2
+    assert counts["pack"] == 2
+    assert counts["song"] == 3
+    assert report["page_count"] == sum(counts.values())
     song_pages = [page for page in report["pages"] if page["page_type"] == "song"]
-    assert report["page_count"] == len(report["pages"])
-    assert report["counts"]["song"] == 3
     assert {page["entity"] for page in song_pages} == {
         "song/alpha001_000",
         "song/alpha001_001",
@@ -160,7 +184,7 @@ def test_drop_rating_is_reported_not_emitted(wiki_output: Path) -> None:
 def test_every_emitted_parameter_exists_in_the_profile_and_conditionals_hold(
     wiki_output: Path,
 ) -> None:
-    profile = json.loads((ROOT / "wiki" / "profiles" / "bili.json").read_text("utf-8"))
+    profile = merged_profile()
     template = profile["templates"]["歌曲"]
     known = set(template["params"])
     conditional = {
@@ -169,6 +193,8 @@ def test_every_emitted_parameter_exists_in_the_profile_and_conditionals_hold(
     observed_unknown = set(profile["pages"]["song"]["observed_unknown_params"])
 
     for page in read_report(wiki_output)["pages"]:
+        page_template = profile["templates"][page["template"]]
+        assert set(page["emitted"]) <= set(page_template["params"]), page["entity"]
         if page["page_type"] != "song":
             continue
         emitted = set(page["emitted"])

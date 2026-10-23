@@ -266,14 +266,37 @@ export function rowsFor(
           avatar: t.avatar,
         }));
     }
-    case "gates":
-      return index.gates.map((g) => ({
-        key: g.id,
-        view: "gates",
-        id: g.id,
-        title: g.id,
-        sub: `${g.topics.length} 帖`,
-      }));
+    case "gates": {
+      // 全部剧情事件（dump.cs 的 Story 类），并附上「锁定多少 iM 帖」这个剧情闸信息
+      const gated = new Map(index.gates.map((g) => [g.id, g.topics]));
+      const events = index.storyEvents ?? index.gates.map((g) => ({ id: g.id, cls: "" }));
+      const category = (id: string) =>
+        id.startsWith("story_ending")
+          ? "结局"
+          : id.includes("tairitsu")
+            ? "Tairitsu 分支"
+            : /^story0[1-9]|^story1|^story01_new/.test(id)
+              ? "主线节点"
+              : "角色线";
+      return events.map((e) => {
+        const topics = gated.get(e.id) ?? [];
+        const bits = [
+          "trigger_topic_id" in e && e.trigger_topic_id ? `帖 ${e.trigger_topic_id}` : "",
+          "trigger_os_id" in e && e.trigger_os_id ? `OS ${e.trigger_os_id}` : "",
+          "boss_stage_id" in e && e.boss_stage_id ? `BOSS ${e.boss_stage_id}` : "",
+          topics.length ? `锁 ${topics.length} 帖` : "",
+        ].filter(Boolean);
+        return {
+          key: e.id,
+          view: "gates",
+          id: e.id,
+          title: e.id,
+          sub: bits.join(" · ") || "—",
+          badge: "cls" in e ? e.cls : undefined,
+          group: category(e.id),
+        };
+      });
+    }
     case "oa":
       return index.oa.map((c) => ({
         key: c.character,

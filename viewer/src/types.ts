@@ -168,6 +168,23 @@ export interface ImFilters {
 /** 角色分级：free 主线免费 / paid 主线付费 / side 支线（DLC 联动）/ plot 剧情角色 */
 export type CharacterTier = "free" | "paid" | "side" | "plot";
 
+/** 剧情事件（dump.cs 的 Story 类 + 其 Action 类常量） */
+export interface StoryEvent {
+  id: string;
+  cls: string;
+  actions?: string[];
+  trigger_os_id?: string;
+  trigger_topic_id?: string;
+  start_topic_id?: string;
+  end_topic_id?: string;
+  trigger_gallery_file_location?: string;
+  boss_stage_id?: string;
+  movie_file?: string;
+  cutscene_movie_file?: string;
+  steps?: string[];
+  imTopics?: string[];
+}
+
 export interface IndexData {
   meta: Meta;
   chapters: Chapter[];
@@ -177,6 +194,7 @@ export interface IndexData {
   imFilters?: ImFilters;
   os: OsMeta[];
   gates: Gate[];
+  storyEvents?: StoryEvent[];
   sync: SyncPoint[];
   timeline: string[];
   characters: Record<string, string>;

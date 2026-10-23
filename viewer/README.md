@@ -471,3 +471,15 @@ STORY_LEVEL_REQ = {"story_ending03_main": {"paff001": 89, "neko001": 79, "robo00
 
 结果：`Q2201 #270（阶段 14）` → `Q4601 #298 / Q4701 #300（善终1，阶段 15）` → `Q5101 #301（善终2，阶段 15）`；
 列表对结局帖标出 `分支：善终1 / 善终2 / 结局04`，提示它们互斥。
+
+### 剧情事件总表（`#/gates`）
+
+`export_story_events.py` 解析 `dump.cs`：每个 `Story*` 类的 `const string ID` 就是一条剧情事件，
+真正的触发常量在它的 `*Action` 类里，所以按类名前缀合并（`StoryRobo01` ← `StoryRobo01Action`、`StoryNeko01BossAction`…）。
+
+每条记录包含：`id / cls / actions[] / trigger_os_id / trigger_topic_id / start_topic_id / end_topic_id /
+trigger_gallery_file_location / boss_stage_id / movie_file / steps[] / imTopics[]`，写进 `index.storyEvents`。
+
+页面：`结局与剧情闸` 列表从 8 行扩到 **43 行**，按「主线节点 / 角色线 / Tairitsu 分支 / 结局」分组，
+行内显示 `帖 P1201`、`OS vanessa001`、`BOSS vos054_bossstage`、`锁 N 帖`；点进去是详情页：
+类名、Action 类、触发源、BOSS、影片（可直接播放，若已导出）、步骤链、本剧情用到的 iM 帖、以它为前置的 iM 帖。

@@ -50,6 +50,7 @@ python export_oa_assets.py        # OA 物件面板 / 物件图 / 角色 LOGO（
 python export_json.py             # index.json + content.<lang>.{im,os,extra}.json
 python export_subs_index.py       # 字幕正文索引（55 组 / 4718 条 cue）
 python export_endplay_map.py      # 结场演出：视频 ← 曲目（读 il2cppdumper/dump.cs）
+python export_story_events.py     # 全部剧情事件（Story 类 + Action 常量）→ index.storyEvents
 python export_endplay_audio.py    # 给无声的结场动画配曲目音轨（songdata_<曲> 的 AudioClip）
 ```
 

@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "story_node.schema.json",
+  "title": "story_node",
+  "description": "A narrative unit: kind=event for Story actions, kind=branch for Branching OS nodes. Gates are data (topic_ids), never entities.",
+  "type": "object",
+  "required": ["id", "type", "kind", "game_id", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^story_node/[^\\s]+$"
+    },
+    "type": {
+      "const": "story_node"
+    },
+    "kind": {
+      "enum": ["event", "branch"]
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "class_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "actions": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "steps": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "names": {
+      "$ref": "common.schema.json#/$defs/texts"
+    },
+    "source_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "node_type": {
+      "type": "integer"
+    },
+    "level": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "level_locks": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/level_lock"
+      }
+    },
+    "state_id": {
+      "type": "integer"
+    },
+    "state_value": {
+      "type": "string"
+    },
+    "next": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^story_node/[^\\s]+$"
+      }
+    },
+    "position": {
+      "type": "integer"
+    },
+    "order": {
+      "type": "integer"
+    },
+    "charts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^song/[^@\\s]+@(Easy|Hard|Chaos|Glitch|Crash|Dream|Drop)$"
+      }
+    },
+    "text_ref": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^story_node/[^\\s]+$"}
+      ]
+    },
+    "boss_stages": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/boss_ref"
+      }
+    },
+    "topic_ids": {
+      "description": "iM topics gated by this event; data for requires_story edges, not gate entities.",
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "trigger_topics": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "trigger_os_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "trigger_topic_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "start_topic_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "end_topic_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "deleted_topic_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "gallery_ref": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["folder_id", "location"],
+          "additionalProperties": false,
+          "properties": {
+            "folder_id": {
+              "type": "string",
+              "pattern": "^gallery_folder/[^\\s]+$"
+            },
+            "location": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "movie_files": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "oa_story_defs.schema.json",
+  "title": "Cytus II OA/story shared definitions",
+  "$defs": {
+    "condition": {
+      "type": "object",
+      "required": ["kind", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["story", "os", "im", "branch"]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "level_lock": {
+      "description": "A level gate on a character, never on a song pack.",
+      "type": "object",
+      "required": ["character", "level"],
+      "additionalProperties": false,
+      "properties": {
+        "character": {
+          "type": "string",
+          "pattern": "^character/[^\\s]+$"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "boss_ref": {
+      "type": "object",
+      "required": ["raw", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "raw": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entity_id": {
+          "anyOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^boss_stage/[^\\s]+$"}
+          ]
+        },
+        "status": {
+          "enum": ["resolved", "unmapped"]
+        }
+      }
+    },
+    "gallery_size": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {"type": "integer", "minimum": 0}
+        }
+      ]
+    }
+  }
+}

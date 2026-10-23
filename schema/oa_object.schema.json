@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "oa_object.schema.json",
+  "title": "oa_object",
+  "description": "A clickable OA exploration object. Its name/detail text lives under text_ref.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "character_id",
+    "text_ref",
+    "analyze_type_id",
+    "analyze_type",
+    "level_locks",
+    "conditions",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^oa_object/[^\\s]+$"
+    },
+    "type": {
+      "const": "oa_object"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "character_id": {
+      "type": "string",
+      "pattern": "^character/[^\\s]+$"
+    },
+    "text_ref": {
+      "type": "string",
+      "pattern": "^oa_object/[^\\s]+$"
+    },
+    "analyze_type_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "analyze_type": {
+      "type": "integer"
+    },
+    "level_locks": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/level_lock"
+      }
+    },
+    "conditions": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/condition"
+      }
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

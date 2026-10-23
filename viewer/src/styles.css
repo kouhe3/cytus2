@@ -536,4 +536,4 @@ table.grid tr:hover td { background: var(--surface); }
 .branch-map svg { display: block; }
 .branch-node { cursor: pointer; }
 .branch-node:hover rect { stroke: var(--accent); }
-.branch-node-label { fill: var(--fg); font-size: 11px; font-family: var(--mono, ui-monospace, monospace); }
+.branch-node-label { fill: var(--fg); font-size: 10px; font-family: var(--mono, ui-monospace, monospace); }

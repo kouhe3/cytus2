@@ -8,9 +8,9 @@ import type { BackupNode, Lang } from "../types";
  *   y = 分支行：a / b / c 三行；无后缀的收束节点放在中间行，同一列多个时上下错开
  * 连线来自 `ViewSetting.LinkedFileIds`（`next`）。
  */
-const COL_W = 104;
+const COL_W = 168;
 const ROW_H = 62;
-const NODE_W = 84;
+const NODE_W = 150;
 const NODE_H = 26;
 const PAD_X = 34;
 const PAD_Y = 26;
@@ -92,6 +92,8 @@ export function BranchMap({
         {nodes.map((n) => {
           const { x, y } = at.get(n.id)!;
           const active = n.id === activeId;
+          const name = n.names?.[lang] || n.id;
+          const label = name.length > 20 ? `${name.slice(0, 19)}…` : name;
           return (
             <g
               key={n.id}
@@ -112,7 +114,7 @@ export function BranchMap({
                 stroke={active ? "var(--accent)" : "var(--border)"}
               />
               <text x={NODE_W / 2} y={NODE_H / 2 + 4} textAnchor="middle" className="branch-node-label">
-                {n.id}
+                {label}
               </text>
               <title>{`${n.names?.[lang] || n.id} · ${n.id} · Lv${n.level ?? "?"} · 分支 ${n.branch || "收束"}`}</title>
             </g>

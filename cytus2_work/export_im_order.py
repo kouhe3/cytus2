@@ -271,13 +271,15 @@ def main():
     read_index, seq = {}, 0
     # 账号线程顺序：三主角在前，其余主角次之，"其他"最后；同一主角的帖子连续，内部按等级需求升序
     need = {tid: max([x["Level"] for x in e["LevelLocks"]] or [0]) for tid, e in locks.items()}
+    # 解锁成本：玩家一次升一个角色，所以多条件锁的成本是各曲包等级之和（R3501 需 paff/neko/robo 各 42 → 126）
+    cost = {tid: sum(x["Level"] for x in e["LevelLocks"]) for tid, e in locks.items()}
     topic_seq = {tid: i for i, tid in enumerate(topics)}   # im_topic_data 的数组顺序
 
     for i, st in enumerate(stages):
         def key(tid):
             ident = resolve_identity(tid)
-            # 解锁顺序优先：先等级需求，再账号线程（同等级时 PAFF → NEKO → …）
-            return (need.get(tid, 0), LANE_OF.get(ident, PLOT_LANE), topic_seq.get(tid, 10_000))
+            # 解锁顺序：先「总等级成本」（多条件锁更晚），再账号线程，再数据表顺序
+            return (cost.get(tid, 0), LANE_OF.get(ident, PLOT_LANE), topic_seq.get(tid, 10_000))
 
         # 稳定的组内顺序：先用数据表顺序（locks 的键顺序）排一遍，再按 key 稳定排序
         ordered = sorted(st["posts"], key=lambda tid: topic_seq.get(tid, 10_000))
@@ -310,6 +312,7 @@ def main():
     for t in idx["im"]:
         t["stage"] = out["order"].get(t["id"]) or (98 if t["id"] in blocked_reason else 99)
         t["readIndex"] = read_index.get(t["id"], 10_000)
+        t["cost"] = cost.get(t["id"], 0)
         sl = locks[t["id"]]["StoryLockId"]
         if sl == "story_ending03_good_ending1":
             t["branch"] = "善终1"       # 回应过 PAFF 的分支

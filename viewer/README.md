@@ -505,3 +505,19 @@ trigger_gallery_file_location / boss_stage_id / movie_file / steps[] / imTopics[
 
 开局因此变成：`#1 P0101（need 0，PAFF）→ #2 N0101（need 0，NEKO）→ #3 Q5701（need 0，NEKO 小号）→ #4 R0101（need 0，ROBO）→ #5 X0101（need 0，Xenon）…`，
 同等级内仍按角色顺序分组。
+
+### v10：解锁成本 = 各条件等级之和
+
+`R3501` 有 3 个条件（`paff001@42 + neko001@42 + robo001@42`），而 `O6201` 只要 `paff001@42`。
+之前用 `max(LevelLocks.Level)` 排序，两者都是 42，于是靠线程顺序决胜，`R3501`（ROBO 线，lane 2）跑到 `O6201`（其他，lane 300）前面。
+
+玩家是一次升一个角色的，所以成本应按**总和**算：
+
+```python
+cost = sum(x["Level"] for x in LevelLocks)
+```
+
+`R3501` = 126，`O6201` = 42 → 现在 `O6201 #203 → R3501 #207`。
+
+排序键最终为：`(stage, cost, lane, 表顺序)`；每个阶段内 `cost` 单调不减（已断言验证）。
+`index.im[].cost` 也一并导出，便于核对。

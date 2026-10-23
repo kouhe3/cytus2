@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "os_log.schema.json",
+  "title": "os_log",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "file",
+    "folder_id",
+    "chapter_id",
+    "index",
+    "date",
+    "category",
+    "log_type",
+    "names",
+    "file_lock",
+    "level_locks",
+    "movies",
+    "text_ref",
+    "missing_languages",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^os/[A-Za-z0-9_]+$"
+    },
+    "type": {
+      "const": "os_log"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "folder_id": {
+      "type": ["string", "null"],
+      "pattern": "^folder/[^\\s]+$"
+    },
+    "chapter_id": {
+      "type": "string",
+      "pattern": "^chapter/[0-9]+$"
+    },
+    "index": {
+      "type": "integer",
+      "minimum": -1,
+      "description": "TimelineChapter.Index; -1 marks an entry with no timeline position."
+    },
+    "date": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "log_type": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "names": {
+      "$ref": "#/$defs/localized_string"
+    },
+    "file_lock": {
+      "type": ["string", "null"],
+      "description": "FileLockId from OSLockCondition; another OS log's game id."
+    },
+    "level_locks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["character", "level"],
+        "additionalProperties": false,
+        "properties": {
+          "character": {
+            "type": "string",
+            "pattern": "^character/[^\\s]+$"
+          },
+          "level": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "movies": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^asset/video/[^\\s]+$"
+      }
+    },
+    "text_ref": {
+      "type": "string",
+      "pattern": "^os/[A-Za-z0-9_]+$"
+    },
+    "missing_languages": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/language"
+      }
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  },
+  "$defs": {
+    "localized_string": {
+      "type": "object",
+      "required": ["en", "ja", "zh-Hant", "ko", "zh-Hans"],
+      "additionalProperties": false,
+      "properties": {
+        "en": {"type": ["string", "null"]},
+        "ja": {"type": ["string", "null"]},
+        "zh-Hant": {"type": ["string", "null"]},
+        "ko": {"type": ["string", "null"]},
+        "zh-Hans": {"type": ["string", "null"]}
+      }
+    },
+    "language": {
+      "enum": ["en", "ja", "zh-Hant", "ko", "zh-Hans"]
+    }
+  }
+}

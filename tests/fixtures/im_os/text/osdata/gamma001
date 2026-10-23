@@ -1,0 +1,45 @@
+[
+  {
+    "Id": "gos001",
+    "Type": 3,
+    "Names": ["First OS", "最初のOS", "第一個OS", "첫 OS", "第一個OS", "第一个OS"],
+    "Contents": [
+      "##bgm=gamma_bgm\n##conversation=Alpha\nHello there\n##image=img100\n##sound=Beep,Beep sound\n##movie=mov100\n##json=imageviewer\n{\"Image\":\"gamma_img\",\"ExpectWidth\":10,\"ExpectHeight\":20}\n##mail=Title,From,To\n##text\nBody line",
+      "##conversation=Alpha\nこんにちは",
+      "##conversation=Alpha\n你好",
+      "##conversation=Alpha\n안녕",
+      "##conversation=Alpha\n你好",
+      "##conversation=Alpha\n你好"
+    ],
+    "TimelineChapter": {"Folder": "Alpha", "Chapter": "Architects", "Index": 1},
+    "Date": "687_06_30\n18:01",
+    "OSLockCondition": {
+      "FileLockId": "gos002",
+      "LevelLocks": [
+        {"SongPackId": "alpha001", "Level": 9, "IsLevelLocked": false}
+      ]
+    },
+    "UnlockCharts": [],
+    "DigitLock": null,
+    "Category": "1.4"
+  },
+  {
+    "Id": "gos002",
+    "Type": 1,
+    "Names": ["Second OS", "二番目", "第二個", "두번째", "第二個", "第二个"],
+    "Contents": [
+      "##conversation=Beta\nOnly English",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "TimelineChapter": {"Folder": "N/A", "Chapter": "Side Stories", "Index": 2},
+    "Date": "688_01_01 00:00",
+    "OSLockCondition": {"FileLockId": "", "LevelLocks": []},
+    "UnlockCharts": [],
+    "DigitLock": null,
+    "Category": "2.0"
+  }
+]

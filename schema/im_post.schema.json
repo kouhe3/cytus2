@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "im_post.schema.json",
+  "title": "im_post",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "author",
+    "avatar",
+    "order",
+    "titles",
+    "likes",
+    "reply_count",
+    "story_gate",
+    "topic_gate",
+    "level_locks",
+    "attachments",
+    "charts",
+    "text_ref",
+    "missing_languages",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^im/[A-Za-z0-9_]+$"
+    },
+    "type": {
+      "const": "im_post"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1
+    },
+    "avatar": {
+      "type": "string",
+      "minLength": 1
+    },
+    "order": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "titles": {
+      "$ref": "#/$defs/localized_string"
+    },
+    "likes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "reply_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "story_gate": {
+      "type": ["string", "null"],
+      "description": "StoryLockId from im_lock_condition_data; resolved to a story node by the edge layer."
+    },
+    "topic_gate": {
+      "type": ["string", "null"],
+      "description": "TopicLockId from im_lock_condition_data (the post shown before this one)."
+    },
+    "level_locks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["character", "level"],
+        "additionalProperties": false,
+        "properties": {
+          "character": {
+            "type": "string",
+            "pattern": "^character/[^\\s]+$"
+          },
+          "level": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "charts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^song/[^@\\s]+@(Easy|Hard|Chaos|Glitch|Crash|Dream|Drop)$"
+      }
+    },
+    "text_ref": {
+      "type": "string",
+      "pattern": "^im/[A-Za-z0-9_]+$"
+    },
+    "missing_languages": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/language"
+      }
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  },
+  "$defs": {
+    "localized_string": {
+      "type": "object",
+      "required": ["en", "ja", "zh-Hant", "ko", "zh-Hans"],
+      "additionalProperties": false,
+      "properties": {
+        "en": {"type": ["string", "null"]},
+        "ja": {"type": ["string", "null"]},
+        "zh-Hant": {"type": ["string", "null"]},
+        "ko": {"type": ["string", "null"]},
+        "zh-Hans": {"type": ["string", "null"]}
+      }
+    },
+    "language": {
+      "enum": ["en", "ja", "zh-Hant", "ko", "zh-Hans"]
+    }
+  }
+}

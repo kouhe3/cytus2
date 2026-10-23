@@ -1,0 +1,17 @@
+{
+  "Id": "P0201",
+  "CharacterName": "Alpha Side",
+  "AvatarId": "alpha_02",
+  "Contents": ["", "", "", "", "", ""],
+  "Attachments": [],
+  "Replies": [
+    {
+      "Id": "P0202",
+      "CharacterName": "Silent Fan",
+      "AvatarId": "misc_03",
+      "Contents": ["", "", "", "", "", ""],
+      "Attachments": null,
+      "Replies": null
+    }
+  ]
+}

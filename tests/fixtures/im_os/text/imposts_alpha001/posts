@@ -1,0 +1,32 @@
+{
+  "Id": "P0101",
+  "CharacterName": "Alpha-Official",
+  "AvatarId": "alpha_01",
+  "Contents": [
+    "Hello iM",
+    "こんにちは",
+    "你好",
+    "안녕",
+    "你好",
+    "你好"
+  ],
+  "Attachments": ["attach01"],
+  "Replies": [
+    {
+      "Id": "P0102",
+      "CharacterName": "Beta Fan",
+      "AvatarId": "misc_01",
+      "Contents": ["Nice!", "すごい", "讚", "멋져", "讚", "赞"],
+      "Attachments": null,
+      "Replies": null
+    },
+    {
+      "Id": "P0103",
+      "CharacterName": "Gamma Fan",
+      "AvatarId": "misc_02",
+      "Contents": ["Only English", "", "", "", "", ""],
+      "Attachments": null,
+      "Replies": null
+    }
+  ]
+}

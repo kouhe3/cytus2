@@ -163,6 +163,45 @@ def build_catalog(
     )
 
 
+# ---------------------------------------------------------------- exp tables
+def _exp_tables(source: InputSource) -> dict[str, tuple[list[int], str]]:
+    """Return ``{song_pack_id: (thresholds, locator)}`` from exp_data.
+
+    ``text/exptable/exp_data`` is optional: older inputs and synthetic
+    fixtures may omit it.  Levels are 0-based, so ``table[i]`` is the
+    cumulative experience for raw level ``i`` and the highest raw level is
+    ``len(table) - 1``.
+    """
+    table = source.text_json("exptable", "exp_data")
+    if table is None:
+        return {}
+    if not isinstance(table.data, dict):
+        raise InputError(f"{table.locator} must be a JSON object")
+    rows = table.data.get("exp_table_list")
+    if not isinstance(rows, list):
+        raise InputError(f"{table.locator}.exp_table_list must be a JSON list")
+    tables: dict[str, tuple[list[int], str]] = {}
+    for index, row in enumerate(rows):
+        where = f"{table.locator}.exp_table_list[{index}]"
+        if not isinstance(row, dict):
+            raise InputError(f"{where} must be a JSON object")
+        game_id = row.get("song_pack_id")
+        if not isinstance(game_id, str) or not game_id:
+            raise InputError(f"{where}: missing song_pack_id")
+        thresholds = row.get("table")
+        if not isinstance(thresholds, list) or not thresholds:
+            raise InputError(f"{where}: table must be a non-empty JSON list")
+        for value in thresholds:
+            if type(value) is not int or value < 0:
+                raise InputError(
+                    f"{where}: table entries must be non-negative integers"
+                )
+        if game_id in tables:
+            raise InputError(f"{where}: duplicate song_pack_id {game_id!r}")
+        tables[game_id] = (list(thresholds), f"{where}.table")
+    return tables
+
+
 # ------------------------------------------------------------------ characters
 def build_characters(
     source: InputSource, packs: list[dict[str, Any]]
@@ -170,6 +209,7 @@ def build_characters(
     table = source.bg_movies()
     if not isinstance(table.data, list):
         raise InputError(f"{table.locator} must be a JSON list")
+    exp_tables = _exp_tables(source)
     gallery = source.gallery_folders()
     gallery_names: dict[str, str] = {}
     avatars: dict[str, str] = {}
@@ -247,6 +287,12 @@ def build_characters(
             },
             "provenance": provenance,
         }
+        exp = exp_tables.get(character_id)
+        if exp is not None:
+            thresholds, exp_locator = exp
+            character["max_level"] = len(thresholds) - 1
+            character["exp_table"] = thresholds
+            provenance.append(_text_asset(exp_locator))
         _sorted_provenance(character)
         characters.append(character)
 

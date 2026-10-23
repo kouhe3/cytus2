@@ -9,9 +9,10 @@ import pytest
 from conftest import FIXTURE_INPUT, ROOT, copy_input, run_build, run_render
 
 FIXTURE_IM_OS = Path(__file__).resolve().parent / "fixtures" / "im_os"
+FIXTURE_EXP_TABLE = Path(__file__).resolve().parent / "fixtures" / "exp_table"
 
-# The character page only emits APK-verifiable fields.  最高等级 has no entity
-# in the canonical DB and stays out; IMID is the distinct iM account names that
+# The character page only emits APK-verifiable fields.  ``最高等级`` is the
+# 0-based exp-table index plus one; IMID is the distinct iM account names that
 # authored the character's own posts.
 CHARACTER_PAGES = {
     "alpha001": (
@@ -21,6 +22,7 @@ CHARACTER_PAGES = {
         "|角色分类=免费角色\n"
         "|IMID=Alpha-Official,Alpha Side\n"
         "|主题色=112233\n"
+        "|最高等级=99\n"
         "|获取方式=免费\n"
         "}}\n"
         "[[分类:角色]]\n"
@@ -32,6 +34,7 @@ CHARACTER_PAGES = {
         "|角色分类=支线角色\n"
         "|IMID=Beta\n"
         "|主题色=445566\n"
+        "|最高等级=40\n"
         "|获取方式=USD 1.99\n"
         "}}\n"
         "[[分类:角色]]\n"
@@ -62,6 +65,7 @@ def build_input(root: Path) -> Path:
     input_dir = root / "input"
     copy_input(FIXTURE_INPUT, input_dir)
     shutil.copytree(FIXTURE_IM_OS / "text", input_dir / "text", dirs_exist_ok=True)
+    shutil.copytree(FIXTURE_EXP_TABLE / "text", input_dir / "text", dirs_exist_ok=True)
     # The OS fixture file is named after a character; keep the site's
     # "<file>（<character>）" page-title rule working.
     (input_dir / "text" / "osdata" / "gamma001").replace(
@@ -169,11 +173,12 @@ def test_every_emitted_parameter_exists_in_the_profile(character_output: Path) -
 def test_character_page_omits_unverifiable_fields(character_output: Path) -> None:
     page = report_page(character_output, "character/alpha001")
     omitted = {item.get("param"): item["reason"] for item in page["omitted"]}
-    assert omitted["最高等级"] == "exp_table_not_extracted"
+    assert "最高等级" not in omitted
+    assert "最高等级" in page["emitted"]
     assert omitted["角色排序"] == "no_verifiable_value"
     assert omitted["简介"] == "no_verifiable_value"
     text = (character_output / page["file"]).read_text(encoding="utf-8")
-    assert "|最高等级=\n" not in text
+    assert "|最高等级=99\n" in text
     assert "|简介=\n" not in text
 
 

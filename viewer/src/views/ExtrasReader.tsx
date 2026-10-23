@@ -698,7 +698,8 @@ export function ExtrasReader({
     return <SongSection index={index} lang={lang} onNavigate={onNavigate} />;
   }
   if (section === "cutscenes") {
-    return <CutsceneSection focus={focus ?? ""} onNavigate={onNavigate} />;
+    // key=命中词组：从搜索结果跳到别的字幕组时强制重建，避免沿用旧的搜索词
+    return <CutsceneSection key={focus ?? ""} focus={focus ?? ""} onNavigate={onNavigate} />;
   }
   const manifest = useManifest();
   const allTitles = Object.entries(manifest?.titles ?? {});

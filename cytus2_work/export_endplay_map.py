@@ -21,6 +21,7 @@ OUT = os.path.join(HERE, "..", "viewer", "public", "data", "endplay.json")
 #   0_GAMEPLAY_CUTSCENE_2 时读 StoryEnding03{Main,Replay}.IsFirstGamePlayCutsceneHit
 #   这个静态 bool 由 Event1.OnEnd(isHitAnyNote) 写入（0x228D508：strb w9(=isHitAnyNote) [static+8]）。
 CONDITIONS = {
+    "vos075_bossstage": "story_ending04_main 的 0_PLAY_END_PLAY_BOSS_STAGE（4.0 结局终战；之后接 Complete EndingCutscene → 场景 end04_StaffRoll）",
     "ending05_staffroll": "StoryEnding05MainAction.StaffrollEndPlay（5.0 终章片尾；播完由 UnlockAfterStoryScene 发奖）",
     "SelectForPaffGameplay": "0_GAMEPLAY_CUTSCENE_1：玩家在这里回应 PAFF（点中音符），OnEnd(isHitAnyNote) 把结果写进 IsFirstGamePlayCutsceneHit",
     "FinalBossStage_1": "0_GAMEPLAY_CUTSCENE_2 阶段，且之前回应过 PAFF（IsFirstGamePlayCutsceneHit = true）",

@@ -608,10 +608,15 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 `data/subs-index.json`，每组字幕出一条（优先当前语言），结果格式 `字幕 · <组> · m:ss · 台词`，
 点进去落到 `#/extras/cutscenes|<组>|<编码词>`，页面自动带词过滤并定位到命中处。
 
-`Ending05_Staffroll` 那组字幕（37 条）是 5.0 片尾的开场旁白：前 132 秒由 `?????` 回顾到 4.0 的事件
-（除役事件、建造者復甦、A.R.C. 重启 cyTus），124.5–318.05 秒之间没有台词（制作人员名单段），
-最后 318–369.9 秒是收尾对话。它只被 `StoryEnding05MainAction/ReplayAction.StaffrollEndPlay` 引用；
-4.0 的片尾是场景 `end04_StaffRoll`（Animator + AudioSource，没有视频）。
+两段很容易混淆的字幕：
+
+| 组 | 归属 | 内容 |
+|:--|:--|:--|
+| `vos075_bossstage`（25 条） | `story_ending04_main` 的 `0_PLAY_END_PLAY_BOSS_STAGE`（`StoryEnding04MainAction.EndPlay`，曲目同 id、难度 Easy） | **4.0 结局影片**：PAFF 旁白，首句「这段画面，是你第一次从 iM 上注意到我……」 |
+| `Ending05_Staffroll`（37 条） | `StoryEnding05MainAction/ReplayAction.StaffrollEndPlay` | **5.0 片尾影片**：`?????` 旁白，前 132 秒回顾到 4.0 的事件，124.5–318.05 秒是名单（无台词），318–369.9 秒收尾 |
+
+`story_ending04_main` 完整链路：`vos7501.mp4` → ending scene → **`vos075_bossstage`** →
+`Complete EndingCutscene.mp4` → 场景 `end04_StaffRoll`（Animator + AudioSource，名单本身没有视频）。
 
 ### 结场/片尾的音轨
 

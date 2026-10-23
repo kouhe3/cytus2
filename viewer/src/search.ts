@@ -136,7 +136,7 @@ export function searchRows(
         rows.push({
           key: `subs:${group}:${l}`,
           view: "extras",
-          id: `cutscenes|${group}|${encodeURIComponent(q)}`,
+          id: `cutscenes|${group}|${encodeURIComponent(query.trim())}`,
           title: `字幕 · ${group}`,
           sub: `${clock(hit[0])} · ${hit[2]}`,
           badge: l,

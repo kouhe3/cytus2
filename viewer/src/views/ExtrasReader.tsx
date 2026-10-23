@@ -376,6 +376,7 @@ function SongSection({
         ：false = 拥有曲包即解锁（「默认解锁」），true = 需要一次解锁事件。获取方式按优先级判定：
         <b>iM 帖</b>（<span className="mono">UnlockCharts</span>）→
         <b>OS 档案</b>（<span className="mono">text/osdata/*</span> 的 <span className="mono">UnlockCharts</span>）→
+        <b>OA 分析记录</b>（<span className="mono">oa_system_data</span> 的 <span className="mono">Rewards</span>）→
         <b>分支节点</b>（<span className="mono">UnlockedCharts</span>）→
         <b>通关剧情</b>（<span className="mono">storychartunlock</span>）→
         <b>默认解锁</b> → <b>CAPSO 商店</b>（<span className="mono">capsoshoppacks</span>）→
@@ -412,6 +413,7 @@ function SongSection({
                         .map(([pack2, lv]) => `${characterName(index, pack2)} Lv${dispLevel(lv)}`)
                         .join("、");
                       const osHit = (catalog.osCharts[song.id] ?? []).find((x) => x.d === d);
+                      const oaHit = (catalog.oaCharts[song.id] ?? []).find((x) => x.d === d);
                       const story = (catalog.storyCharts[song.id] ?? []).find((x) => x.d === d);
                       const capso = capsoIndex.get(song.id);
                       const gacha = (gachaIndex[song.id] ?? []).find((x) => x.d === d);
@@ -450,6 +452,30 @@ function SongSection({
                             </>
                           ) : free ? (
                             <span style={{ color: "var(--muted)" }}>默认解锁（NeedUnlock=false）</span>
+                          ) : oaHit ? (
+                            <>
+                              OA 分析记录{" "}
+                              <button type="button" className="chip chip-btn" onClick={() => onNavigate("oa", oaHit.character)}>
+                                {oaHit.names?.[lang] || oaHit.names?.["zh-Hans"] || oaHit.ref}
+                              </button>
+                              {oaHit.locks.length ? (
+                                <span style={{ color: "var(--muted)" }}>
+                                  （
+                                  {oaHit.locks
+                                    .map((l) =>
+                                      l.kind === "OASystemLevelLock" && typeof l.level === "number"
+                                        ? `${characterName(index, l.character)} Lv${dispLevel(l.level)}`
+                                        : l.kind === "OASystemStoryLock"
+                                          ? "需剧情"
+                                          : l.kind === "OASystemOSLock"
+                                            ? "需 OS 档案"
+                                            : l.kind,
+                                    )
+                                    .join(" · ")}
+                                  {oaHit.missions.length ? ` · ${oaHit.missions.length} 个任务` : ""}）
+                                </span>
+                              ) : null}
+                            </>
                           ) : capso && capso.diffs.includes(d) ? (
                             <span>{capsoLabel(capso)}</span>
                           ) : gacha ? (

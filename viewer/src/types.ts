@@ -257,6 +257,16 @@ export interface ExpansionPack {
   songs: ExpansionSong[];
 }
 
+export interface OaChartUnlock {
+  d: number;
+  src: "oa";
+  ref: string;
+  names?: Record<string, string>;
+  character: string;
+  locks: { kind: string; character: string; level?: number }[];
+  missions: { id: string; type: string; args: string }[];
+}
+
 export interface GachaChart {
   d: number;
   machine: string;
@@ -280,6 +290,8 @@ export interface SongCatalog {
   storyCharts: Record<string, { d: number; story: string }[]>;
   /** OS 档案里的 UnlockCharts：songId → 档案件（同样带等级锁） */
   osCharts: Record<string, SongUnlock[]>;
+  /** OA 系统分析记录的谱面奖励：songId → 奖励项 */
+  oaCharts: Record<string, OaChartUnlock[]>;
   expansion: ExpansionPack[];
   capso: CapsoPack[];
   gacha: GachaData;

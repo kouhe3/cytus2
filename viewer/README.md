@@ -626,6 +626,7 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 | 来源 | 字段 |
 |:--|:--|
 | iM 帖 | `im_topic_data.UnlockCharts`（SongId + Difficulty）+ 该帖的 `LevelLocks` / `StoryLockId` |
+| **OA 分析记录** | `text/oasystemdata/oa_system_data` 的 `Rewards`（`Type 0`，RewardId 形如 `paff001_016_3`）；对象 `OASystemLocks` 给前置（等级 / OS / 剧情），68 个谱面 |
 | **OS 档案** | `text/osdata/<packId>` 里每个档案的 `UnlockCharts` + `OSLockCondition.LevelLocks`（261 个档案带谱面，覆盖 555 个谱面） |
 | 分支节点 | `branchingosdata.UnlockedCharts` + `UnlockCondition.Level` |
 | 通关剧情 | `chartunlock.ab` 的 TextAsset `storychartunlock`：`{storyId:[{SongId,Difficulty}]}` |
@@ -638,7 +639,12 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 `iM 帖` / `分支节点` / `通关剧情` / `默认解锁（NeedUnlock=false）` / `需解锁 · 本地无记录`。
 
 实测统计（1402 个谱面）：iM 帖 145、**OS 档案 555**、通关剧情 8、默认解锁 472、CAPSO 商店 67、
-CAPSO! 抽奖 103、付费包购买 25、无本地记录 27（11 首）。四类来源两两重叠为 0，可以按优先级判定。
+CAPSO! 抽奖 103、付费包购买 25、OA 分析记录 68（补上了 Who Am I? 的 Glitch）、无本地记录 6（2 首：ivy001_049 Heroic Age、vanessa001_023 Cocytus，均 `HideWhenLocked: true`）。
+各来源两两重叠为 0，可以按优先级判定。
+
+等级 +1 已用 Fandom 交叉验证：Aroma（`paff002`）7 首的 15 个解锁等级全部吻合
+（Bring the light 6/6/7、Make U Mine 8/9/11、Anzen Na Kusuri 14/16/18、漂流 19/19/19、
+Perspectives 20/20/20、風の声 21/21/22、Neon Escape 23/23/24；其余 4 首为 Lv1 默认解锁）。
 
 ### 等级是 0 基
 

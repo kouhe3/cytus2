@@ -151,6 +151,52 @@ def read_os_chart_unlocks() -> dict:
     return out
 
 
+def read_oa_rewards() -> dict:
+    """OA 系统的谱面奖励（text/oasystemdata/oa_system_data 的 Rewards，Type 0）
+
+    RewardId 形如 `paff001_016_3` / `bobo001_010_0,1,2`；奖励挂在 ObjectId 上，
+    对象自身的 OASystemLocks 决定前置（OASystemLevelLock / OASystemOSLock / OASystemStoryLock）。
+    """
+    path = os.path.join(T, "oasystemdata", "oa_system_data")
+    if not os.path.exists(path):
+        return {}
+    data = json.load(open(path, encoding="utf-8"))
+    objs = {o["ObjectId"]: o for o in data.get("Objects") or []}
+    missions = {}
+    for m in data.get("Missions") or []:
+        missions.setdefault(m.get("ObjectId"), []).append(
+            {"id": m.get("MissionId"), "type": m.get("Type"), "args": m.get("Args")}
+        )
+    out = {}
+    for r in data.get("Rewards") or []:
+        if r.get("Type") != 0:  # 0 = 谱面，1 = 皮肤
+            continue
+        parts = r["RewardId"].rsplit("_", 1)
+        if len(parts) != 2:
+            continue
+        song_id, diffs = parts[0], [int(x) for x in parts[1].split(",") if x.isdigit()]
+        obj = objs.get(r["ObjectId"]) or {}
+        locks = []
+        for lock in obj.get("OASystemLocks") or []:
+            kind = (lock.get("$type") or "").split(".")[-1].replace(", Assembly-CSharp", "")
+            locks.append({
+                "kind": kind,
+                "character": lock.get("CharacterId") or "",
+                "level": lock.get("LockLevel"),
+            })
+        for d in diffs:
+            out.setdefault(song_id, []).append({
+                "d": d,
+                "src": "oa",
+                "ref": r["ObjectId"],
+                "names": names_by_lang(obj.get("Names")),
+                "character": obj.get("CharacterId") or "",
+                "locks": locks,
+                "missions": missions.get(r["ObjectId"]) or [],
+            })
+    return out
+
+
 def read_gacha() -> dict:
     """gacharewarddata.ab（split_assets_pack_1）→ CAPSO! 抽奖机奖励
 
@@ -314,6 +360,7 @@ def main():
         "capso": read_capso(),
         "gacha": read_gacha(),
         "osCharts": read_os_chart_unlocks(),
+        "oaCharts": read_oa_rewards(),
     }
     json.dump(data, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     songs = sum(len(p["songs"]) for p in packs) + len(other)
@@ -325,7 +372,8 @@ def main():
         f"{len(packs)} 个曲包 / {songs} 首歌（另有 DLC {len(data['expansion'])} 包 {n_dlc} 首、"
         f"CAPSO {len(data['capso'])} 包 {n_capso} 首）/ {len(unlocks)} 首有帖子或节点获取方式 / "
         f"{n_story} 首有通关解锁 / CAPSO! 抽奖 {n_gacha} 个谱面 / "
-        f"OS 档案解锁 {len(data['osCharts'])} 首 → {os.path.relpath(OUT, HERE)}"
+        f"OS 档案解锁 {len(data['osCharts'])} 首 / OA 奖励 {sum(len(v) for v in data['oaCharts'].values())} 个谱面 "
+        f"→ {os.path.relpath(OUT, HERE)}"
     )
 
 

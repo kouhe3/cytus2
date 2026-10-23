@@ -350,6 +350,13 @@ def test_render_patches_reports_counts_and_title_sources(patched_output: Path) -
     assert counts["character"]["unmatched"] == 1
     assert counts["pack"]["matched"] == 0
     assert counts["pack"]["unmatched"] == 2
+    assert counts["im_post"] == {
+        "pages": 3,
+        "matched": 0,
+        "unmatched": 3,
+        "conflicts": 0,
+        "patches": 0,
+    }
 
     first = report_page(patched_output, "song/alpha001_000")
     assert first["matched"] is True
@@ -370,6 +377,9 @@ def test_render_patches_reports_counts_and_title_sources(patched_output: Path) -
         "character/beta001",
         "pack/alpha001",
         "pack/beta001",
+        "im/P0101",
+        "im/P0201",
+        "im/P0301",
     }
     assert report["patch_conflicts"] == []
 

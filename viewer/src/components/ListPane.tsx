@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Row } from "../rows";
 import { Avatar } from "./Avatar";
 
@@ -19,6 +20,16 @@ export function ListPane({
       </div>
     );
   }
+  // 分组可折叠：所有列表（时间线 / iM / 剧情事件 / 分支）共用同一套行为
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const toggle = (key: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   const groups = new Map<string, Row[]>();
   for (const row of rows) {
     const key = row.group ?? "";
@@ -29,8 +40,21 @@ export function ListPane({
     <div className="list" role="list" aria-label="条目列表">
       {[...groups.entries()].map(([group, items]) => (
         <div key={group}>
-          {group ? <div className="group-title">{group}</div> : null}
-          {items.map((row) => (
+          {group ? (
+            <button
+              type="button"
+              className="group-title group-title--btn"
+              aria-expanded={!collapsed.has(group)}
+              onClick={() => toggle(group)}
+            >
+              <span className={`caret${collapsed.has(group) ? "" : " caret--open"}`} aria-hidden="true">
+                ›
+              </span>
+              <span>{group}</span>
+              <span className="group-count">{items.length}</span>
+            </button>
+          ) : null}
+          {(collapsed.has(group) ? [] : items).map((row) => (
             <button
               type="button"
               role="listitem"

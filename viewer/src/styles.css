@@ -174,6 +174,32 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   text-transform: uppercase;
   color: var(--muted);
 }
+/* 可折叠的分组标题：所有列表共用 */
+.group-title--btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 8px 4px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: left;
+}
+.group-title--btn:hover { color: var(--fg); }
+.group-title--btn .caret {
+  display: inline-block;
+  width: 10px;
+  color: var(--muted);
+  transition: transform 0.12s ease;
+}
+.group-title--btn .caret--open { transform: rotate(90deg); }
+.group-title--btn .group-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
 .row {
   display: flex;
   gap: 8px;

@@ -34,6 +34,7 @@ export function StoryIndexView({ db }: { db: Database }) {
   );
   const metaCount = storySortMetaCount(db, sort);
   const nodeCount = db.entitiesByType.get("story_node")?.length ?? 0;
+  const shownEvents = entries.filter((entry) => entry.node.kind === "event").length;
   const eventCount =
     db.entitiesByType.get("story_node")?.filter(
       (node) => isStoryNode(node) && node.kind === "event",
@@ -51,8 +52,8 @@ export function StoryIndexView({ db }: { db: Database }) {
             and spoiler-gated nodes are deferred instead of being pulled forward.
           </p>
           <div className="page-stats" data-testid="story-stats">
-            <strong>{entries.length}</strong> nodes · {eventCount} events ·{" "}
-            {nodeCount - eventCount} Branching OS
+            <strong>{entries.length}</strong> nodes · {shownEvents} events ·{" "}
+            {entries.length - shownEvents} Branching OS
           </div>
         </header>
 

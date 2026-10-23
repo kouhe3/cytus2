@@ -1,0 +1,76 @@
+{
+  "categories": {
+    "oa": "分类:Oa剧情"
+  },
+  "templates": {
+    "Oa/文件": {
+      "template": "Oa/文件",
+      "param_order": [
+        "所属物品",
+        "文件名",
+        "描述",
+        "条件",
+        "剧情排序",
+        "任务排序",
+        "内容"
+      ],
+      "params": {
+        "所属物品": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "文件名": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "描述": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "条件": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "剧情排序": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "任务排序": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "内容": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        }
+      },
+      "fields": {
+        "object": "所属物品",
+        "filename": "文件名",
+        "description": "描述",
+        "condition": "条件",
+        "sort_key": "剧情排序",
+        "content": "内容"
+      }
+    }
+  },
+  "pages": {
+    "oa_document": {
+      "template": "Oa/文件",
+      "title": {
+        "field": "title",
+        "fallback": "none",
+        "disambiguator": "（{game_id}）"
+      },
+      "preserve_unknown_params": true,
+      "observed_unknown_params": []
+    }
+  }
+}

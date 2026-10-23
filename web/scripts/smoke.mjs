@@ -872,6 +872,16 @@ try {
     `location.pathname === '/extras/titles' && Boolean(document.querySelector('[data-testid="titles-view"]'))`,
     "title screens route loads",
   );
+  await cdp.waitFor(
+    `(() => {
+      const videos = [...document.querySelectorAll('[data-testid="title-video"]')];
+      const missing = document.querySelectorAll('[data-testid="title-video-missing"]').length;
+      if (videos.length + missing !== 13) return false;
+      if (missing === 13) return true;
+      return videos.length === 13 && videos.every((video) => video.readyState >= 1 || Boolean(video.error));
+    })()`,
+    "title clips settle (metadata or missing-export note)",
+  );
   const titles = await cdp.evaluate(`(() => ({
     rows: document.querySelectorAll('[data-testid="title-row"]').length,
     videos: document.querySelectorAll('[data-testid="title-video"]').length,

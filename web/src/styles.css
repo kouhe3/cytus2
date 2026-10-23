@@ -1725,3 +1725,10 @@ kbd {
     flex-direction: column;
   }
 }
+
+.chip.chip--warn {
+  color: var(--spoiler);
+  border-color: #45242a;
+  background: #180e11;
+  cursor: default;
+}

@@ -240,15 +240,18 @@ export function rowsFor(
         badge: p.id,
       }));
     case "im":
-      return index.im.map((t) => ({
-        key: t.id,
-        view: "im",
-        id: t.id,
-        title: t.titles[lang] || t.id,
-        sub: `${t.author} · ${t.replies} 回复`,
-        badge: t.id,
-        avatar: t.avatar,
-      }));
+      // 按阅读阶段排序（阶段由脚本推导：角色等级硬上限 + 剧情触发 + 帖子依赖）
+      return [...index.im]
+        .sort((a, b) => (a.stage ?? 99) - (b.stage ?? 99))
+        .map((t) => ({
+          key: t.id,
+          view: "im",
+          id: t.id,
+          title: t.titles[lang] || t.id,
+          sub: `阶段 ${t.stage ?? "?"} · ${t.author} · ${t.replies} 回复`,
+          badge: t.id,
+          avatar: t.avatar,
+        }));
     case "gates":
       return index.gates.map((g) => ({
         key: g.id,

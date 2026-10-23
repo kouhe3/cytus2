@@ -150,6 +150,27 @@ def parse_blocks(text):
     return blocks
 
 
+def derive_triggers():
+    """帖子 → 触发剧情：从 dump.cs 的 Story* 类读 `ID` 与 `TOUCH_IM_POST_/TOUCH_IM_TOPIC_<id>` 步骤常量。
+
+    以类定义为准（story_triggers.json 早先按 metadata 反查，把 P1201 错挂到 story01）：
+      P0101 → story01_new（StoryOpening）、P1201 → story03（StoryPaff01）、
+      R0801/R0901 → story02（StoryRobo01）、N2201 → story_neko02、R2401 → story05、X1601 → story_ending02
+    """
+    path = os.path.join(ROOT_DIR, "il2cppdumper", "dump.cs") if "ROOT_DIR" in globals() else os.path.join(os.path.dirname(os.path.abspath(__file__)), "il2cppdumper", "dump.cs")
+    if not os.path.exists(path):
+        return {}
+    src = open(path, encoding="utf-8", errors="replace").read()
+    out = {}
+    for block in re.split(r"\n(?=public (?:static )?class )", src):
+        m = re.search(r'const string ID = "([^"]+)"', block)
+        if not m:
+            continue
+        for tid in set(re.findall(r"TOUCH_IM_(?:POST|TOPIC)_([A-Za-z0-9]+)", block)):
+            out.setdefault(tid, m.group(1))
+    return out
+
+
 def load_bundle_textasset(bundle, text_name=None):
     """从 assets/assetpack/<bundle> 里读 TextAsset（illustrationdata 这类没落到 text/ 的表）。"""
     import UnityPy
@@ -176,7 +197,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
 
     trigger_path = os.path.join(ROOT_DIR, "story_triggers.json")
-    triggers = load(trigger_path)["triggers"] if os.path.exists(trigger_path) else {}
+    triggers = derive_triggers() or (load(trigger_path)["triggers"] if os.path.exists(trigger_path) else {})
     gallery_folders = load(os.path.join(T, "gallerydata", "folder"))
     char_names = {f["Id"]: f["Name"] for f in gallery_folders}
 
@@ -410,7 +431,10 @@ def main():
             "charts": t.get("UnlockCharts") or [],
             "likes": t.get("LikeCount", 0),
             "replies": sum(_count_replies(p)),
-            "storyTrigger": triggers.get(tid),
+            # 触发帖：{story, step}（step 用 dump.cs 的步骤名，缺省按 TOUCH_IM_POST_<id>）
+            "storyTrigger": (
+                {"story": triggers[tid], "step": f"TOUCH_IM_POST_{tid}"} if tid in triggers else None
+            ),
         })
 
     oa_chars = []

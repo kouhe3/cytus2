@@ -218,3 +218,50 @@ OA「场景」页签在每段视频上方标出「初始（默认场景）/ 变�
 条件是 `os:bos060` → 该 OS 记录的 `bgm` 块 = `ARC_RIN_AMB`。52 个条目里 18 个能这样查到 BGM。
 影片自身也可能带独立音轨：`bos6001.mp4` 的 106 s 音乐不属于任何曲目（`audio_match.py` 对 391 首 songdata +
 51 首 osbgms 最高 0.02，同源校准值 1.62），需要人耳辨认时可听 `media/audio/cutscenes/bos6001.mp3`。
+
+
+### iM 帖子的阅读顺序（按角色等级 / 剧情推导）
+
+依据（均从数据 + 反汇编取，不靠感觉）：
+
+| 来源 | 内容 |
+|:--|:--|
+| `im_lock_condition_data` | 每帖的 `StoryLockId`（需该剧情已通）、`TopicLockId`（需先读某帖）、`LevelLocks`（各曲包等级）；`IsLevelLocked=true` 是**硬上限** |
+| `im_lock_condition.StoryLockId` 判定 | `_IsLockedBySomeStory` = `!StoryStep.IsStoryEnd(id)`（0x237DC44） |
+| `im_topic_data.UnlockCharts` | 帖子解锁的谱面 —— 打谱才涨经验，经验表在 `exptable/exp_data` |
+| `ILevelLocker`（IMLevelLocker） | 等级上限由 `IsLevelLocked` 条目决定：其它角色没到指定等级前，该角色升不过这个等级 |
+| `dump.cs` Story 类 | 触发帖：`P0101→story01_new`、`P1201→story03`、`R0801/R0901→story02`、`N2201→story_neko02`、`R2401→story05`、`X1601→story_ending02`（早先按 metadata 反查把 P1201 错挂成 story01） |
+| `Story*._ConditionCheck` | `story04` 需要 `neko001 > 23`；`story_cherry02` 需要播过 OS 过场 `cpos033`；`story01`（StoryOpeningLegacy）/`story05`/`story_ending04_main` 恒真 |
+
+结果（`export_im_order.py`，318/323 帖可排入，5 帖需 Cherry 线 OS 过场）：
+
+| 阶段 | 等级（paff/neko/robo ±其他） | 帖数 | 剧情 |
+|--:|:--|--:|:--|
+| 1 | 9 / 9 / 9 | 65 | P0101→story01_new、R0801+R0901→story02 |
+| 2 | 17 / 17 / 17 | 35 | P1201→story03 |
+| 3 | 24 / 24 / 23 | 42 | （neko 24 满足 story04） |
+| 4 | 24 / 24 / 29 | 10 | R2401→story05 |
+| 5 | 29 / 29 / 29（ivy 24） | 18 | N2201→story_neko02 |
+| 6–10 | 34→51 每 3 级一档 | 17+22+11+19+9 | — |
+| 11 | 54（ivy 24） | 10 | X1601→story_ending02 |
+| 12–14 | 56 / 58 / 74 | 7+13+23 | ivy 79、cherry 24 解锁 |
+| 15 | 89 / 79 / 79（cherry 39） | 14 | — |
+| 16 | 99 | 3 | — |
+| 99 | — | 5 | 需 OS `cpos033`（Cherry 线） |
+
+`index.im[].stage` 写回 `index.json`，iM 列表按它排序，行内显示「阶段 N」。
+硬上限互相咬合的例子：`R0801` 要求 paff/neko/robo 同时 9；`N2201` 同时 29；`R2401` 还要 ivy 9；
+`Q6101` 要 paff 89 / neko 79 / robo 79 / cherry 39 / ivy 79 / vanessa 49。
+
+### 剧透警告（SpoilerAlert）
+
+`SpoilerAlertTable.ALERT_TABLE`（0x254FFDC 反编译）只有 4 个角色带警告，条件都是「其他角色等级」：
+
+| 角色 | 触发警告的阈值 |
+|:--|:--|
+| `cherry002` | paff 71 / neko 65 / robo 65 / ivy 38 |
+| `ivy001` | paff 24 / neko 24 / robo 23 |
+| `vanessa001` | paff 75 / neko 69 / robo 69 |
+| `bobo001` | paff 76 / neko 69 / robo 69 / vanessa 24 |
+
+低于阈值时进入该角色内容会先弹 `LevelLockPanelData.PanelTypes.SPOILER_ALERT`（=2）。

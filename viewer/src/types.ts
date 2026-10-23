@@ -61,6 +61,8 @@ export interface ImMeta {
   likes: number;
   replies: number;
   storyTrigger?: { story: string; step: string } | null;
+  /** 阅读顺序阶段（export_im_order.py 推导：角色等级 + 剧情 + 帖子依赖） */
+  stage?: number;
 }
 
 export interface OsMeta {

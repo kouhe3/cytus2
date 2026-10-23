@@ -133,7 +133,7 @@ export const TIMELINE_MODES: { id: TimelineMode; label: string }[] = [
 
 export const VIEWS = [
   { id: "timeline", label: "时间线", countKey: "osEntries" },
-  { id: "packs", label: "角色", countKey: "packs" },
+  { id: "packs", label: "等级解锁", countKey: "packs" },
   { id: "im", label: "iM 社群", countKey: "imTopics" },
   { id: "backup", label: "备份数据库", countKey: "galleryItems" },
   { id: "gates", label: "结局闸", countKey: "gates" },

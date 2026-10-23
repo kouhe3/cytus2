@@ -191,7 +191,7 @@ export function OaReader({
             onClick={() => onNavigate("packs", character)}
             title="该角色对应的等级阶梯"
           >
-            角色 →
+            等级解锁 →
           </button>
         ) : null}
       </div>

@@ -82,7 +82,7 @@ export function OsReader({
           ) : null;
         })()}
         {meta.packs.map(([pack, level]) => (
-          <NavChip key={`${pack}:${level}`} onClick={() => onNavigate("packs", pack)} title="打开角色（等级阶梯）">
+          <NavChip key={`${pack}:${level}`} onClick={() => onNavigate("packs", pack)} title="打开等级解锁（该角色的等级阶梯）">
             {pack} · Lv{level}
           </NavChip>
         ))}

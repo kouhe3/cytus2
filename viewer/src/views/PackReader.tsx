@@ -22,7 +22,7 @@ export function PackReader({
     <div className="reader-inner">
       <div className="crumbs">
         <button type="button" className="chip chip-btn" onClick={() => onNavigate("packs")}>
-          角色
+          等级解锁
         </button>{" "}
         <Chip>同步点 {pack.syncCount}</Chip>
         {index.oa.some((c) => c.character === pack.id) ? (

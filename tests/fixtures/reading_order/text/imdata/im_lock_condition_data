@@ -1,0 +1,74 @@
+[
+  {
+    "TopicId": "AL0101",
+    "TopicLockId": "",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "alpha001", "Level": 9, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "AL0201",
+    "TopicLockId": "",
+    "StoryLockId": "story_alpha01",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "alpha001", "Level": 1, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "P0101",
+    "TopicLockId": "",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "alpha001", "Level": 3, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "P0201",
+    "TopicLockId": "P0101",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": []
+  },
+  {
+    "TopicId": "P0301",
+    "TopicLockId": "",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "alpha001", "Level": 5, "IsLevelLocked": false},
+      {"SongPackId": "beta001", "Level": 9, "IsLevelLocked": false},
+      {"SongPackId": "side001", "Level": 2, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "B0101",
+    "TopicLockId": "",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "beta001", "Level": 0, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "G0101",
+    "TopicLockId": "",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "side001", "Level": 0, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "I0101",
+    "TopicLockId": "",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "ivy001", "Level": 0, "IsLevelLocked": false}
+    ]
+  }
+]

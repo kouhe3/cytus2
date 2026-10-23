@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reading_order.schema.json",
+  "title": "reading_order",
+  "description": "A derived unlocking/reading position for a content entity. stage is the simulation round, level_gate the effective level after spoiler deferral; order is the global 1-based position.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "entity_id",
+    "entity_type",
+    "stage",
+    "level_gate",
+    "original_level",
+    "tier",
+    "thread",
+    "level_locks",
+    "version",
+    "version_order",
+    "chapter",
+    "chapter_id",
+    "chapter_order",
+    "chapter_staged",
+    "spoiler_alert",
+    "spoiler_conditions",
+    "in_game_order",
+    "order",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^reading_order/[^\\s]+$"
+    },
+    "type": {
+      "const": "reading_order"
+    },
+    "entity_id": {
+      "type": "string",
+      "pattern": "^(im|os|oa_document|story_node)/[^\\s]+$"
+    },
+    "entity_type": {
+      "enum": ["im_post", "os_log", "oa_document", "story_node"]
+    },
+    "stage": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Simulation round within the phase; earlier rounds become readable first."
+    },
+    "level_gate": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Effective level: max(original_level, spoiler gate threshold)."
+    },
+    "original_level": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Highest own level lock (0-based); story events inherit their trigger or dependent level."
+    },
+    "tier": {
+      "enum": ["free", "paid", "side"]
+    },
+    "thread": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^character/[^\\s]+$"}
+      ]
+    },
+    "level_locks": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/level_lock"
+      }
+    },
+    "version": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ],
+      "description": "OS Category value; null when the entity has no version field."
+    },
+    "version_order": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0},
+      "description": "Numeric parts of version for release-order sorting."
+    },
+    "chapter": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ],
+      "description": "OS timeline chapter name."
+    },
+    "chapter_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^chapter/[0-9]+$"}
+      ]
+    },
+    "chapter_order": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "integer", "minimum": 0}
+      ]
+    },
+    "chapter_staged": {
+      "type": "boolean",
+      "description": "True for test01/test02, the staging chapters a chapter sort pushes last."
+    },
+    "spoiler_alert": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^spoiler_alert/[^\\s]+$"}
+      ]
+    },
+    "spoiler_conditions": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/level_lock"
+      }
+    },
+    "in_game_order": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Stable tie-breaker from the game table order."
+    },
+    "order": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Global position in the default (free -> paid -> side) reading order."
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

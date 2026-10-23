@@ -1,0 +1,17 @@
+[
+  {
+    "Id": "bos001",
+    "Type": 3,
+    "Names": ["Beta OS", "Beta OS", "Beta OS", "Beta OS", "Beta OS", "Beta OS"],
+    "Contents": ["##conversation=Beta\nBeta", "", "", "", "", ""],
+    "TimelineChapter": {"Folder": "N/A", "Chapter": "Side Stories", "Index": 1},
+    "Date": "688_02_02",
+    "OSLockCondition": {
+      "FileLockId": "",
+      "LevelLocks": [{"SongPackId": "beta001", "Level": 1, "IsLevelLocked": false}]
+    },
+    "UnlockCharts": [],
+    "DigitLock": null,
+    "Category": "2.0"
+  }
+]

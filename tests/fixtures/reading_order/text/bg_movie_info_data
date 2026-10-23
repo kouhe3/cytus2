@@ -1,0 +1,52 @@
+[
+  {
+    "Id": "alpha001",
+    "Name": "Default",
+    "CharacterId": "alpha001",
+    "OSFileId": "aos001",
+    "IMFileId": "",
+    "StoryId": "story_alpha01",
+    "LevelLockCharacterId": "",
+    "LevelLockLevel": 0,
+    "NeedCapso": false,
+    "BGMoviePrefabPairs": [
+      {"BGMoviePrefix": "alpha001", "BGPrefabName": "alpha001", "Weight": 100}
+    ]
+  },
+  {
+    "Id": "beta001",
+    "Name": "Default",
+    "CharacterId": "beta001",
+    "OSFileId": "bos001",
+    "IMFileId": "",
+    "StoryId": "",
+    "LevelLockCharacterId": "alpha001",
+    "LevelLockLevel": 9,
+    "NeedCapso": true,
+    "BGMoviePrefabPairs": []
+  },
+  {
+    "Id": "side001",
+    "Name": "Default",
+    "CharacterId": "side001",
+    "OSFileId": "gos001",
+    "IMFileId": "",
+    "StoryId": "",
+    "LevelLockCharacterId": "",
+    "LevelLockLevel": 0,
+    "NeedCapso": true,
+    "BGMoviePrefabPairs": []
+  },
+  {
+    "Id": "ivy001",
+    "Name": "Default",
+    "CharacterId": "ivy001",
+    "OSFileId": "ivos001",
+    "IMFileId": "",
+    "StoryId": "",
+    "LevelLockCharacterId": "",
+    "LevelLockLevel": 0,
+    "NeedCapso": false,
+    "BGMoviePrefabPairs": []
+  }
+]

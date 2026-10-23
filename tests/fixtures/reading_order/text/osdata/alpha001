@@ -1,0 +1,41 @@
+[
+  {
+    "Id": "aos001",
+    "Type": 3,
+    "Names": ["First OS", "First OS", "First OS", "First OS", "First OS", "First OS"],
+    "Contents": ["##conversation=Alpha\nHello", "", "", "", "", ""],
+    "TimelineChapter": {"Folder": "Alpha", "Chapter": "Architects", "Index": 1},
+    "Date": "687_06_30",
+    "OSLockCondition": {"FileLockId": "", "LevelLocks": []},
+    "UnlockCharts": [],
+    "DigitLock": null,
+    "Category": "1.0"
+  },
+  {
+    "Id": "aos002",
+    "Type": 3,
+    "Names": ["Second OS", "Second OS", "Second OS", "Second OS", "Second OS", "Second OS"],
+    "Contents": ["##conversation=Alpha\nSecond", "", "", "", "", ""],
+    "TimelineChapter": {"Folder": "Alpha", "Chapter": "Side Stories", "Index": 2},
+    "Date": "688_01_01",
+    "OSLockCondition": {"FileLockId": "aos001", "LevelLocks": []},
+    "UnlockCharts": [],
+    "DigitLock": null,
+    "Category": "1.1"
+  },
+  {
+    "Id": "aos003",
+    "Type": 3,
+    "Names": ["Staging OS", "Staging OS", "Staging OS", "Staging OS", "Staging OS", "Staging OS"],
+    "Contents": ["##conversation=Alpha\nStaging", "", "", "", "", ""],
+    "TimelineChapter": {"Folder": "Alpha", "Chapter": "test01", "Index": -1},
+    "Date": "689_01_01",
+    "OSLockCondition": {
+      "FileLockId": "",
+      "LevelLocks": [{"SongPackId": "alpha001", "Level": 2, "IsLevelLocked": false}]
+    },
+    "UnlockCharts": [],
+    "DigitLock": null,
+    "Category": "9.0"
+  }
+]

@@ -113,6 +113,16 @@ export function OaReader({
   }
   const descriptionGroups = [...descGroupMap.entries()];
 
+  // 贴图名与角色 id 的大小写不一定一致：oas_Vanessa001_001_1 vs vanessa001
+  const oaAsset = (name: string) => {
+    const table = manifest?.oaAssets;
+    if (!table) return undefined;
+    if (table[name]) return table[name];
+    const lower = name.toLowerCase();
+    const key = Object.keys(table).find((k) => k.toLowerCase() === lower);
+    return key ? table[key] : undefined;
+  };
+
   const charScenes = sceneClips.filter(
     (c) => c.char === character || c.char.startsWith(`${character}_s`),
   );
@@ -202,7 +212,7 @@ export function OaReader({
           </p>
           <div className="oa-art">
             {[character, `${character.slice(0, -3)}002`, `${character.slice(0, -3)}003`]
-              .map((id) => ({ id, hit: manifest?.oaAssets?.[`${id}_l`] }))
+              .map((id) => ({ id, hit: oaAsset(`${id}_l`) }))
               .filter((x) => x.hit)
               .map(({ id, hit }) => (
                 <figure className="oa-art-item" key={id}>
@@ -266,16 +276,18 @@ export function OaReader({
               <div className="oa-art">
                 {(() => {
                   const idx = activeObject.split("obj")[1] ?? "";
-                  const objImg = manifest?.oaAssets?.[`${character}_obj${idx}`];
+                  const objImg = oaAsset(`${character}_obj${idx}`);
                   const panels = [1, 2, 3]
-                    .map((n) => ({ n, hit: manifest?.oaAssets?.[`oas_${character}_${idx}_${n}`] }))
+                    .map((n) => ({ n, hit: oaAsset(`oas_${character}_${idx}_${n}`) }))
                     .filter((p) => p.hit);
                   return (
                     <>
                       {objImg ? (
                         <figure className="oa-art-item">
                           <img src={MEDIA_BASE + encodeURI(objImg.file)} alt={activeObject} loading="lazy" />
-                          <figcaption className="mono">物件图 {objImg.w}×{objImg.h}</figcaption>
+                          <figcaption className="mono">
+                            {objImg.file.split("/").pop()?.replace(/\.png$/, "")} · {objImg.w}×{objImg.h}
+                          </figcaption>
                         </figure>
                       ) : null}
                       {panels.map(({ n, hit }) => (
@@ -286,7 +298,7 @@ export function OaReader({
                             loading="lazy"
                           />
                           <figcaption className="mono">
-                            oas_{character}_{idx}_{n} · {hit!.w}×{hit!.h}
+                            {hit!.file.split("/").pop()?.replace(/\.png$/, "")} · {hit!.w}×{hit!.h}
                           </figcaption>
                         </figure>
                       ))}

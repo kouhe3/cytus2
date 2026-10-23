@@ -44,7 +44,7 @@ export function BranchMap({
   }
 
   const width = PAD_X * 2 + (positions.length - 1) * COL_W + NODE_W;
-  const height = PAD_Y * 2 + 2 * ROW_H + NODE_H;
+  const height = PAD_Y * 2 + 2 * ROW_H + NODE_H + ROW_H;
 
   const byId = new Map(nodes.map((n) => [n.id, n]));
   // 每个节点的落点只算一次，连线与方块共用同一套坐标
@@ -78,13 +78,22 @@ export function BranchMap({
               const x2 = to.x;
               const y2 = to.y + NODE_H / 2;
               const mx = (x1 + x2) / 2;
+              // 跨越多列的「跳线」（如 taos010 → taos011，位置 10 → 19）用虚线拱到节点上方，避免被方块盖住
+              const jump = Math.abs((t.position ?? 0) - (n.position ?? 0)) > 2;
+              const lift = jump ? Math.max(y1, y2) + ROW_H * 0.9 : null;
               return (
                 <path
                   key={`${n.id}->${id}`}
-                  d={`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`}
+                  d={
+                    jump
+                      ? `M ${x1} ${y1} C ${x1 + 24} ${lift}, ${x2 - 24} ${lift}, ${x2} ${y2}`
+                      : `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`
+                  }
                   fill="none"
-                  stroke="var(--border)"
+                  stroke={jump ? "var(--accent)" : "var(--border)"}
                   strokeWidth={1}
+                  strokeDasharray={jump ? "4 3" : undefined}
+                  opacity={jump ? 0.75 : 1}
                 />
               );
             }),

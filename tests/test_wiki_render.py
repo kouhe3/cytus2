@@ -121,6 +121,8 @@ def test_default_song_omits_unverifiable_fields(wiki_output: Path) -> None:
     assert {"BPM", "时长", "谱师", "歌词", "曲绘"} & emitted == set()
     omitted = {row.get("param") for row in page["omitted"]}
     assert {"BPM", "时长", "谱师", "歌词", "曲绘", "EasyNote"} <= omitted
+    reasons = {row.get("param"): row["reason"] for row in page["omitted"]}
+    assert reasons["曲绘"] == "conditional_omitted"
     assert page["conflicts"] == []
 
 

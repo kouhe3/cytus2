@@ -1,7 +1,7 @@
 {
   "site": "bili",
   "site_name": "BiliGame Cytus II",
-  "generated_from": "prop=revisions&rvprop=content&rvslots=main for 模板:歌曲 (2026-10-23)",
+  "generated_from": "wiki/snapshot/template_params.json (模板:歌曲; fetched from wiki.biligame.com/cytus2 on 2026-10-23)",
   "notes": {
     "semantics": "required = source uses {{{name}}} with no default; conditional = template guards the parameter with #if and also has a default; optional = every occurrence has a default.",
     "unknown_params": "Existing 歌曲 pages use historical keys outside the 37 template parameters; parameter patches must preserve them.",

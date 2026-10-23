@@ -422,6 +422,32 @@ def main():
             "syncCount": sum(1 for lv in levels if lv["im"] and lv["os"]),
         })
 
+    # Tairitsu：Branching OS（分支 OS），没有 iM 帖与传统 OS 档案；节点按等级 + 分支状态解锁
+    if "tairitsu001" not in {p["id"] for p in pack_list} and br:
+        branch_levels = collections.defaultdict(list)
+        branch_charts = collections.defaultdict(set)
+        for e in br:
+            lv = int((e.get("UnlockCondition") or {}).get("Level") or 0)
+            branch_levels[lv].append(e["Id"])
+            for c in e.get("UnlockedCharts") or []:
+                if c.get("SongId"):
+                    branch_charts[lv].add(c["SongId"])
+        pack_list.append({
+            "id": "tairitsu001",
+            "kind": "branching",
+            "folders": ["Tairitsu"],
+            "chapters": [],
+            "levels": [
+                {"level": lv, "im": [], "os": [], "branch": sorted(ids), "charts": sorted(branch_charts[lv])}
+                for lv, ids in sorted(branch_levels.items())
+            ],
+            "imCount": 0,
+            "osCount": 0,
+            "syncCount": 0,
+            "branchCount": len(br),
+        })
+        pack_list.sort(key=lambda p: p["id"])
+
     gates = collections.defaultdict(list)
     for tid in order:
         g = (imlock.get(tid) or {}).get("StoryLockId") or ""
@@ -509,9 +535,15 @@ def main():
     backup_nodes = []
     for e in br:
         vs = e.get("ViewSetting") or {}
+        uc = e.get("UnlockCondition") or {}
+        charts = sorted({c.get("SongId") for c in e.get("UnlockedCharts") or [] if c.get("SongId")})
         backup_nodes.append({
             "id": e["Id"],
             "type": e.get("Type"),
+            "level": uc.get("Level"),
+            "stateId": uc.get("StateId"),
+            "stateValue": uc.get("StateValue"),
+            "charts": charts,
             "names": {code: one_line((e.get("Names") or [""] * 6)[slot]) for code, _, slot in LANGS},
             "position": vs.get("Position"),
             "order": vs.get("Order"),

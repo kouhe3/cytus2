@@ -32,15 +32,23 @@ export function BranchingReader({
         <Chip>{node.branch ? `分支 ${node.branch.toUpperCase()}` : "收束段"}</Chip>
       </div>
       <h2>{node.id}</h2>
-      <p className="lede">分支图节点（ViewSetting.Position / LinkedFileIds），不是线性档案。</p>
+      <p className="lede">
+        Tairitsu 的 <b>Branching OS（分支 OS）</b>节点：按「曲包等级 + 分支状态」解锁，不是线性档案。
+      </p>
       <Facts
         items={[
-          ["位置", node.position ?? "—"],
-          ["顺序", node.order ?? "—"],
-          ["类型", node.type],
+          ["解锁等级", node.level ? `Lv${node.level}` : "—"],
+          ["分支状态", node.stateId !== undefined ? `StateId ${node.stateId} = ${node.stateValue}` : "—"],
+          ["关联谱面", (node.charts ?? []).join("、") || "—"],
+          ["位置 / 顺序", `${node.position ?? "—"} / ${node.order ?? "—"}`],
           ["前驱", incoming.map((n) => n.id).join("、") || "—"],
         ]}
       />
+      <div className="chips">
+        <button type="button" className="chip chip-btn" onClick={() => onNavigate("packs", "tairitsu001")}>
+          等级解锁 · tairitsu001 →
+        </button>
+      </div>
       <div className="chips">
         {node.next.map((id) => (
           <button

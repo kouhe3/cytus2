@@ -36,16 +36,23 @@ export interface PackLevel {
   level: number;
   im: string[];
   os: string[];
+  /** Branching OS（Tairitsu）：该等级解锁的分支节点 */
+  branch?: string[];
+  /** 该等级解锁的谱面 */
+  charts?: string[];
 }
 
 export interface Pack {
   id: string;
+  /** branching = Tairitsu 的 Branching OS（没有 iM 帖与传统 OS 档案） */
+  kind?: "branching";
   folders: string[];
   chapters: [string, number][];
   levels: PackLevel[];
   imCount: number;
   osCount: number;
   syncCount: number;
+  branchCount?: number;
 }
 
 export interface ImMeta {
@@ -118,6 +125,11 @@ export interface BackupNode {
   id: string;
   names?: LangMap<string>;
   type: number;
+  /** 分支节点解锁条件：曲包等级 + 分支状态（Branching OS） */
+  level?: number;
+  stateId?: number;
+  stateValue?: string;
+  charts?: string[];
   position: number | null;
   order: number | null;
   next: string[];

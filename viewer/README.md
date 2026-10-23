@@ -566,3 +566,22 @@ iM 列表用 `row.group` 输出 `阶段 N（≤LvX）` 作为分组标题（`Lis
 剧情详情页顶部有一行常驻说明：
 「触发源」= 读它 / 玩它会让这段剧情开始；「前置」= 必须先完成这段剧情，那些条目才可读。
 列表里 `⚑ 触发帖 ·` 也直接写明该帖是触发源，而不是它的解锁条件。
+
+### Tairitsu 的「分支 OS」（Branching OS）
+
+Tairitsu 有曲包（`songdata_tairitsu001_001…`、`exp_data` 里也有 `tairitsu001`），但**没有 iM 帖、也没有传统 OS 档案**；
+游戏给这个角色单独做了一套 **Branching OS**：`branchingosdata/tairitsu001` 的 48 个节点（`taos001a`…`taos0xxc`）。
+
+节点解锁不是按时间线，而是 `UnlockCondition = { Level, StateId, StateValue }`：
+
+- `Level` = Tairitsu 曲包等级（1–15 级，节点按 1/2/3… 递增出现）；
+- `StateId = 0`、`StateValue = 0/1/2` = 分支状态（对应分支 a / b / c）；
+- 节点还会 `UnlockedCharts` 解锁谱面（例如 `taos005x` 段解锁 `tairitsu001_006`、`taos010x` 段解锁 `tairitsu001_002`）。
+
+页面上的体现：
+
+| 位置 | 变化 |
+|:--|:--|
+| `等级解锁` | 27 个角色（新增 `tairitsu001`），该角色没有 iM / OS 两列，改为「分支节点 / 解锁谱面」两列 |
+| `分支剧情` | 节点详情显示 `解锁等级 Lv*`、`分支状态 StateId 0 = 0`、关联谱面，并有「等级解锁 · tairitsu001 →」回链 |
+| OA | Tairitsu 本来就有 OA 档案（12 个 OA 角色之一） |

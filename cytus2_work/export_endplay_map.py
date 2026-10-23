@@ -21,6 +21,7 @@ OUT = os.path.join(HERE, "..", "viewer", "public", "data", "endplay.json")
 #   0_GAMEPLAY_CUTSCENE_2 时读 StoryEnding03{Main,Replay}.IsFirstGamePlayCutsceneHit
 #   这个静态 bool 由 Event1.OnEnd(isHitAnyNote) 写入（0x228D508：strb w9(=isHitAnyNote) [static+8]）。
 CONDITIONS = {
+    "ending05_staffroll": "StoryEnding05MainAction.StaffrollEndPlay（5.0 终章片尾；播完由 UnlockAfterStoryScene 发奖）",
     "SelectForPaffGameplay": "0_GAMEPLAY_CUTSCENE_1：玩家在这里回应 PAFF（点中音符），OnEnd(isHitAnyNote) 把结果写进 IsFirstGamePlayCutsceneHit",
     "FinalBossStage_1": "0_GAMEPLAY_CUTSCENE_2 阶段，且之前回应过 PAFF（IsFirstGamePlayCutsceneHit = true）",
     "FinalBossStage_2": "0_GAMEPLAY_CUTSCENE_2 阶段，且之前没有回应 PAFF（IsFirstGamePlayCutsceneHit = false）",
@@ -51,13 +52,17 @@ def main():
             cur = {"class": m.group(1), "song": None, "video": None, "line": i}
             continue
         if cur is not None:
-            ms = re.search(r'SONG_ID = "([^"]+)"', line)
+            # 结场事件有两种写法：SONG_ID/VIDEO_ID，或 BOSS_SONG_ID/BOSS_MOVIE_ID/BOSS_STAGE_ID
+            ms = re.search(r'(?:BOSS_)?SONG_ID = "([^"]+)"', line)
             if ms:
                 cur["song"] = ms.group(1)
-            mv = re.search(r'VIDEO_ID = "([^"]+)"', line)
-            if mv:
+            mv = re.search(r'(?:BOSS_MOVIE_ID|VIDEO_ID|BOSS_STAGE_ID) = "([^"]+)"', line)
+            if mv and not cur["video"]:
                 cur["video"] = mv.group(1)
             if line.startswith("}"):
+                # 有些结场事件只给 BOSS_MOVIE_ID：此时曲目名就是视频名的小写（songdata 包同名）
+                if cur["song"] is None and cur["video"]:
+                    cur["song"] = cur["video"].lower()
                 if cur["song"]:
                     video = cur["video"] or cur["song"]
                     cur["condition"] = CONDITIONS.get(cur["song"])

@@ -602,6 +602,18 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 
 分支剧情每个节点页顶部都有这张图（可横向滚动），点方块直接跳转；当前节点用 accent 描边。
 
+### 结场/片尾的音轨
+
+`export_endplay_map.py` 从 `dump.cs` 抓 `IEndPlayEvent` 的常量生成 `data/endplay.json`，`export_endplay_audio.py`
+再按 `songdata_<song>.ab` 把 Vorbis 音轨复制进视频。注意事件里有两套字段名：
+`SONG_ID`/`VIDEO_ID` 与 `BOSS_SONG_ID`/`BOSS_MOVIE_ID`/`BOSS_STAGE_ID`（5.0 片尾 `StaffrollEndPlay`
+只有后者），脚本两套都认；只给 `BOSS_MOVIE_ID` 时曲目名取视频名小写（`Ending05_Staffroll` → `ending05_staffroll`）。
+
+结果：`videos/Ending05_Staffroll.mp4`（原片 6:13，无音轨）＋ `videos/Ending05_Staffroll__ending05_staffroll.mp4`
+（H.264 + AAC 6:13）。ending03 的 true ending 片尾 **不是视频**，是场景 `end03_TrueEnd_StaffRoll`，
+字母是 UI（`End03TrueEndStaffRollRunner` 逐字母回调），只有它前后的过场是 `true_ending.mp4` /
+`good_ending_01.mp4` / `good_ending_02.mp4`。
+
 ### 歌曲目录与获取方式
 
 曲名/难度不在 `songdata_*.ab`（那里面只有谱面 JSON 与 AudioClip），而在

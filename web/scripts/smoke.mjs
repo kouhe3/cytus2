@@ -472,6 +472,37 @@ try {
     "OS detail returns to the timeline",
   );
 
+  // ------------------------------------ CAPSO unlock source (generic detail)
+  await cdp.navigate(`${appBase}/song/neko001_058@Chaos`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="chart-view"]')) &&
+     Boolean(document.querySelector('[data-testid="unlock-source"]'))`,
+    "CAPSO-unlocked chart loads",
+  );
+  const capsoSource = await cdp.evaluate(
+    `document.querySelector('[data-testid="unlock-source"]').getAttribute('href')`,
+  );
+  check(
+    capsoSource?.startsWith("/capso_shop_item/") === true,
+    "chart with a CAPSO source links to the CAPSO item",
+  );
+  await cdp.evaluate(`document.querySelector('[data-testid="unlock-source"]').click()`);
+  await cdp.waitFor(
+    `location.pathname.startsWith('/capso_shop_item/') && Boolean(document.querySelector('[data-testid="entity-view"]'))`,
+    "generic CAPSO entity detail opens",
+  );
+  check(
+    (await cdp.evaluate(
+      `Boolean(document.querySelector('.entity-facts'))`,
+    )) === true,
+    "generic source entity detail renders schema facts",
+  );
+  await cdp.evaluate(`document.querySelector('[data-testid="back-to-timeline"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/timeline' && document.querySelectorAll('[data-testid="timeline-card"]').length > 0`,
+    "generic source detail returns to the timeline",
+  );
+
   await cdp.navigate(`${appBase}/`);
   await cdp.waitFor(
     `location.pathname === '/timeline' && document.querySelectorAll('[data-testid="timeline-card"]').length > 0`,

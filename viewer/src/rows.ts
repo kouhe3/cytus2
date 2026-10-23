@@ -261,7 +261,7 @@ export function rowsFor(
           title: t.titles[lang] || t.id,
           sub: `${t.storyTrigger ? "⚑ " : ""}#${t.readIndex ?? "?"} · 阶段 ${t.stage ?? "?"}${
             t.lockLevel ? `（≤Lv${t.lockLevel}）` : ""
-          } · ${t.author} · ${t.replies} 回复`,
+          }${t.external ? ` · 外部：${t.external}` : ""} · ${t.author} · ${t.replies} 回复`,
           badge: t.id,
           avatar: t.avatar,
         }));

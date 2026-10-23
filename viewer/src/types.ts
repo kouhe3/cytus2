@@ -69,6 +69,8 @@ export interface ImMeta {
   lane?: number;
   /** 该阶段三主角达到的等级（游戏里的 LOCK 点） */
   lockLevel?: number;
+  /** 模型外的依赖（stage 98）：如 story_cherry02 需要 OS 过场 cpos033 */
+  external?: string;
 }
 
 export interface OsMeta {

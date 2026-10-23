@@ -252,14 +252,32 @@ def main():
             seq += 1
             read_index[tid] = seq
 
+    # 模型外的帖子（如依赖 OS 过场 cpos033 的 Cherry 线）单独归到 stage 98，按等级需求排序
+    blocked_sorted = sorted(
+        blocked,
+        key=lambda tid: (
+            max([x["Level"] for x in locks[tid]["LevelLocks"]] or [0]),
+            topic_seq.get(tid, 10_000),
+        ),
+    )
+    blocked_reason = {
+        tid: (locks[tid]["StoryLockId"] or locks[tid]["TopicLockId"] or "等级 / 前置未在模型内")
+        for tid in blocked
+    }
+    for tid in blocked_sorted:
+        seq += 1
+        read_index[tid] = seq
+
     json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
     # 把阶段号写回 index.json，前端 iM 列表按它排序
     idx_path = os.path.join(HERE, "..", "viewer", "public", "data", "index.json")
     idx = json.load(open(idx_path, encoding="utf-8"))
     for t in idx["im"]:
-        t["stage"] = out["order"].get(t["id"], 99)
+        t["stage"] = out["order"].get(t["id"]) or (98 if t["id"] in blocked_reason else 99)
         t["readIndex"] = read_index.get(t["id"], 10_000)
+        if t["id"] in blocked_reason:
+            t["external"] = blocked_reason[t["id"]]
         t["lane"] = LANE_OF.get(resolve_identity(t["id"]), PLOT_LANE)
         t["lockLevel"] = next(
             (st["lockLevel"] for st in stages if t["id"] in st["posts"]), 0

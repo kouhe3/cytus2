@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gacha_machine.schema.json",
+  "title": "gacha_machine",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "name",
+    "create_order",
+    "icon_path",
+    "default_price",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^gacha_machine/[^\\s]+$"
+    },
+    "type": {
+      "const": "gacha_machine"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "create_order": {
+      "type": "integer"
+    },
+    "icon_path": {
+      "type": "string"
+    },
+    "default_price": {
+      "type": "string"
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

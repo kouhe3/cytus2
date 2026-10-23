@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "kind": "pages",
+  "site": "https://wiki.biligame.com/cytus2",
+  "fetched_at": "2026-10-23T00:00:00+00:00",
+  "templates": {
+    "歌曲": {
+      "title": "Template:歌曲",
+      "page_count": 1,
+      "pages": [
+        {
+          "title": "First",
+          "params": {
+            "曲名": "First",
+            "曲师": "Old Artist",
+            "原文": "人工填写的旧值",
+            "轶事": "人工轶事"
+          }
+        }
+      ]
+    },
+    "角色": {
+      "title": "Template:角色",
+      "page_count": 1,
+      "pages": [
+        {
+          "title": "Alpha",
+          "params": {
+            "角色名": "Alpha",
+            "拥有系统": "im",
+            "角色分类": "人工分类"
+          }
+        }
+      ]
+    },
+    "Im/帖": {
+      "title": "Template:Im/帖",
+      "page_count": 4,
+      "pages": [
+        {
+          "title": "闲聊时间",
+          "params": {
+            "标题": "闲聊时间",
+            "全局排序": "23",
+            "剧情排序": "5"
+          }
+        },
+        {
+          "title": "闲聊时间 2",
+          "params": {
+            "标题": "闲聊时间",
+            "全局排序": "26",
+            "剧情排序": "6"
+          }
+        },
+        {
+          "title": "重启。",
+          "params": {
+            "标题": "重启。",
+            "全局排序": "300",
+            "剧情排序": "24"
+          }
+        },
+        {
+          "title": "重启。(good ending2)",
+          "params": {
+            "标题": "重启。",
+            "全局排序": "295",
+            "剧情排序": ""
+          }
+        }
+      ]
+    }
+  }
+}

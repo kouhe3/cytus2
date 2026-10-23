@@ -259,7 +259,9 @@ export function rowsFor(
           view: "im",
           id: t.id,
           title: t.titles[lang] || t.id,
-          sub: `#${t.readIndex ?? "?"} 阶段 ${t.stage ?? "?"} · ${t.author} · ${t.replies} 回复`,
+          sub: `#${t.readIndex ?? "?"} · 阶段 ${t.stage ?? "?"}${
+            t.lockLevel ? `（≤Lv${t.lockLevel}）` : ""
+          } · ${t.author} · ${t.replies} 回复`,
           badge: t.id,
           avatar: t.avatar,
         }));

@@ -63,8 +63,12 @@ export interface ImMeta {
   storyTrigger?: { story: string; step: string } | null;
   /** 阅读顺序阶段（export_im_order.py 推导：角色等级 + 剧情 + 帖子依赖） */
   stage?: number;
-  /** 阶段内的阅读序号（触发帖 → 本阶段活跃账号 → 其余主角 → 其他） */
+  /** 阶段内的阅读序号：账号线程（同一主角连续）→ 该帖等级需求 → 数据表顺序 */
   readIndex?: number;
+  /** 账号线程序号（0=PAFF,1=NEKO,2=ROBO,3=Ivy,4=Xenon,5=ConneR,6=Cherry,7=JOE,8=其他） */
+  lane?: number;
+  /** 该阶段三主角达到的等级（游戏里的 LOCK 点） */
+  lockLevel?: number;
 }
 
 export interface OsMeta {

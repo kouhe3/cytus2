@@ -127,8 +127,12 @@ def main():
                 changed = True
         if not newly and (dict(level), len(read), len(stories_done)) == before:
             break
+        cap_now = caps()
         stages.append({
             "stage": stage,
+            # 阶段门槛：三主角（PAFF/NEKO/ROBO）在这一段达到的等级，对应游戏里的 LOCK 点
+            "lockLevel": max([level.get(p, 0) for p in ("paff001", "neko001", "robo001")] or [0]),
+            "capped": {p: c for p, c in cap_now.items() if c < 10_000},
             "levels": {p: level[p] for p in packs if level[p]},
             "posts": newly,
             "stories": sorted(stories_done),
@@ -164,22 +168,24 @@ def main():
         return avatar.split("_")[0].lower()
 
     read_index, seq = {}, 0
-    # topics 的键就是帖子 id；用最新版 index 里的顺序当兜底
-    data_order = {tid: t.get("order", 10_000) for tid, t in topics.items()}
+    # 账号线程顺序：三主角在前，其余主角次之，"其他"最后；同一主角的帖子连续，内部按等级需求升序
+    LANE = ["paff", "neko", "robo", "ivy", "xenon", "conner", "cherry", "joe"]
+
+    def lane_of(avatar: str) -> int:
+        acc = (avatar or "").split("_")[0].lower()
+        return LANE.index(acc) if acc in LANE else len(LANE)
+
+    need = {tid: max([x["Level"] for x in e["LevelLocks"]] or [0]) for tid, e in locks.items()}
+    topic_seq = {tid: i for i, tid in enumerate(topics)}   # im_topic_data 的数组顺序
+
     for i, st in enumerate(stages):
-        active = {STORY_ACCOUNT.get(triggers[t]) for t in st["posts"] if t in triggers} - {None}
         def key(tid):
-            acc = account_of((topics.get(tid) or {}).get("AvatarId") or "")
-            if tid in triggers:
-                grp = 0
-            elif acc in active:
-                grp = 1
-            elif acc in MAIN or acc in OTHER_MAIN:
-                grp = 2
-            else:
-                grp = 3
-            return (grp, data_order.get(tid, 10_000))
-        for tid in sorted(st["posts"], key=key):
+            return (lane_of((topics.get(tid) or {}).get("AvatarId") or ""), need.get(tid, 0))
+
+        # 稳定的组内顺序：先用数据表顺序（locks 的键顺序）排一遍，再按 key 稳定排序
+        ordered = sorted(st["posts"], key=lambda tid: topic_seq.get(tid, 10_000))
+        ordered.sort(key=key)
+        for tid in ordered:
             seq += 1
             read_index[tid] = seq
 
@@ -191,6 +197,10 @@ def main():
     for t in idx["im"]:
         t["stage"] = out["order"].get(t["id"], 99)
         t["readIndex"] = read_index.get(t["id"], 10_000)
+        t["lane"] = lane_of(t.get("avatar") or "")
+        t["lockLevel"] = next(
+            (st["lockLevel"] for st in stages if t["id"] in st["posts"]), 0
+        )
     json.dump(idx, open(idx_path, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 
     print(f"packs: {packs}")

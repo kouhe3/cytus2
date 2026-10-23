@@ -87,6 +87,7 @@ def load(p):
 def main():
     locks = {e["TopicId"]: e for e in load("imdata/im_lock_condition_data")}
     topics = {t["Id"]: t for t in load("imdata/im_topic_data")}
+    flt = load("imdata/im_filter_data")
     triggers = derive_triggers()
     exp = {e["song_pack_id"]: e["table"] for e in load("exptable/exp_data")["exp_table_list"]}
 
@@ -185,19 +186,64 @@ def main():
 
     read_index, seq = {}, 0
     # 账号线程顺序：三主角在前，其余主角次之，"其他"最后；同一主角的帖子连续，内部按等级需求升序
-    # 游戏内角色列表顺序（免费：PAFF/NEKO/ROBO；付费主线：Ivy/Crystal PuNK/Vanessa/Bo Bo；其余随后）
-    LANE = ["paff", "neko", "robo", "ivy", "cherry", "vanessa", "bobo", "xenon", "conner", "joe"]
+    # 账号线程 = 角色（不是 avatar 前缀）：免费 → 付费 → 支线 → 剧情
+    T0 = {"paff001", "neko001", "robo001"}
+    TIER_ORDER = [
+        ["paff001", "neko001", "robo001", "ivy001", "cherry002", "vanessa001", "bobo001"],
+        ["ilka001", "xenon001", "conner001", "cherry001", "joe001", "sagar001", "rin001",
+         "paff002", "robo002", "neko002"],
+        ["graffj001", "miku001", "ai001", "alice001", "hans001", "kaf001", "amiya001",
+         "tairitsu001", "neko003", "paff003"],
+    ]
+    LANE_OF = {pid: tier * 100 + i for tier, group in enumerate(TIER_ORDER) for i, pid in enumerate(group)}
+    PLOT_LANE = 300
+
+    # avatar → 所属账号家族（im_filter_data：PAFF 名下就有 paff_01 + paff_02）
+    def _pack_of_avatar(av: str) -> str:
+        base, _, num = (av or "").partition("_")
+        if num.isdigit():
+            cand = f"{base}{int(num):03d}"
+            if cand in LANE_OF:
+                return cand
+        return {"paff": "paff001", "neko": "neko001", "robo": "robo001", "cherry": "cherry001"}.get(base.lower(), "")
+
+    AVATAR_FAMILY = {}
+    for item in flt.get("Items") or []:
+        fam = _pack_of_avatar(item["DisplayAvatarId"])
+        for av in item["FilterAvatarIds"]:
+            AVATAR_FAMILY[av] = fam
+
+    def resolve_identity(tid: str) -> str:
+        """帖子属于哪个角色曲包：优先 LevelLocks 里非「三主角公共锁」的曲包，其次 avatar 前缀补零"""
+        packs = [x["SongPackId"] for x in locks[tid]["LevelLocks"]]
+        own = [p for p in packs if p in LANE_OF and p not in T0]
+        if own:
+            return own[0]
+        avatar = (topics.get(tid) or {}).get("AvatarId") or ""
+        fam = AVATAR_FAMILY.get(avatar)
+        if fam:
+            return fam
+        return _pack_of_avatar(avatar)
 
     def lane_of(avatar: str) -> int:
-        acc = (avatar or "").split("_")[0].lower()
-        return LANE.index(acc) if acc in LANE else len(LANE)
+        """兼容旧调用（只按 avatar 猜）"""
+        return LANE_OF.get(resolve_identity_by_avatar(avatar), PLOT_LANE)
+
+    def resolve_identity_by_avatar(avatar: str) -> str:
+        base, _, num = (avatar or "").partition("_")
+        if num and num.isdigit():
+            cand = f"{base}{int(num):03d}"
+            if cand in LANE_OF:
+                return cand
+        return {"paff": "paff001", "neko": "neko001", "robo": "robo001", "cherry": "cherry001"}.get(base.lower(), "")
 
     need = {tid: max([x["Level"] for x in e["LevelLocks"]] or [0]) for tid, e in locks.items()}
     topic_seq = {tid: i for i, tid in enumerate(topics)}   # im_topic_data 的数组顺序
 
     for i, st in enumerate(stages):
         def key(tid):
-            return (lane_of((topics.get(tid) or {}).get("AvatarId") or ""), need.get(tid, 0))
+            ident = resolve_identity(tid)
+            return (LANE_OF.get(ident, PLOT_LANE), need.get(tid, 0))
 
         # 稳定的组内顺序：先用数据表顺序（locks 的键顺序）排一遍，再按 key 稳定排序
         ordered = sorted(st["posts"], key=lambda tid: topic_seq.get(tid, 10_000))
@@ -214,7 +260,7 @@ def main():
     for t in idx["im"]:
         t["stage"] = out["order"].get(t["id"], 99)
         t["readIndex"] = read_index.get(t["id"], 10_000)
-        t["lane"] = lane_of(t.get("avatar") or "")
+        t["lane"] = LANE_OF.get(resolve_identity(t["id"]), PLOT_LANE)
         t["lockLevel"] = next(
             (st["lockLevel"] for st in stages if t["id"] in st["posts"]), 0
         )

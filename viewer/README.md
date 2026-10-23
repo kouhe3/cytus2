@@ -158,3 +158,63 @@ AssetBundle 里的 `Texture2D` 往往是**补成正方形**的画布（透明留
 - React 19 客户端渲染入口：[react.dev/reference/react-dom/client/createRoot](https://react.dev/reference/react-dom/client/createRoot)
 - Vite 配置文件与 `defineConfig`：[vite.dev/config/](https://vite.dev/config/)
 - `@vitejs/plugin-react` 用法（`plugins: [react()]`）：[npmjs.com/package/@vitejs/plugin-react](https://www.npmjs.com/package/@vitejs/plugin-react)
+
+
+## 数据与逆向结论（已验证）
+
+以下结论来自 `dump.cs` + `libil2cpp.so` 反汇编（工具：`cytus2_work/il2cpp_probe.py`，或 IDA Pro MCP）。
+
+### 结场动画的音轨
+
+`video_endplay_*` / `video_oasystem_*` 的 VideoClip 只有 H.264，**没有音轨**；声音由同时播放的曲目负责。
+`IEndPlayEvent.EndPlaySongInfo` 给出 `SONG_ID`，音频就在 `songdata_<曲目>.ab` 的 AudioClip 里
+（例：`FinalBossStage_1` 长 514.8 s，结场影片 516 s）。`export_endplay_audio.py` 以「视频流 copy + 曲目 AAC」合成
+`videos/<video>__<song>.mp4`，原无声文件保留。
+
+### 终战两条分支 = 是否回应过 PAFF
+
+`EndPlayEventFactory._GenerateEvent`（0x228C94C）在 step `0_GAMEPLAY_CUTSCENE_2` 读静态 bool
+`StoryEnding03{Main,Replay}.IsFirstGamePlayCutsceneHit`（`static_fields + 8`）：
+
+| bool | 前置过场 | 结场曲 | 收尾（`OnEnd(isSelectedChoice)`） |
+|:--|:--|:--|:--|
+| true（回应过 PAFF） | `ClickOneNoteForPaffCutscene.mp4` | `FinalBossStage_1` | 选择 → 善终1 `eos006`；否则真结局 `true_ending` |
+| false（没回应） | `ClickZeroNoteForPaffCutscene.mp4` | `FinalBossStage_2` | 选择 → 善终2 `eos007`；否则真结局 `true_ending` |
+
+这个 bool 由 `StoryEnding03EndPlayEvent1.OnEnd(bool isHitAnyNote)`（0x228D508）写入，随后按它选
+`StoryEnding03FinalCutscene01/02`。前置链：gallery `misc/ending03` + OS `vanessa001/vos037` →
+BossStage `vanessa_v`（曲 `vanessa001_010`，Hard）→ `IvyDieCutscene.mp4` → `0_VANESSA_EVENT` → 两段 gameplay → 结场。
+
+### OA 描述
+
+- `---` 是**对话分段标记**（游戏内描述一段一段显示），不是台词里的三条杠：`oa_system_data` 的
+  `Descriptions[].Contents` 是 `<p>…</p>\n---\n<p>…</p>`，282 个字段（跨语言）带它，`Documents` / `Objects` 没有。
+  导出时切成 `lines[]`，`text` 用换行拼接供搜索。
+- 同一热点常有 2–3 个变体，阶段由 `EnableCondition` 判定：`OASystemLevelLock` → 初始；
+  `OASystemOSLock(pos078)` → Vanessa（恨意）；`OASystemStoryLock(story_ending04_main)` → 4.0 通关后。写成 `stage` / `stageOrder`。
+- **描述名只有一份**（繁体中文，如 `NEKO#ΦωΦ\n右側的封鎖線`），`Contents` 才分语言；游戏本身也如此显示，
+  页面标 `nameLocked` 并在悬停说明。
+- OA 贴图名前缀大小写不统一：`vanessa001` 的是 `oas_Vanessa001_001_*`，其余角色小写；查表用大小写不敏感匹配。
+
+### OA 场景的多版本
+
+影片名 `{prefix}_oa_system.mp4`，`prefix` 由 `ObjectAnalysisRecord.GetIdByStory(songPackId)`（0x2278214）按进度给出；
+切换由剧情 action 的 `CHANGED_OA_BG_MOVIE_PREFIX` 常量驱动。多场景角色：
+
+| 角色 | 场景数 | 切换条件 |
+|:--|--:|:--|
+| `ilka001` | 3 | 初始；`StoryStep.IsStoryEnd("story_ilka01")` → `_s001`；曲包等级 ≥ 41 → `_s002` |
+| `vanessa001` | 2 | `IsStoryEnd("story_vanessa02")` → `_s001`（画面从废墟实景变成全息残像） |
+| `alice001` | 2 | 曲包等级 ≥ 21 → `_s001` |
+| `hans001` | 2 | 曲包等级 ≥ 21 → `_s001` |
+| `tairitsu001` | 2 | 跟随当前造型 `GetCurrentCharacterIllustrationId("tairitsu001")` |
+
+其余 8 个角色只有 1 段。`export_scene_stages.py` 解析 `dump.cs` 生成 `data/scenes.json`（含切换条件），
+OA「场景」页签在每段视频上方标出「初始（默认场景）/ 变体 · 条件」。
+
+### 备份数据库影片的配乐
+
+影片条目（`format 1`、`icon_video`）名字是游戏内时间码，如 `Video_701_11_29` → `bobo001` 的 `bos6001`，
+条件是 `os:bos060` → 该 OS 记录的 `bgm` 块 = `ARC_RIN_AMB`。52 个条目里 18 个能这样查到 BGM。
+影片自身也可能带独立音轨：`bos6001.mp4` 的 106 s 音乐不属于任何曲目（`audio_match.py` 对 391 首 songdata +
+51 首 osbgms 最高 0.02，同源校准值 1.62），需要人耳辨认时可听 `media/audio/cutscenes/bos6001.mp3`。

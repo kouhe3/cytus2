@@ -18,8 +18,18 @@ function Description({ id, item }: { id: string; item: OaItem }) {
   return (
     <div className="oa-desc">
       <p className="mono">
+        {item.stage ? (
+          <span className="chip chip--stage" title={`阶段 ${item.stageOrder ?? "?"}`}>
+            {item.stage}
+          </span>
+        ) : null}{" "}
         {id}
-        {item.name ? ` · ${item.name}` : ""}
+        {item.name ? (
+          <span title={item.nameLocked ? "该名称在游戏数据里只有一份（繁体中文），不随语言切换" : undefined}>
+            {" · "}
+            {item.name}
+          </span>
+        ) : null}
         {item.event !== undefined ? ` · event ${item.event}` : ""}
       </p>
       {conditions.length > 0 ? (
@@ -234,10 +244,12 @@ export function OaReader({
                   {group} · {ids.length} 个变体
                 </span>
               </h3>
-              {ids.map((id) => {
-                const d = item(id);
-                return d ? <Description key={id} id={id} item={d} /> : null;
-              })}
+              {[...ids]
+                .sort((a, b) => (item(a)?.stageOrder ?? 9) - (item(b)?.stageOrder ?? 9))
+                .map((id) => {
+                  const d = item(id);
+                  return d ? <Description key={id} id={id} item={d} /> : null;
+                })}
             </section>
           ))}
         </>

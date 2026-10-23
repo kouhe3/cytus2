@@ -540,7 +540,7 @@ def main():
                 for c in items or []:
                     t = (c.get("$type") or "").split(".")[-1].split(",")[0]
                     if t == "OASystemLevelLock":
-                        out.append(f"等级 {c.get('CharacterId', '')}")
+                        out.append(f"等级 {c.get('LockLevel') or '?'}")
                     elif t == "OASystemOSLock":
                         out.append(f"OS {c.get('OSLockId', '')}")
                     elif t == "OASystemStoryLock":
@@ -549,15 +549,20 @@ def main():
                         out.append(t)
                 return out
 
+            stage, stage_order = _stage(d.get("EnableCondition"), d.get("DisableCondition"))
             oav[d.get("Id")] = {
                 "kind": "description",
+                "stage": stage,
+                "stageOrder": stage_order,
                 # 同一点位有多个变体（阶段/解锁条件不同），按 DescriptionObjectId 归组
                 "group": d.get("DescriptionObjectId"),
                 "event": d.get("DescriptionEvent"),
                 "enable": _conds(d.get("EnableCondition")),
                 "disable": _conds(d.get("DisableCondition")),
                 "character": d.get("CharacterId", ""),
+                # 描述名在游戏数据里只有一份（繁体中文），不随语言切换
                 "name": one_line(d.get("Name", "")),
+                "nameLocked": True,
                 "text": strip_tags(body).strip(),
             }
         for d in oa.get("Documents", []):
@@ -590,6 +595,29 @@ def main():
             print(f"{code}.{name}", os.path.getsize(path) // 1024, "KB")
 
     print("index.json", os.path.getsize(os.path.join(OUT, "index.json")) // 1024, "KB")
+
+def _stage(enable, disable):
+    """描述变体的阶段语义（wiki：初始 / Vanessa（恨意）/ 4.0 通关后）。
+
+    - enable `story_ending04_main`      → 4.0 通关后（替换掉前面所有变体）
+    - enable `OSLockId = pos078`        → Vanessa（恨意）阶段；disable ending04 表示通关后让位
+    - enable `Level LockLevel = N`      → 初始（角色等级解锁）
+    """
+    def kind(c):
+        # "$type": "Rayark.Cytus2.OASystem.OASystemOSLock, Assembly-CSharp"
+        return (c.get("$type") or "").split(",")[0].split(".")[-1]
+
+    en = {kind(c): c for c in enable or []}
+    if (en.get("OASystemStoryLock") or {}).get("StoryId") == "story_ending04_main":
+        return "4.0 通关后", 3
+    if "OASystemOSLock" in en:
+        return "Vanessa（恨意）", 2
+    if "OASystemLevelLock" in en:
+        return "初始", 1
+    if "OASystemStoryLock" in en:
+        return en["OASystemStoryLock"].get("StoryId", "剧情解锁"), 2
+    return "初始", 1
+
 
 def _count_replies(node):
     for r in node.get("Replies") or []:

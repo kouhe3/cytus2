@@ -197,6 +197,11 @@ export interface OaItem {
   /** 描述点位分组（DescriptionObjectId），同一组是同一热点的不同阶段变体 */
   group?: string;
   event?: number;
+  /** 变体阶段语义（wiki：初始 / Vanessa（恨意）/ 4.0 通关后） */
+  stage?: string;
+  stageOrder?: number;
+  /** 描述名在游戏数据里只有一份（繁体中文），不随语言切换 */
+  nameLocked?: boolean;
   enable?: string[];
   disable?: string[];
   details?: string;

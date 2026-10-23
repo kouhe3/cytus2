@@ -117,7 +117,6 @@ def _deep_merge(base: dict, overlay: dict) -> dict:
 
 def test_render_writes_one_page_and_report_entry_per_song(wiki_output: Path) -> None:
     report = read_report(wiki_output)
-    assert report["page_count"] == 17
     assert report["counts"] == {
         "character": 2,
         "gallery_item": 5,
@@ -126,6 +125,7 @@ def test_render_writes_one_page_and_report_entry_per_song(wiki_output: Path) -> 
         "pack": 2,
         "song": 3,
     }
+    assert report["page_count"] == sum(report["counts"].values())
     song_pages = [page for page in report["pages"] if page["page_type"] == "song"]
     assert {page["entity"] for page in song_pages} == {
         "song/alpha001_000",

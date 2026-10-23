@@ -219,7 +219,7 @@ def main():
                 if any(level[x["SongPackId"]] < x["Level"] for x in e["LevelLocks"]):
                     continue
                 # 支线 / DLC 角色：主线通关（ending02 之后）才开刷，避免支线内容插到主线前面
-                if LANE_OF.get(resolve_identity(tid), PLOT_LANE) >= 200 and "story_ending02" not in stories_done:
+                if 200 <= LANE_OF.get(resolve_identity(tid), PLOT_LANE) < 300 and "story_ending02" not in stories_done:
                     continue
                 read.add(tid)
                 newly.append(tid)
@@ -276,7 +276,8 @@ def main():
     for i, st in enumerate(stages):
         def key(tid):
             ident = resolve_identity(tid)
-            return (LANE_OF.get(ident, PLOT_LANE), need.get(tid, 0))
+            # 解锁顺序优先：先等级需求，再账号线程（同等级时 PAFF → NEKO → …）
+            return (need.get(tid, 0), LANE_OF.get(ident, PLOT_LANE), topic_seq.get(tid, 10_000))
 
         # 稳定的组内顺序：先用数据表顺序（locks 的键顺序）排一遍，再按 key 稳定排序
         ordered = sorted(st["posts"], key=lambda tid: topic_seq.get(tid, 10_000))

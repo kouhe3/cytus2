@@ -96,14 +96,15 @@ def report_page(out: Path, entity: str) -> dict:
 
 def test_render_writes_one_page_and_report_entry_per_song(wiki_output: Path) -> None:
     report = read_report(wiki_output)
-    assert report["page_count"] == 3
-    assert report["counts"] == {"song": 3}
-    assert {page["entity"] for page in report["pages"]} == {
+    song_pages = [page for page in report["pages"] if page["page_type"] == "song"]
+    assert report["page_count"] == len(report["pages"])
+    assert report["counts"]["song"] == 3
+    assert {page["entity"] for page in song_pages} == {
         "song/alpha001_000",
         "song/alpha001_001",
         "song/beta001_000",
     }
-    for page in report["pages"]:
+    for page in song_pages:
         assert (wiki_output / page["file"]).is_file()
         assert page["title_source"] == "generated"
 
@@ -168,6 +169,8 @@ def test_every_emitted_parameter_exists_in_the_profile_and_conditionals_hold(
     observed_unknown = set(profile["pages"]["song"]["observed_unknown_params"])
 
     for page in read_report(wiki_output)["pages"]:
+        if page["page_type"] != "song":
+            continue
         emitted = set(page["emitted"])
         assert emitted <= known, page["entity"]
         assert emitted.isdisjoint(observed_unknown), page["entity"]

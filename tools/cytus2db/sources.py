@@ -10,6 +10,8 @@ Table names used by this builder (JSON file name first, bundle fallback):
 ``song_pack_data``                  sharedassets0.assets:song_pack_data
 ``illustrationdata``                illustrationdata.ab:illustration
 ``bg_movie_info_data``              bgmovieinfodata.ab:bg_movie_info_data
+``imdata/im_assistant_data``        iM assistant dialogue groups
+``titleinfodata/title_info``        title-screen evolution entries
 """
 
 from __future__ import annotations
@@ -99,6 +101,12 @@ class InputSource:
 
     def audio_subtitles(self) -> Table | None:
         return self.text_json("audiosubtitledata", "audio_subtitle")
+
+    def im_assistant_data(self) -> Table | None:
+        return self.text_json("imdata", "im_assistant_data")
+
+    def title_info(self) -> Table | None:
+        return self.text_json("titleinfodata", "title_info")
 
     def os_tables(self) -> list[Table]:
         directory = self.text_dir / "osdata"

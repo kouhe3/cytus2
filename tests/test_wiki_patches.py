@@ -366,6 +366,9 @@ def test_render_patches_reports_counts_and_title_sources(patched_output: Path) -
         "conflicts": 0,
         "patches": 0,
     }
+    assert counts["os_log"]["unmatched"] == 3
+    assert counts["oa_document"]["unmatched"] == 2
+    assert counts["gallery_item"]["unmatched"] == 5
 
     first = report_page(patched_output, "song/alpha001_000")
     assert first["matched"] is True
@@ -389,6 +392,16 @@ def test_render_patches_reports_counts_and_title_sources(patched_output: Path) -
         "im/P0101",
         "im/P0201",
         "im/P0301",
+        "os/bos001",
+        "os/gos001",
+        "os/gos002",
+        "oa_document/alpha001_obj001_oa001",
+        "oa_document/beta001_obj001_oa001",
+        "gallery_item/misc/alpha_bossstage",
+        "gallery_item/misc/conditions",
+        "gallery_item/misc/ending03",
+        "gallery_item/misc/opening",
+        "gallery_item/misc/poster",
     }
     assert report["patch_conflicts"] == []
 

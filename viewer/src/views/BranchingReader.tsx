@@ -32,12 +32,20 @@ export function BranchingReader({
         </button>{" "}
         <Chip>{node.branch ? `分支 ${node.branch.toUpperCase()}` : "收束段"}</Chip>
       </div>
-      <h2>{node.id}</h2>
+      <h2>{node.names?.[lang] || node.id}</h2>
+      <p className="mono" style={{ marginTop: -4, color: "var(--muted)" }}>
+        {node.id}
+      </p>
       <p className="lede">
         Tairitsu 的 <b>Branching OS（分支 OS）</b>节点：按「曲包等级 + 分支状态」解锁，不是线性档案。
       </p>
       <h3>分支图（{index.branching.length} 节点，点方块跳转）</h3>
-      <BranchMap nodes={index.branching} activeId={node.id} onNavigate={(id) => onNavigate("branching", id)} />
+      <BranchMap
+        nodes={index.branching}
+        activeId={node.id}
+        lang={lang}
+        onNavigate={(id) => onNavigate("branching", id)}
+      />
 
       <Facts
         items={[

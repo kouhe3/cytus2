@@ -329,8 +329,8 @@ export function rowsFor(
         key: n.id,
         view: "branching",
         id: n.id,
-        title: n.id,
-        sub: `位置 ${n.position ?? "—"} · 后继 ${n.next.join("、") || "—"}`,
+        title: n.names?.[lang] || n.id,
+        sub: `${n.id} · 位置 ${n.position ?? "—"} · 后继 ${n.next.filter(Boolean).join("、") || "—"}`,
         group: n.branch ? `分支 ${n.branch.toUpperCase()}` : "收束段",
       }));
     }

@@ -1,4 +1,4 @@
-import type { BackupNode } from "../types";
+import type { BackupNode, Lang } from "../types";
 
 /**
  * Tairitsu 的 Branching OS 分支图。
@@ -21,10 +21,12 @@ const SHARED_ROW = 1;
 export function BranchMap({
   nodes,
   activeId,
+  lang,
   onNavigate,
 }: {
   nodes: BackupNode[];
   activeId?: string;
+  lang: Lang;
   onNavigate: (id: string) => void;
 }) {
   const positions = [...new Set(nodes.map((n) => n.position ?? 0))].sort((a, b) => a - b);
@@ -112,7 +114,7 @@ export function BranchMap({
               <text x={NODE_W / 2} y={NODE_H / 2 + 4} textAnchor="middle" className="branch-node-label">
                 {n.id}
               </text>
-              <title>{`${n.id} · Lv${n.level ?? "?"} · 分支 ${n.branch || "收束"}`}</title>
+              <title>{`${n.names?.[lang] || n.id} · ${n.id} · Lv${n.level ?? "?"} · 分支 ${n.branch || "收束"}`}</title>
             </g>
           );
         })}

@@ -41,13 +41,21 @@ DONE_BY_DEFAULT = {"story01"}
 #   story_cherry02             需播过 OS 过场 cpos033（Cherry 线，外部）
 #   story_ending03_* / ending04 恒真（结局链，外部）
 LEVEL_STORY = {"story04": ("neko001", 24)}
+# 剧情先后（硬约束）：剧情闸不能越级
+STORY_AFTER = {
+    "story_ending03_main": {"story_ending02"},
+    "story_ending03_good_ending1": {"story_ending03_main"},
+    "story_ending03_good_ending2": {"story_ending03_main"},
+    "story_ending04_main": {"story_ending03_main"},
+}
 EXTERNAL_STORIES = {
     "story_cherry02": "需 OS 过场 cpos033（Cherry 线）",
     "story_ending03_good_ending1": "结局 03 善终 1",
     "story_ending03_good_ending2": "结局 03 善终 2",
     "story_ending04_main": "结局 04",
 }
-ALWAYS = {"story05", "story_ending03_good_ending1", "story_ending03_good_ending2", "story_ending04_main"}
+# story05 的 _ConditionCheck 恒真，但仍需 R2401 触发；其余结局不再无条件视为已通
+ALWAYS = {"story05"}
 
 
 def derive_triggers():
@@ -107,6 +115,14 @@ def main():
             if level.get(pack, 0) >= need:
                 stories_done.add(sid)
         stories_done |= ALWAYS
+        # 剧情链：前置完成后，后续剧情视为可完成（ending03 的触发是 gallery/OS，不是 iM）
+        changed = True
+        while changed:
+            changed = False
+            for sid, needs in STORY_AFTER.items():
+                if sid not in stories_done and needs <= stories_done:
+                    stories_done.add(sid)
+                    changed = True
         newly = []
         changed = True
         while changed:
@@ -169,7 +185,8 @@ def main():
 
     read_index, seq = {}, 0
     # 账号线程顺序：三主角在前，其余主角次之，"其他"最后；同一主角的帖子连续，内部按等级需求升序
-    LANE = ["paff", "neko", "robo", "ivy", "xenon", "conner", "cherry", "joe"]
+    # 游戏内角色列表顺序（免费：PAFF/NEKO/ROBO；付费主线：Ivy/Crystal PuNK/Vanessa/Bo Bo；其余随后）
+    LANE = ["paff", "neko", "robo", "ivy", "cherry", "vanessa", "bobo", "xenon", "conner", "joe"]
 
     def lane_of(avatar: str) -> int:
         acc = (avatar or "").split("_")[0].lower()

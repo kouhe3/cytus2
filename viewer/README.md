@@ -350,3 +350,29 @@ v3 改成按**角色等级解锁顺序**排，LOCK 点就是阶段边界：
   用 `max(LevelLocks[].Level)` 作为解锁进度代理，对同一条线程等于解锁顺序（因为同角色帖子的门槛单调）。
 - 玩家实际上同时给所有已解锁、不涉及剧透的角色升级，所以「阶段」内各线程并列，顺序只是阅读时的陈列次序。
 
+
+### iM 阅读顺序 v4：剧情闸是硬约束
+
+v3 还留了个错误：`story_ending03_good_ending1` 的帖子（`Q46xx` 这批「封锁线」小号）被当成「结局恒真」直接放进了第 1 阶段，
+排到 `P0201` 前面。v4 把结局链补进模型：
+
+```python
+STORY_AFTER = {
+  "story_ending03_main":         {"story_ending02"},
+  "story_ending03_good_ending1": {"story_ending03_main"},
+  "story_ending03_good_ending2": {"story_ending03_main"},
+  "story_ending04_main":         {"story_ending03_main"},
+}
+```
+
+效果：`Q4601` 从 #2 挪到 **#250（阶段 12）**，`Q6101`（结局 04）在 #315（阶段 15）；开局仍是 `P0101 → P0201 → …`。
+
+另外按「玩家通常的推进方式」把账号线程顺序改成**免费三主角优先、付费主线在后**（与游戏角色列表一致）：
+
+```
+PAFF → NEKO#ΦωΦ → ROBO_Head → Ivy → Crystal PuNK → Vanessa → Bo Bo → Xenon → ConneR → JOE → 其他
+```
+
+- 「遇到 LOCK 就去刷别的角色」在模型里就是 `IsLevelLocked` 硬上限：阶段卡住时，只能去升别的曲包；
+- 列表里给剧情触发帖加了 `⚑` 前缀（`⚑ #1 · 阶段 1（≤Lv9） · PAFF-Official`），方便发现「该点哪一帖」；
+- 剧透警告阈值见上表，达到后对应角色（Ivy/Cherry/Vanessa/Bo Bo）的帖子自然进入后续阶段。

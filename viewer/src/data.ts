@@ -178,6 +178,14 @@ export function formatClock(seconds: number): string {
   return `${m}:${rest.toFixed(1).padStart(4, "0")}`;
 }
 
+/** 角色分级标签（免费 / 付费 / 支线 / 剧情） */
+export function tierLabel(index: { characterTiers?: Record<string, string> }, id: string): string {
+  const tier = index.characterTiers?.[id];
+  return ({ free: "免费", paid: "付费", side: "支线", plot: "剧情" } as Record<string, string>)[
+    tier ?? ""
+  ] ?? "";
+}
+
 export function formatDate(date: string): string {
   const [day, time] = date.split(" ");
   const parts = day ? day.split("_") : [];

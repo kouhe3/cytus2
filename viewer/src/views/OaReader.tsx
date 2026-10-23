@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ExtraContent, IndexData, OaItem } from "../types";
-import { characterName, loadSceneStages, useAsync } from "../data";
+import { characterName, loadSceneStages, tierLabel, useAsync } from "../data";
 import { Script } from "../components/Script";
 import { Video } from "../components/Media";
 import { MEDIA_BASE, useManifest } from "../media";
@@ -185,7 +185,14 @@ export function OaReader({
           {chars.objects.length} 物件 · {chars.descriptions.length} 描述 · {chars.documents.length} 文件
         </Chip>
       </div>
-      <h2>{characterName(index, character)}</h2>
+      <h2>
+        {characterName(index, character)}
+        {tierLabel(index, character) ? (
+          <span className="chip chip--tier" style={{ marginLeft: 8, verticalAlign: "middle" }}>
+            {tierLabel(index, character)}
+          </span>
+        ) : null}
+      </h2>
       <p className="lede">
         角色 <span className="mono">{character}</span> · 探索式档案：物件 → 文件，另有场景热点「描述」。联动章节用它替代
         OS 档案层。

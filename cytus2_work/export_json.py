@@ -171,6 +171,23 @@ def derive_triggers():
     return out
 
 
+# 角色分级（来自 CyTus Wiki 的角色导航分类）
+#   主线（免费）：PAFF / NEKO#ΦωΦ / ROBO_Head / Ivy / Crystal PuNK / Vanessa / Bo Bo
+#   主线（付费）：Ilka / Xenon / ConneR / Cherry / JOE / Sagar / Rin / Aroma / Nora / Neko
+#   支线角色（DLC 联动）：Graff.J / Miku / Kizuna AI / Alice / Hans / Kaf / Amiya / Tairitsu / NEKO_II / PΛFF
+#   其余出现在剧情里的角色归「剧情」
+CHARACTER_TIERS = {
+    "paff001": "free", "neko001": "free", "robo001": "free",
+    "ivy001": "free", "cherry002": "free", "vanessa001": "free", "bobo001": "free",
+    "ilka001": "paid", "xenon001": "paid", "conner001": "paid",
+    "cherry001": "paid", "joe001": "paid", "sagar001": "paid", "rin001": "paid",
+    "paff002": "paid", "robo002": "paid", "neko002": "paid",
+    "graffj001": "side", "miku001": "side", "ai001": "side", "alice001": "side",
+    "hans001": "side", "kaf001": "side", "amiya001": "side", "tairitsu001": "side",
+    "neko003": "side", "paff003": "side",
+}
+
+
 def load_bundle_textasset(bundle, text_name=None):
     """从 assets/assetpack/<bundle> 里读 TextAsset（illustrationdata 这类没落到 text/ 的表）。"""
     import UnityPy
@@ -531,6 +548,7 @@ def main():
         "folders": folder_list,
         "packs": pack_list,
         "im": im_meta,
+        "characterTiers": {cid: CHARACTER_TIERS.get(cid, "plot") for cid in characters},
         "imFilters": {
             "items": [
                 {

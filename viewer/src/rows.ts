@@ -1,5 +1,5 @@
 import type { IndexData, Lang } from "./types";
-import { characterName, formatDate } from "./data";
+import { characterName, formatDate, tierLabel } from "./data";
 
 export interface Row {
   key: string;
@@ -237,7 +237,7 @@ export function rowsFor(
         view: "packs",
         id: p.id,
         title: characterName(index, p.id),
-        sub: `iM ${p.imCount} · OS ${p.osCount} · 同步 ${p.syncCount}`,
+        sub: `${tierLabel(index, p.id) ? `${tierLabel(index, p.id)} · ` : ""}iM ${p.imCount} · OS ${p.osCount} · 同步 ${p.syncCount}`,
         badge: p.id,
       }));
     case "im": {
@@ -291,7 +291,7 @@ export function rowsFor(
         view: "backup",
         id: f.id,
         title: f.name,
-        sub: `${counts.get(f.id) ?? 0} 个文件`,
+        sub: `${tierLabel(index, f.id) ? `${tierLabel(index, f.id)} · ` : ""}${counts.get(f.id) ?? 0} 个文件`,
         avatar: f.avatar && f.avatar !== "gallery" ? f.avatar : undefined,
       }));
     }

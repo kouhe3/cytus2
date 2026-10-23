@@ -327,6 +327,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .oa-lines { display: flex; flex-direction: column; gap: 10px; margin: 6px 0; }
 .oa-lines p { margin: 0; }
 
+/* 角色分级：免费 / 付费 / 支线 / 剧情 */
+.chip--tier { font-size: 11px; padding: 1px 7px; color: var(--muted); border-color: var(--border); background: transparent; }
+
 .chip--stage { color: var(--accent); border-color: var(--accent); background: transparent; }
 
 .oa-art { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 6px; }
@@ -370,6 +373,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   /* OA 描述：数据里的 `---` 是对话分段，逐段显示（不显示分隔符本身） */
 .oa-lines { display: flex; flex-direction: column; gap: 10px; margin: 6px 0; }
 .oa-lines p { margin: 0; }
+
+/* 角色分级：免费 / 付费 / 支线 / 剧情 */
+.chip--tier { font-size: 11px; padding: 1px 7px; color: var(--muted); border-color: var(--border); background: transparent; }
 
 .chip--stage { color: var(--accent); border-color: var(--accent); background: transparent; }
 

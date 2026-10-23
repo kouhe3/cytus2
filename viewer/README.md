@@ -376,3 +376,17 @@ PAFF → NEKO#ΦωΦ → ROBO_Head → Ivy → Crystal PuNK → Vanessa → Bo B
 - 「遇到 LOCK 就去刷别的角色」在模型里就是 `IsLevelLocked` 硬上限：阶段卡住时，只能去升别的曲包；
 - 列表里给剧情触发帖加了 `⚑` 前缀（`⚑ #1 · 阶段 1（≤Lv9） · PAFF-Official`），方便发现「该点哪一帖」；
 - 剧透警告阈值见上表，达到后对应角色（Ivy/Cherry/Vanessa/Bo Bo）的帖子自然进入后续阶段。
+
+### 角色分级（免费 / 付费 / 支线 / 剧情）
+
+按 CyTus Wiki 的角色导航分类，写进 `index.characterTiers`：
+
+| 分级 | 角色（曲包 id） |
+|:--|:--|
+| **免费**（主线） | `paff001` PAFF、`neko001` NEKO#ΦωΦ、`robo001` ROBO_Head、`ivy001` Ivy、`cherry002` Crystal PuNK、`vanessa001` Vanessa、`bobo001` Bo Bo |
+| **付费**（主线） | `ilka001` Ilka、`xenon001` Xenon、`conner001` ConneR、`cherry001` Cherry、`joe001` JOE、`sagar001` Sagar、`rin001` Rin、`paff002` Aroma、`robo002` Nora、`neko002` Neko |
+| **支线**（DLC 联动） | `graffj001` Graff.J、`miku001` Miku、`ai001` Kizuna AI、`alice001` Alice、`hans001` Hans、`kaf001` Kaf、`amiya001` Amiya、`tairitsu001` Tairitsu、`neko003` NEKO_II、`paff003` PΛFF |
+| **剧情** | 其它出现在剧情里的角色（如 `misc`） |
+
+页面上：`曲包阶级` 与 `备份数据库` 的列表行在副标题前加分级，`曲包` / `OA` 页标题右侧显示分级 chip。
+「免费」这 7 个正好就是 iM 账户过滤器里的 7 个图标 —— 与游戏里免费角色的划分一致。

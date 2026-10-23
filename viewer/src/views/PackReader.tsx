@@ -1,5 +1,5 @@
 import type { IndexData, Lang } from "../types";
-import { characterName } from "../data";
+import { characterName, tierLabel } from "../data";
 import { Chip, Facts } from "../components/ui";
 
 export function PackReader({
@@ -26,7 +26,14 @@ export function PackReader({
         </button>{" "}
         <Chip>同步点 {pack.syncCount}</Chip>
       </div>
-      <h2>{characterName(index, pack.id)}</h2>
+      <h2>
+        {characterName(index, pack.id)}
+        {tierLabel(index, pack.id) ? (
+          <span className="chip chip--tier" style={{ marginLeft: 8, verticalAlign: "middle" }}>
+            {tierLabel(index, pack.id)}
+          </span>
+        ) : null}
+      </h2>
       <p className="lede">
         曲包 <span className="mono">{pack.id}</span> · 角色 {characterName(index, pack.id)}。
         同一 level 上，iM 帖与 OS 条目同时解锁 —— 这是两条轨道之间唯一可验证的交点。

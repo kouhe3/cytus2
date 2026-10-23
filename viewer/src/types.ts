@@ -161,6 +161,9 @@ export interface ImFilters {
   likeAvatar?: string | null;
 }
 
+/** 角色分级：free 主线免费 / paid 主线付费 / side 支线（DLC 联动）/ plot 剧情角色 */
+export type CharacterTier = "free" | "paid" | "side" | "plot";
+
 export interface IndexData {
   meta: Meta;
   chapters: Chapter[];
@@ -173,6 +176,7 @@ export interface IndexData {
   sync: SyncPoint[];
   timeline: string[];
   characters: Record<string, string>;
+  characterTiers?: Record<string, CharacterTier>;
   illustrations: IllustrationMeta[];
   oa: OaCharacter[];
   gallery: { folders: GalleryFolder[]; items: GalleryItem[] };

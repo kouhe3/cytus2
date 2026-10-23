@@ -37,8 +37,12 @@ _Avoid_: 备份节点、branching node
 _Avoid_: boss 曲、活动曲
 
 **Character** (`character`):
-游戏角色 / 曲包身份。
-_Avoid_: 人物、hero
+拥有等级与经验曲线的游戏角色（如 NEKO#ΦωΦ，id `neko001`）。iM 与 OS 的等级锁指向角色，不指向曲包。
+_Avoid_: 把角色叫「曲包」、pack
+
+**Song Pack** (`pack`):
+歌曲的发行集合（`song_pack_data`）；一首歌通过 `pack_id` 归属它。同名字符串可能同时是角色 id（`character/neko001` 与 `pack/neko001`），但两者是不同实体。
+_Avoid_: 把 pack 当作等级拥有者
 
 ## 音乐
 

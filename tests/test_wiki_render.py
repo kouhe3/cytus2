@@ -119,6 +119,9 @@ def test_render_writes_one_page_and_report_entry_per_song(wiki_output: Path) -> 
     report = read_report(wiki_output)
     counts = report["counts"]
     assert counts["character"] == 2
+    assert counts["gallery_item"] == 5
+    assert counts["oa_document"] == 2
+    assert counts["os_log"] == 3
     assert counts["pack"] == 2
     assert counts["song"] == 3
     assert report["page_count"] == sum(counts.values())

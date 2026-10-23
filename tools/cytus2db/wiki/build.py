@@ -13,7 +13,13 @@ from pathlib import Path
 from urllib.parse import quote
 
 from ..errors import BuildError
-from .bili import RenderedPage, load_profile, render_page, resolve_titles
+from .bili import (
+    RenderedPage,
+    TitleMatch,
+    load_profile,
+    render_page,
+    resolve_titles,
+)
 from .db import Database
 from .model import Conflict, PageModel
 from .patches import (
@@ -22,6 +28,7 @@ from .patches import (
     patch_page,
     plan_patches,
 )
+from .titles import TitleResolver
 
 
 def build_page_models(db: Database) -> list[PageModel]:
@@ -54,9 +61,44 @@ def render_wiki(
     rendered = [render_page(model, profile, titles[model.entity_id]) for model in models]
 
     plan: dict[str, PatchEntry] | None = None
+    resolver: TitleResolver | None = None
     if snapshot_dir is not None:
         snapshot = load_snapshot(snapshot_dir)
         plan = plan_patches([patch_page(page) for page in rendered], snapshot)
+        # The first pass supplies the page identities.  Matching maps every
+        # generated title to the snapshot spelling; rendering again with that
+        # resolver makes emitted links point at existing pages instead of
+        # case/punctuation variants.  Patch parameters are re-extracted from
+        # the resolved wikitext so the two passes never diverge.
+        resolver = TitleResolver.from_titles(
+            snapshot.articles, snapshot.redirects
+        )
+        for page in rendered:
+            entry = plan[page.model.entity_id]
+            canonical = entry.match.title if entry.match.matched else page.title
+            resolver.add_generated(page.title, canonical)
+        matched_titles = {
+            page.model.entity_id: TitleMatch(
+                plan[page.model.entity_id].match.title,
+                plan[page.model.entity_id].match.source,
+                plan[page.model.entity_id].match.conflicts,
+            )
+            for page in rendered
+        }
+        rendered = [
+            render_page(
+                model,
+                profile,
+                matched_titles[model.entity_id],
+                resolver,
+            )
+            for model in models
+        ]
+        plan = plan_patches([patch_page(page) for page in rendered], snapshot)
+        for page in rendered:
+            entry = plan[page.model.entity_id]
+            canonical = entry.match.title if entry.match.matched else page.title
+            resolver.add_generated(page.title, canonical)
 
     out = Path(out_dir)
     pages_dir = out / "pages"
@@ -146,6 +188,7 @@ def render_wiki(
             for page in sorted(rendered, key=lambda item: item.model.entity_id)
             if _title_conflicts(page, plan[page.model.entity_id])
         ]
+        report["unresolved_links"] = _unresolved_links(rendered)
         result["patch_counts"] = patch_counts
         result["patch_count"] = sum(
             row["patches"] for row in patch_counts.values()
@@ -157,6 +200,21 @@ def render_wiki(
         newline="\n",
     )
     return result
+
+
+def _unresolved_links(rendered: list[RenderedPage]) -> list[dict[str, object]]:
+    """Link targets that no snapshot page or generated page can resolve."""
+    index: dict[str, dict[str, object]] = {}
+    for page in sorted(rendered, key=lambda item: item.model.entity_id):
+        for target in page.unresolved_links:
+            record = index.setdefault(
+                target, {"target": target, "count": 0, "sources": []}
+            )
+            record["count"] = int(record["count"]) + 1
+            sources = record["sources"]
+            if isinstance(sources, list) and page.model.entity_id not in sources:
+                sources.append(page.model.entity_id)
+    return [index[target] for target in sorted(index)]
 
 
 def _page_path(page: RenderedPage) -> Path:

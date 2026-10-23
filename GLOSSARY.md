@@ -96,3 +96,18 @@ _Avoid_: 黑市（作实体）
 
 **Red link check**:
 用目标站 `allpages`（区分条目与重定向）判定输出中的 `[[链接]]` 是否有对应页面。
+
+**Title normalisation**:
+跨导出器、补丁匹配与校验共用的标题等价规则（`cytus2db.wiki.titles`）：NFKC、
+`_`↔空格、空白折叠、仅首字母大小写不敏感，另加全角/半角括号、破折号族、冒号、
+括号前空格与 CJK 邻接空格的显式折叠。整页输出与已有标题同键即视为覆盖，必须改走补丁。
+_Avoid_: 用 `casefold` 比较整个标题（`NEKO` 与 `Neko` 是两页）
+
+**Canonical link target**:
+输出链接时用快照中的规范拼写回写目标；目标只在宽松键下唯一命中时才回写，
+多义时不猜，留给红链报告。
+
+**Known-missing title**:
+`wiki/snapshot/known_missing.json` 中人工列出的、确实没有页面的红链目标；每条都带原因。
+校验把它们单独报告，不算失败；未列入的目标仍是错误。
+_Avoid_: 把「未匹配」静默当缺页

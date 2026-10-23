@@ -87,7 +87,10 @@ def build_parser() -> argparse.ArgumentParser:
     verify.add_argument(
         "--snapshot",
         default="wiki/snapshot",
-        help="committed site snapshot directory (default: %(default)s)",
+        help=(
+            "committed site snapshot directory; its optional known_missing.json "
+            "lists red-link targets with no page (default: %(default)s)"
+        ),
     )
     verify.add_argument(
         "--report",

@@ -9,6 +9,7 @@ knowledge stays in the page-model builders.
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +17,13 @@ from typing import Any, Iterable
 
 from ..errors import BuildError, InputError
 from .model import Conflict, Link, PageModel, Text
+from .titles import (
+    IGNORED_TARGET_PREFIXES,
+    TitleResolver,
+    normalise_title,
+)
+
+_LINK_RE = re.compile(r"\[\[([^\[\]\n]+?)\]\]")
 
 
 @dataclass(frozen=True)
@@ -89,6 +97,7 @@ class RenderedPage:
     conflicts: tuple[Conflict, ...]
     categories: tuple[str, ...]
     links: tuple[Link, ...]
+    unresolved_links: tuple[str, ...] = ()
 
 
 # ------------------------------------------------------------------- profile
@@ -254,9 +263,10 @@ def resolve_titles(
 ) -> dict[str, TitleMatch]:
     """Resolve page titles from the profile's title rule.
 
-    Colliding base titles are disambiguated deterministically.  Existing-page
-    matching (snapshot) belongs to ticket #12 and will extend this report
-    source, not replace the rule.
+    Collisions are counted by the shared MediaWiki title key, so spellings
+    that would publish as the same page (``illMenate``/``IllMenate``) are
+    disambiguated instead of overwriting each other.  Existing-page matching
+    then replaces these proposals in ``plan_patches``.
     """
     proposals: dict[str, tuple[str, str, str]] = {}
     for model in sorted(models, key=lambda item: item.entity_id):
@@ -273,13 +283,20 @@ def resolve_titles(
             )
         proposals[model.entity_id] = (model.game_id(), "generated:game_id", model.page_type)
 
-    counts = Counter(title for title, _, _ in proposals.values())
+    # Two titles that normalise to the same MediaWiki key are one page: a
+    # second full page would overwrite the first instead of disambiguating.
+    counts = Counter(
+        normalise_title(title) for title, _, _ in proposals.values()
+    )
     resolved: dict[str, TitleMatch] = {}
     for entity_id, (title, source, page_type) in proposals.items():
         conflicts: list[Conflict] = []
-        if counts[title] > 1:
+        if counts[normalise_title(title)] > 1:
             conflicts.append(
-                Conflict("title_conflict", f"{title!r} shared by {counts[title]} pages")
+                Conflict(
+                    "title_conflict",
+                    f"{title!r} shared by {counts[normalise_title(title)]} pages",
+                )
             )
             game_id = entity_id.split("/", 1)[-1]
             title = profile.pages[page_type].disambiguator.format(
@@ -295,6 +312,7 @@ def render_page(
     model: PageModel,
     profile: Profile,
     title_match: TitleMatch,
+    resolver: TitleResolver | None = None,
 ) -> RenderedPage:
     spec = profile.pages.get(model.page_type)
     if spec is None:
@@ -304,6 +322,7 @@ def render_page(
     values: dict[str, str] = {}
     omitted: list[OmittedParameter] = []
     omitted_params: set[str] = set()
+    unresolved_links: list[str] = []
     conflicts = list(model.conflicts) + list(title_match.conflicts)
 
     for field in model.fields():
@@ -318,7 +337,12 @@ def render_page(
                 f"{model.entity_id}: field {field.name!r} maps to unknown "
                 f"parameter {param!r} in {profile.path}"
             )
-        value = _render_text(field.value)
+        value = _render_text(field.value, resolver)
+        if resolver is not None:
+            value, missing = _canonicalise_links(value, resolver)
+            for target in missing:
+                if target not in unresolved_links:
+                    unresolved_links.append(target)
         if not value.strip():
             omitted.append(OmittedParameter(param, field.name, "empty_value"))
             omitted_params.add(param)
@@ -378,21 +402,72 @@ def render_page(
         omitted=tuple(omitted),
         conflicts=tuple(_dedupe_conflicts(conflicts)),
         categories=tuple(categories),
-        links=model.links(),
+        links=tuple(_render_link(link, resolver) for link in model.links()),
+        unresolved_links=tuple(unresolved_links),
     )
 
 
-def _render_text(text: Text) -> str:
+def _render_link(link: Link, resolver: TitleResolver | None) -> Link:
+    target = resolver.resolve(link.target) if resolver is not None else link.target
+    label = target if link.label == link.target else link.label
+    return Link(target, label)
+
+
+def _render_text(text: Text, resolver: TitleResolver | None = None) -> str:
     pieces = []
     for part in text.parts:
         if isinstance(part, Link):
-            if part.label == part.target:
-                pieces.append(f"[[{part.target}]]")
+            target = (
+                resolver.resolve(part.target) if resolver is not None else part.target
+            )
+            label = target if part.label == part.target else part.label
+            if label == target:
+                pieces.append(f"[[{target}]]")
             else:
-                pieces.append(f"[[{part.target}|{part.label}]]")
+                pieces.append(f"[[{target}|{label}]]")
         else:
             pieces.append(part)
     return "".join(pieces)
+
+
+def _canonicalise_links(
+    text: str, resolver: TitleResolver
+) -> tuple[str, tuple[str, ...]]:
+    """Rewrite literal ``[[target]]`` links to the site's canonical spelling.
+
+    Page builders occasionally emit wikitext links as plain strings (unlock
+    lists, gallery captions).  Resolving them here keeps link emission in one
+    place instead of asking every builder to construct ``Link`` objects.
+    Targets that cannot be resolved are returned unchanged and reported.
+    """
+    unresolved: list[str] = []
+
+    def replace(match: re.Match[str]) -> str:
+        raw = match.group(1)
+        target_part, separator, label = raw.partition("|")
+        target = target_part.strip()
+        if not target or target.startswith(":"):
+            return match.group(0)
+        if target.casefold().startswith(IGNORED_TARGET_PREFIXES):
+            return match.group(0)
+        canonical = resolver.resolve(target)
+        known = resolver.is_known(canonical)
+        if canonical == target and "#" in target:
+            base, _, fragment = target.partition("#")
+            resolved_base = resolver.resolve(base.strip())
+            if resolved_base != base.strip():
+                canonical = f"{resolved_base}#{fragment}"
+                known = resolver.is_known(resolved_base)
+        if not known:
+            if canonical not in unresolved:
+                unresolved.append(canonical)
+            return match.group(0)
+        if canonical == target:
+            return match.group(0)
+        tail = separator + label if separator else ""
+        return f"[[{canonical}{tail}]]"
+
+    return _LINK_RE.sub(replace, text), tuple(unresolved)
 
 
 def _dedupe_conflicts(conflicts: Iterable[Conflict]) -> list[Conflict]:

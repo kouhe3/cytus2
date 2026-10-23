@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kind": "titles",
+  "site": "https://wiki.biligame.com/cytus2",
+  "namespace": 0,
+  "fetched_at": "2026-10-23T00:00:00+00:00",
+  "counts": {
+    "articles": 6,
+    "redirects": 0,
+    "total": 6
+  },
+  "articles": [
+    "First",
+    "Alpha",
+    "闲聊时间",
+    "闲聊时间 2",
+    "重启。",
+    "重启。(good ending2)"
+  ],
+  "redirects": []
+}

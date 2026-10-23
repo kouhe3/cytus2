@@ -55,6 +55,19 @@ def build_parser() -> argparse.ArgumentParser:
         default="wiki/profiles/bili.json",
         help="hand-written wiki profile (default: %(default)s)",
     )
+    render.add_argument(
+        "--patches",
+        action="store_true",
+        help=(
+            "match rendered pages against the site snapshot and emit "
+            "parameter-level patches instead of full pages"
+        ),
+    )
+    render.add_argument(
+        "--snapshot",
+        default="wiki/snapshot",
+        help="wiki snapshot directory used by --patches (default: %(default)s)",
+    )
     return parser
 
 
@@ -63,7 +76,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "render":
         try:
-            result = render_wiki(Path(args.db), Path(args.out), Path(args.profile))
+            result = render_wiki(
+                Path(args.db),
+                Path(args.out),
+                Path(args.profile),
+                Path(args.snapshot) if args.patches else None,
+            )
         except BuildError as exc:
             print(f"cytus2db: {exc}", file=sys.stderr)
             return 1
@@ -71,6 +89,19 @@ def main(argv: list[str] | None = None) -> int:
             f"{name}={count}" for name, count in result["counts"].items()
         )
         print(f"rendered pages: {result['page_count']} ({summary})")
+        if "patch_counts" in result:
+            matched = sum(row["matched"] for row in result["patch_counts"].values())
+            unmatched = sum(
+                row["unmatched"] for row in result["patch_counts"].values()
+            )
+            conflicts = sum(
+                row["conflicts"] for row in result["patch_counts"].values()
+            )
+            print(
+                f"matched: {matched}, patches: {result['patch_count']}, "
+                f"unmatched: {unmatched}, conflicts: {conflicts}"
+            )
+            print(f"wrote patches -> {Path(args.out) / 'patches'}")
         print(f"wrote pages -> {Path(args.out) / 'pages'}")
         print(f"wrote report -> {Path(args.out) / 'report.json'}")
         return 0

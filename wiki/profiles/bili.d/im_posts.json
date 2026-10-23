@@ -1,0 +1,64 @@
+{
+  "categories": {
+    "im_post": "分类:Im剧情"
+  },
+  "templates": {
+    "Im/帖": {
+      "template": "Im/帖",
+      "param_order": [
+        "剧情排序",
+        "全局排序",
+        "iM_ID",
+        "标题",
+        "内容",
+        "评论",
+        "点赞数",
+        "解锁条件",
+        "解锁谱面",
+        "配图文件名",
+        "结局分支",
+        "头像覆盖"
+      ],
+      "params": {
+        "剧情排序": {"required": false, "conditional": false, "default": ""},
+        "全局排序": {"required": false, "conditional": false, "default": ""},
+        "iM_ID": {"required": false, "conditional": false, "default": ""},
+        "标题": {"required": false, "conditional": false, "default": ""},
+        "内容": {"required": false, "conditional": false, "default": ""},
+        "评论": {"required": false, "conditional": false, "default": ""},
+        "点赞数": {"required": false, "conditional": false, "default": ""},
+        "解锁条件": {"required": false, "conditional": false, "default": ""},
+        "解锁谱面": {"required": false, "conditional": false, "default": ""},
+        "配图文件名": {"required": false, "conditional": false, "default": ""},
+        "结局分支": {"required": false, "conditional": false, "default": "主线"},
+        "头像覆盖": {"required": false, "conditional": false, "default": ""}
+      },
+      "fields": {
+        "plot_order": "剧情排序",
+        "global_order": "全局排序",
+        "account": "iM_ID",
+        "headline": "标题",
+        "content": "内容",
+        "comments": "评论",
+        "likes": "点赞数",
+        "unlock_condition": "解锁条件",
+        "unlock_charts": "解锁谱面",
+        "attachment": "配图文件名",
+        "ending_branch": "结局分支",
+        "avatar_override": "头像覆盖"
+      }
+    }
+  },
+  "pages": {
+    "im_post": {
+      "template": "Im/帖",
+      "title": {
+        "field": "page_title",
+        "fallback": "game_id",
+        "disambiguator": "（{game_id}）"
+      },
+      "preserve_unknown_params": true,
+      "observed_unknown_params": []
+    }
+  }
+}

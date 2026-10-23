@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "kind": "pages",
+  "site": "bili",
+  "fetched_at": "2026-10-23T00:00:00Z",
+  "source_query": "fixture",
+  "templates": {
+    "Im/帖": {
+      "title": "Template:Im/帖",
+      "page_count": 1,
+      "pages": [
+        {
+          "title": "旧页-第一篇",
+          "params": {
+            "iM_ID": "Alpha-Official",
+            "标题": "第一篇贴文",
+            "剧情排序": "1",
+            "全局排序": "1"
+          }
+        }
+      ]
+    }
+  }
+}

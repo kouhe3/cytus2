@@ -228,12 +228,43 @@ export interface SongPack {
   songs: SongInfo[];
 }
 
+export interface CapsoPack {
+  id: string;
+  name: string;
+  price: string;
+  capsoPrice: number;
+  iap: boolean;
+  capso: boolean;
+  songs: { id: string; diffs: number[] }[];
+  extras: string[];
+}
+
+export interface ExpansionSong {
+  id: string;
+  name: string;
+  artist: string;
+  packId: string;
+  charts: Record<string, string>;
+  needUnlock: Record<string, boolean>;
+}
+
+export interface ExpansionPack {
+  id: string;
+  name: string;
+  price: string;
+  boxOnly: boolean;
+  prePurchase: boolean;
+  songs: ExpansionSong[];
+}
+
 export interface SongCatalog {
   packs: SongPack[];
   other: SongInfo[];
   unlocks: Record<string, SongUnlock[]>;
   /** 通关剧情解锁的谱面：songId → [{d, story}] */
   storyCharts: Record<string, { d: number; story: string }[]>;
+  expansion: ExpansionPack[];
+  capso: CapsoPack[];
 }
 
 export interface IndexData {

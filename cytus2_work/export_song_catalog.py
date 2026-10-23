@@ -42,6 +42,74 @@ def assemble_shared0() -> str:
     return dst
 
 
+def read_bundle_textasset(bundle: str, name: str):
+    """从 bundle 里取指定 TextAsset 的 JSON"""
+    import UnityPy
+
+    env = UnityPy.load(os.path.join(TMP, bundle))
+    for obj in env.objects:
+        if obj.type.name != "TextAsset":
+            continue
+        ta = obj.read()
+        if ta.m_Name != name:
+            continue
+        raw = ta.m_Script
+        return json.loads(raw if isinstance(raw, str) else bytes(raw).decode("utf-8", "replace"))
+    return None
+
+
+def read_expansion() -> list:
+    """expansion_pack_data（DLC）→ 曲包列表；这些歌不在 song_pack_data 的 offline 列表里"""
+    data = read_bundle_textasset("sharedassets0.assets", "expansion_pack_data") or {}
+    out = []
+    for p in data.get("ExpansionPackList") or []:
+        out.append({
+            "id": p["ExpansionPackId"],
+            "name": (p.get("ExpansionPackName") or "").replace("\n", " ").strip(),
+            "price": p.get("DefaultPrice") or "",
+            "boxOnly": bool(p.get("IsBoxOnly")),
+            "prePurchase": bool(p.get("IsPrePurchase")),
+            "songs": [
+                {
+                    "id": s["SongId"],
+                    "name": s.get("SongName"),
+                    "artist": s.get("Artist"),
+                    "packId": s.get("SongPackId") or "",
+                    "charts": {k: v.get("Level") for k, v in (s.get("Charts") or {}).items()},
+                    "needUnlock": {k: bool(v.get("NeedUnlock")) for k, v in (s.get("Charts") or {}).items()},
+                }
+                for s in p.get("SongInfoList") or []
+            ],
+        })
+    return out
+
+
+def read_capso() -> list:
+    """capsoshoppacks → CAPSO 商店包；歌曲条目形如 `neko001_058_0,1,2`（下划线后是难度）"""
+    packs = read_bundle_textasset("capsoshopdata.ab", "capsoshoppacks") or []
+    out = []
+    for p in packs:
+        songs, extras = [], []
+        for it in p.get("Items") or []:
+            if it.get("ItemType") == 0:
+                parts = it["Id"].rsplit("_", 1)
+                diffs = [int(x) for x in parts[1].split(",") if x.isdigit()] if len(parts) == 2 else []
+                songs.append({"id": parts[0], "diffs": diffs})
+            else:
+                extras.append(it["Id"])
+        out.append({
+            "id": p["Id"],
+            "name": (p.get("Name") or "").replace("\n", " ").strip(),
+            "price": p.get("DefaultPriceString") or "",
+            "capsoPrice": p.get("CapsoPrice") or 0,
+            "iap": bool(p.get("IsAvailableForIAP")),
+            "capso": bool(p.get("IsAvailableForCapso")),
+            "songs": songs,
+            "extras": extras,
+        })
+    return out
+
+
 def read_story_chart_unlock() -> dict:
     """chartunlock.ab → {songId: [{d, story}]}（storychartunlock）"""
     import UnityPy
@@ -148,12 +216,22 @@ def main():
                 "story": "",
             })
 
-    data = {"packs": packs, "other": other, "unlocks": unlocks, "storyCharts": read_story_chart_unlock()}
+    data = {
+        "packs": packs,
+        "other": other,
+        "unlocks": unlocks,
+        "storyCharts": read_story_chart_unlock(),
+        "expansion": read_expansion(),
+        "capso": read_capso(),
+    }
     json.dump(data, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     songs = sum(len(p["songs"]) for p in packs) + len(other)
     n_story = len(data["storyCharts"])
+    n_dlc = sum(len(x["songs"]) for x in data["expansion"])
+    n_capso = sum(len(x["songs"]) for x in data["capso"])
     print(
-        f"{len(packs)} 个曲包 / {songs} 首歌 / {len(unlocks)} 首有帖子或节点获取方式 / "
+        f"{len(packs)} 个曲包 / {songs} 首歌（另有 DLC {len(data['expansion'])} 包 {n_dlc} 首、"
+        f"CAPSO {len(data['capso'])} 包 {n_capso} 首）/ {len(unlocks)} 首有帖子或节点获取方式 / "
         f"{n_story} 首有通关解锁 → {os.path.relpath(OUT, HERE)}"
     )
 

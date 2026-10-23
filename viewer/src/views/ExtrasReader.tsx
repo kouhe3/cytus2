@@ -354,6 +354,12 @@ function SongSection({
   const catalog: SongCatalog = songs.data;
 
   const total = catalog.packs.reduce((n, p) => n + p.songs.length, 0) + catalog.other.length;
+  const capsoIndex = new Map<string, { pack: import("../types").CapsoPack; diffs: number[] }>();
+  for (const pack of catalog.capso) {
+    for (const item of pack.songs) capsoIndex.set(item.id, { pack, diffs: item.diffs });
+  }
+  const capsoLabel = (entry: { pack: import("../types").CapsoPack }) =>
+    `CAPSO 商店「${entry.pack.name}」· ${entry.pack.price}${entry.pack.capsoPrice ? ` / ${entry.pack.capsoPrice} CAPSO` : ""}`;
 
   return (
     <div className="reader-inner">
@@ -366,11 +372,13 @@ function SongSection({
       <p className="lede">
         {catalog.packs.length} 个曲包 / {total} 首歌。曲名与难度来自 sharedassets0 的{" "}
         <span className="mono">song_pack_data</span>，每个难度带 <span className="mono">NeedUnlock</span>
-        ：false = 拥有曲包即解锁（「默认解锁」），true = 需要一次解锁事件。解锁来源共三类，全部来自本地数据：
-        iM 帖的 <span className="mono">UnlockCharts</span>、分支节点的{" "}
-        <span className="mono">UnlockedCharts</span>、通关剧情的{" "}
-        <span className="mono">storychartunlock</span>。付费曲包的谱面购买即解锁；剩下的写「需解锁 · 本地无记录」，
-        表示数据里没有对应解锁事件（角色/曲包整体开放或活动内容）。
+        ：false = 拥有曲包即解锁（「默认解锁」），true = 需要一次解锁事件。获取方式按优先级判定：
+        <b>iM 帖</b>（<span className="mono">UnlockCharts</span>）→
+        <b>分支节点</b>（<span className="mono">UnlockedCharts</span>）→
+        <b>通关剧情</b>（<span className="mono">storychartunlock</span>）→
+        <b>默认解锁</b> → <b>CAPSO 商店</b>（<span className="mono">capsoshoppacks</span>）→
+        <b>购买曲包</b>（IAP）。都不匹配的写「需解锁 · 本地无记录」：可能是抽奖机（gacha）或后续活动内容，
+        其配置表不在 APK 内。
       </p>
       {catalog.packs.map((pack) => (
         <details key={pack.id} style={{ marginBottom: 10 }}>
@@ -401,6 +409,7 @@ function SongSection({
                         .map(([pack2, lv]) => `${characterName(index, pack2)} Lv${lv}`)
                         .join("、");
                       const story = (catalog.storyCharts[song.id] ?? []).find((x) => x.d === d);
+                      const capso = capsoIndex.get(song.id);
                       const free = !(song.needUnlock?.[key] ?? false);
                       return (
                         <div key={key} className="mono" style={{ lineHeight: 1.7 }}>
@@ -426,6 +435,8 @@ function SongSection({
                             </>
                           ) : free ? (
                             <span style={{ color: "var(--muted)" }}>默认解锁（NeedUnlock=false）</span>
+                          ) : capso && capso.diffs.includes(d) ? (
+                            <span>{capsoLabel(capso)}</span>
                           ) : pack.iap ? (
                             <span style={{ color: "var(--muted)" }}>购买曲包后解锁</span>
                           ) : (
@@ -441,6 +452,71 @@ function SongSection({
           </table>
         </details>
       ))}
+
+      <h3 style={{ marginTop: 18 }}>DLC / 扩展包（{catalog.expansion.length} 包 · {catalog.expansion.reduce((n, x) => n + x.songs.length, 0)} 首）</h3>
+      <p className="lede">
+        这些歌 <b>不在</b> <span className="mono">song_pack_data</span> 的离线曲库里，只出现在{" "}
+        <span className="mono">expansion_pack_data</span>；购买对应 DLC 包即可游玩。
+      </p>
+      {catalog.expansion.map((pack) => (
+        <details key={pack.id} style={{ marginBottom: 10 }}>
+          <summary className="mono">
+            {pack.name}（{pack.id}）· {pack.songs.length} 首 · {pack.price}
+            {pack.boxOnly ? " · 仅礼盒" : ""}
+            {pack.prePurchase ? " · 预购" : ""}
+          </summary>
+          <table className="grid" style={{ marginTop: 6 }}>
+            <tbody>
+              {pack.songs.map((song) => (
+                <tr key={song.id}>
+                  <td style={{ width: 240 }}>
+                    <b>{song.name}</b>
+                    <div className="mono" style={{ color: "var(--muted)" }}>
+                      {song.id} · {song.artist}
+                    </div>
+                  </td>
+                  <td style={{ width: 120 }} className="mono">
+                    {Object.entries(song.charts).map(([k, lv]) => `${k} ${lv}`).join(" / ")}
+                  </td>
+                  <td className="mono" style={{ color: "var(--muted)" }}>
+                    购买 DLC「{pack.name}」{pack.price}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      ))}
+
+      <h3 style={{ marginTop: 18 }}>CAPSO 商店（{catalog.capso.length} 包）</h3>
+      <p className="lede">
+        曲目以 <span className="mono">{`songId_难度`}</span> 形式挂在 CAPSO 包里，可用 CAPSO 点数或 IAP 购买；
+        这是本地数据里唯一的「商城 / 抽奖」型来源。<b>抽奖机（gacha）</b>本体走
+        <span className="mono"> ObtainableSource.Gacha </span>＋<span className="mono">GachaMachineId</span>，
+        配置表不在 APK 内（服务器下发），所以无法按曲目列出。
+      </p>
+      <table className="grid">
+        <tbody>
+          {catalog.capso.map((pack) => (
+            <tr key={pack.id}>
+              <td style={{ width: 260 }}>
+                <b>{pack.name}</b>
+                <div className="mono" style={{ color: "var(--muted)" }}>
+                  {pack.id}
+                </div>
+              </td>
+              <td style={{ width: 160 }} className="mono">
+                {pack.price || "—"}
+                {pack.capsoPrice ? ` / ${pack.capsoPrice} CAPSO` : ""}
+              </td>
+              <td className="mono">
+                {pack.songs.map((x) => `${x.id}（${x.diffs.join(",")}）`).join("、") || "—"}
+                {pack.extras.length ? ` · 其他：${pack.extras.join("、")}` : ""}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

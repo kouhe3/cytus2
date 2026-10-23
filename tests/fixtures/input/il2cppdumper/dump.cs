@@ -31,6 +31,8 @@ public class StoryEnding03Main // TypeDefIndex: 9003
 	// Fields
 	public const string ID = "story_ending03_main";
 	public const string STEP_START = "0_TOUCH_OS_POST";
+	public const string TRIGGER_GALLERY_FOLDER_ID = "misc";
+	public const string TRIGGER_GALLERY_FILE_LOCATION = "opening";
 
 	// Properties
 	private bool Rayark.Cytus2.Story.ICutscene.CanSkip { get; }

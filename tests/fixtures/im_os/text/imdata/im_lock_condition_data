@@ -2,7 +2,7 @@
   {
     "TopicId": "P0101",
     "TopicLockId": "",
-    "StoryLockId": "story01",
+    "StoryLockId": "story_alpha01",
     "LevelLockDisplay": false,
     "LevelLocks": [
       {"SongPackId": "alpha001", "Level": 9, "IsLevelLocked": false}

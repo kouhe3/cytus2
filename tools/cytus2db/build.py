@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .entities import build_entities, extension_modules
+from .edges import build_edges, validate_edge_records, validate_edges
 from .errors import ValidationError
 from .sources import InputSource
 from .validate import SchemaValidator
@@ -35,8 +36,11 @@ def build_database(
     entities = build_entities(source)
     for entity_type in BASE_ENTITY_TYPES:
         entities.setdefault(entity_type, [])
+    edges = build_edges(source, entities)
 
     validate(entities)
+    validate_edge_records(edges)
+    validate_edges(edges, entities)
 
     out = Path(out_dir)
     if clean:
@@ -50,9 +54,9 @@ def build_database(
         writer = getattr(module, "write_artifacts", None)
         if writer is not None:
             writer(out, source, entities)
-    write_edges(out / "db" / "edges.jsonl")
-    write_sqlite(out / "db.sqlite", entities, counts)
-    write_spa(out / "spa" / "data.json", entities)
+    write_edges(out / "db" / "edges.jsonl", edges)
+    write_sqlite(out / "db.sqlite", entities, counts, edges)
+    write_spa(out / "spa" / "data.json", entities, edges)
     return counts
 
 

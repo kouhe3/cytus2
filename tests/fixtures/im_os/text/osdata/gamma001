@@ -19,7 +19,10 @@
         {"SongPackId": "alpha001", "Level": 9, "IsLevelLocked": false}
       ]
     },
-    "UnlockCharts": [],
+    "UnlockCharts": [
+      {"Difficulty": 2, "SongId": "alpha001_001"},
+      {"Difficulty": 2, "SongId": "alpha001_001"}
+    ],
     "DigitLock": null,
     "Category": "1.4"
   },

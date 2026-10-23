@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gallery_item.schema.json",
+  "title": "gallery_item",
+  "description": "A Backup Database entry: video, image or boss stage. Not a Branching OS node.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "folder_id",
+    "location",
+    "name",
+    "icon",
+    "format",
+    "kind",
+    "size",
+    "conditions",
+    "obtainable",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^gallery_item/[^\\s]+$"
+    },
+    "type": {
+      "const": "gallery_item"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "folder_id": {
+      "type": "string",
+      "pattern": "^gallery_folder/[^\\s]+$"
+    },
+    "location": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "icon": {
+      "type": "string",
+      "minLength": 1
+    },
+    "format": {
+      "type": "integer"
+    },
+    "kind": {
+      "enum": ["video", "image", "boss_stage"]
+    },
+    "size": {
+      "$ref": "oa_story_defs.schema.json#/$defs/gallery_size"
+    },
+    "conditions": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/condition"
+      }
+    },
+    "obtainable": {
+      "type": "boolean"
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

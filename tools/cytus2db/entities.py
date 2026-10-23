@@ -510,6 +510,34 @@ def build_assets(seed_lists: list[list[AssetSeed]]) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------- orchestration
+def extension_modules() -> list:
+    """Return imported extension modules (``cytus2db.ext.*``), sorted by name."""
+    import importlib
+    import pkgutil
+
+    from . import ext as ext_package
+
+    modules = []
+    for info in sorted(pkgutil.iter_modules(ext_package.__path__), key=lambda item: item.name):
+        modules.append(importlib.import_module(f"{ext_package.__name__}.{info.name}"))
+    return modules
+
+
+def _build_extensions(source: InputSource) -> dict[str, list[dict[str, Any]]]:
+    """Discover ``cytus2db.ext.<name>.build`` modules and merge their entities."""
+    merged: dict[str, list[dict[str, Any]]] = {}
+    for module in extension_modules():
+        builder = getattr(module, "build", None)
+        if builder is None:
+            continue
+        produced = builder(source)
+        if not isinstance(produced, dict):
+            raise BuildError(f"{module.__name__}.build must return a dict")
+        for entity_type, records in produced.items():
+            merged.setdefault(entity_type, []).extend(records)
+    return merged
+
+
 def build_entities(source: InputSource) -> dict[str, list[dict[str, Any]]]:
     packs, songs, charts = build_catalog(source)
     characters, character_seeds = build_characters(source, packs)
@@ -519,7 +547,7 @@ def build_entities(source: InputSource) -> dict[str, list[dict[str, Any]]]:
     assets = build_assets(
         [character_seeds, illustration_seeds, subtitle_seeds, media_seeds]
     )
-    return {
+    entities = {
         "character": characters,
         "pack": packs,
         "folder": folders,
@@ -530,3 +558,6 @@ def build_entities(source: InputSource) -> dict[str, list[dict[str, Any]]]:
         "asset": assets,
         "subtitle_line": subtitles,
     }
+    for entity_type, records in _build_extensions(source).items():
+        entities.setdefault(entity_type, []).extend(records)
+    return entities

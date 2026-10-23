@@ -1,0 +1,66 @@
+[
+  {
+    "FileLocation": "opening",
+    "FileName": "Welcome_to_cyTus",
+    "IconType": "icon_video",
+    "Format": 1,
+    "Location": "",
+    "Obtainable": false,
+    "Conditions": []
+  },
+  {
+    "FileLocation": "poster",
+    "FileName": "Poster",
+    "IconType": "icon_image",
+    "Format": 3,
+    "Location": "1024,512",
+    "Obtainable": true,
+    "Conditions": []
+  },
+  {
+    "FileLocation": "ending03",
+    "FileName": "Ending 03 Stage",
+    "IconType": "icon_bossstage",
+    "Format": 4,
+    "Location": "",
+    "Obtainable": false,
+    "Conditions": [
+      {
+        "$type": "Rayark.Cytus2.Gallery.StoryLockCondition, Assembly-CSharp",
+        "storyId": "story_ending03_main"
+      }
+    ]
+  },
+  {
+    "FileLocation": "alpha_bossstage",
+    "FileName": "Alpha Stage",
+    "IconType": "icon_bossstage",
+    "Format": 2,
+    "Location": "",
+    "Obtainable": false,
+    "Conditions": [
+      {
+        "$type": "Rayark.Cytus2.Gallery.OSFileLockCondition, Assembly-CSharp",
+        "fileId": "alpha001"
+      }
+    ]
+  },
+  {
+    "FileLocation": "conditions",
+    "FileName": "Conditions Video",
+    "IconType": "icon_video",
+    "Format": 1,
+    "Location": "",
+    "Obtainable": true,
+    "Conditions": [
+      {
+        "$type": "Rayark.Cytus2.Gallery.IMTopicLockCondition, Assembly-CSharp",
+        "topicId": "AL0101"
+      },
+      {
+        "$type": "Rayark.Cytus2.Gallery.BranchingOSFileLockCondition, Assembly-CSharp",
+        "branchingFileId": "taos001a"
+      }
+    ]
+  }
+]

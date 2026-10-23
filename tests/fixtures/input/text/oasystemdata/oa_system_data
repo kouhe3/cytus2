@@ -1,0 +1,150 @@
+{
+  "Objects": [
+    {
+      "ObjectId": "alpha001_obj001",
+      "Names": ["Alpha Device", "アルファ装置", "阿爾法裝置", "알파 장치", "阿爾法裝置", "阿尔法装置"],
+      "CharacterId": "alpha001",
+      "Details": ["An alpha device.", "アルファの装置。", "阿爾法的裝置。", "알파 장치.", "阿爾法的裝置。", "阿尔法的装置。"],
+      "OASystemLocks": [
+        {
+          "$type": "Rayark.Cytus2.OASystem.OASystemLevelLock, Assembly-CSharp",
+          "CharacterId": "alpha001",
+          "LockLevel": 3
+        }
+      ],
+      "AnalyzeTypeId": "alpha001_010_1",
+      "AnalyzeType": 1
+    },
+    {
+      "ObjectId": "beta001_obj001",
+      "Names": ["Beta Device", "ベータ装置", "貝塔裝置", "베타 장치", "貝塔裝置", "贝塔装置"],
+      "CharacterId": "beta001",
+      "Details": ["A beta device.", "ベータの装置。", "貝塔的裝置。", "베타 장치.", "貝塔的裝置。", "贝塔的装置。"],
+      "OASystemLocks": [
+        {
+          "$type": "Rayark.Cytus2.OASystem.OASystemOSLock, Assembly-CSharp",
+          "OSLockId": "pos001"
+        },
+        {
+          "$type": "Rayark.Cytus2.OASystem.OASystemStoryLock, Assembly-CSharp",
+          "StoryId": "story_alpha01"
+        }
+      ],
+      "AnalyzeTypeId": "",
+      "AnalyzeType": 0
+    }
+  ],
+  "Descriptions": [
+    {
+      "DescriptionObjectId": "alpha001_desc001",
+      "Id": "alpha001_desc001",
+      "CharacterId": "alpha001",
+      "Name": "Alpha Hotspot",
+      "Weight": 1,
+      "EnableCondition": [
+        {
+          "$type": "Rayark.Cytus2.OASystem.OASystemLevelLock, Assembly-CSharp",
+          "CharacterId": "alpha001",
+          "LockLevel": 4
+        }
+      ],
+      "DisableCondition": [
+        {
+          "$type": "Rayark.Cytus2.OASystem.OASystemStoryLock, Assembly-CSharp",
+          "StoryId": "story_ending03_main"
+        }
+      ],
+      "DescriptionEvent": 0,
+      "Contents": [
+        "<p>Alpha hotspot.</p>",
+        "<p>アルファ。</p>",
+        "<p>阿爾法。</p>",
+        "<p>알파.</p>",
+        "<p>阿爾法。</p>",
+        "<p>阿尔法。</p>"
+      ]
+    },
+    {
+      "DescriptionObjectId": "beta001_desc001",
+      "Id": "beta001_desc001_alt001",
+      "CharacterId": "beta001",
+      "Name": "Beta Hotspot",
+      "Weight": 2,
+      "EnableCondition": [
+        {
+          "$type": "Rayark.Cytus2.OASystem.OASystemOSLock, Assembly-CSharp",
+          "OSLockId": "pos002"
+        }
+      ],
+      "DisableCondition": [],
+      "DescriptionEvent": 1,
+      "Contents": [
+        "<p>Beta hotspot.</p>",
+        "<p>ベータ。</p>",
+        "<p>貝塔。</p>",
+        "<p>베타.</p>",
+        "<p>貝塔。</p>",
+        "<p>贝塔。</p>"
+      ]
+    }
+  ],
+  "Documents": [
+    {
+      "DocumentId": "alpha001_obj001_oa001",
+      "CharacterId": "alpha001",
+      "MissionId": "alpha001_obj001_mission001",
+      "Names": ["Alpha Doc", "Alpha Doc", "Alpha Doc", "Alpha Doc", "Alpha Doc", "Alpha Doc"],
+      "Contents": [
+        "##text\nAlpha document body.\n",
+        "##text\nアルファ文書。\n",
+        "##text\n阿爾法文件。\n",
+        "##text\n알파 문서.\n",
+        "##text\n阿爾法文件。\n",
+        "##text\n阿尔法文件。\n"
+      ],
+      "DigitLock": null
+    },
+    {
+      "DocumentId": "beta001_obj001_oa001",
+      "CharacterId": "beta001",
+      "MissionId": "beta001_obj001_mission001",
+      "Names": ["Beta Doc", "Beta Doc", "Beta Doc", "Beta Doc", "Beta Doc", "Beta Doc"],
+      "Contents": [
+        "##text\nBeta document body.\n",
+        "##text\nベータ文書。\n",
+        "##text\n貝塔文件。\n",
+        "##text\n베타 문서.\n",
+        "##text\n貝塔文件。\n",
+        "##text\n贝塔文件。\n"
+      ],
+      "DigitLock": "1234"
+    }
+  ],
+  "Missions": [
+    {
+      "MissionId": "alpha001_obj001_mission001",
+      "ObjectId": "alpha001_obj001",
+      "Type": "click_description",
+      "Args": "alpha001_desc001",
+      "Titles": ["Alpha Doc", "Alpha Doc", "Alpha Doc", "Alpha Doc", "Alpha Doc", "Alpha Doc"],
+      "Details": ["Check the alpha device.", "アルファを調べる。", "檢查阿爾法。", "알파를 조사.", "檢查阿爾法。", "检查阿尔法。"],
+      "IsHidden": false
+    },
+    {
+      "MissionId": "beta001_obj001_mission001",
+      "ObjectId": "beta001_obj001",
+      "Type": "play_song",
+      "Args": "beta001_000",
+      "Titles": ["Beta Doc", "Beta Doc", "Beta Doc", "Beta Doc", "Beta Doc", "Beta Doc"],
+      "Details": ["Play the beta song.", "ベータをプレイ。", "遊玩貝塔。", "베타 플레이.", "遊玩貝塔。", "游玩贝塔。"],
+      "IsHidden": true
+    }
+  ],
+  "Rewards": [
+    {
+      "RewardId": "alpha001_000_2",
+      "ObjectId": "alpha001_obj001",
+      "Type": 0
+    }
+  ]
+}

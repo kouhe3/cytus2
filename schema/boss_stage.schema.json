@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "boss_stage.schema.json",
+  "title": "boss_stage",
+  "description": "A special story stage keyed by its resource/location name; display and story names are aliases.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "display_name",
+    "aliases",
+    "folder_id",
+    "gallery_item_id",
+    "conditions",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^boss_stage/[^\\s]+$"
+    },
+    "type": {
+      "const": "boss_stage"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "aliases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "folder_id": {
+      "type": "string",
+      "pattern": "^gallery_folder/[^\\s]+$"
+    },
+    "gallery_item_id": {
+      "type": "string",
+      "pattern": "^gallery_item/[^\\s]+$"
+    },
+    "conditions": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/condition"
+      }
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

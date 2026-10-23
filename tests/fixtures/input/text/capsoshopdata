@@ -1,0 +1,31 @@
+[
+  {
+    "Id": "shopA",
+    "Name": "Alpha Pack",
+    "CreateOrder": 0,
+    "IconPath": "capsopack_icon_alpha",
+    "DefaultPriceString": "$1.99",
+    "Items": [
+      {"Id": "alpha001_001_0,1,2", "ItemType": 0},
+      {"Id": "alpha001_s002", "ItemType": 1},
+      {"Id": "tapfx_001_air horn", "ItemType": 2}
+    ],
+    "CapsoPrice": 10,
+    "IsAvailableForCapso": true,
+    "IsAvailableForIAP": true
+  },
+  {
+    "Id": "shopB",
+    "Name": "Beta Pack",
+    "CreateOrder": 1,
+    "IconPath": "capsopack_icon_beta",
+    "DefaultPriceString": "CAPSO! ONLY",
+    "Items": [
+      {"Id": "alpha001_000_0,1", "ItemType": 0},
+      {"Id": "alpha001_s001", "ItemType": 1}
+    ],
+    "CapsoPrice": 0,
+    "IsAvailableForCapso": true,
+    "IsAvailableForIAP": false
+  }
+]

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "oa_character.schema.json",
+  "title": "oa_character",
+  "description": "A character with an OA exploration archive; the union of objects, documents and descriptions.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "character_id",
+    "name",
+    "gallery_folder_id",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^oa_character/[^\\s]+$"
+    },
+    "type": {
+      "const": "oa_character"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "character_id": {
+      "type": "string",
+      "pattern": "^character/[^\\s]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "gallery_folder_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^gallery_folder/[^\\s]+$"}
+      ]
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

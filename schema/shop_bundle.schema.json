@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "shop_bundle.schema.json",
+  "title": "shop_bundle",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "milestone_key",
+    "trigger_free_character_level",
+    "black_market",
+    "message_ids",
+    "items",
+    "tiers",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^shop_bundle/[^\\s]+$"
+    },
+    "type": {
+      "const": "shop_bundle"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "milestone_key": {
+      "type": "string"
+    },
+    "trigger_free_character_level": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "black_market": {
+      "type": "boolean"
+    },
+    "message_ids": {
+      "type": "object",
+      "required": [
+        "purchased",
+        "purchased_preorder",
+        "panel_description",
+        "panel_warning",
+        "tab_title"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "purchased": {
+          "type": "string"
+        },
+        "purchased_preorder": {
+          "type": "string"
+        },
+        "panel_description": {
+          "type": "string"
+        },
+        "panel_warning": {
+          "type": "string"
+        },
+        "tab_title": {
+          "type": "string"
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "product_id",
+          "item_type",
+          "weight",
+          "reference_price_iap_id",
+          "preorder"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "item_type": {
+            "enum": ["Character", "ExpansionPack"]
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reference_price_iap_id": {
+            "type": "string"
+          },
+          "preorder": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "tiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["remain_weight", "iap_id"],
+        "additionalProperties": false,
+        "properties": {
+          "remain_weight": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "iap_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

@@ -259,9 +259,10 @@ export function rowsFor(
           view: "im",
           id: t.id,
           title: t.titles[lang] || t.id,
-          sub: `${t.storyTrigger ? "⚑ " : ""}#${t.readIndex ?? "?"} · 阶段 ${t.stage ?? "?"}${
-            t.lockLevel ? `（≤Lv${t.lockLevel}）` : ""
-          }${t.external ? ` · 外部：${t.external}` : ""}${t.branch ? ` · 分支：${t.branch}` : ""} · ${t.author} · ${t.replies} 回复`,
+          sub: `${t.storyTrigger ? "⚑ " : ""}#${t.readIndex ?? "?"}${t.cost ? ` · 解锁成本 ${t.cost}` : ""}${
+            t.external ? ` · 外部：${t.external}` : ""
+          }${t.branch ? ` · 分支：${t.branch}` : ""} · ${t.author} · ${t.replies} 回复`,
+          group: `阶段 ${t.stage ?? "?"}${t.lockLevel ? `（≤Lv${t.lockLevel}）` : ""}`,
           badge: t.id,
           avatar: t.avatar,
         }));

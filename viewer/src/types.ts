@@ -73,6 +73,8 @@ export interface ImMeta {
   external?: string;
   /** 结局分支（善终1 / 善终2 / 结局04）—— 同一周目只会走其中一条 */
   branch?: string;
+  /** 解锁成本（各条件等级之和）：多条件锁更晚 */
+  cost?: number;
 }
 
 export interface OsMeta {

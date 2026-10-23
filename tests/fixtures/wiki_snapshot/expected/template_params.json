@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "template_params",
+  "site": "https://wiki.biligame.com/cytus2",
+  "fetched_at": "2026-01-01T00:00:00+00:00",
+  "source_query": "action=query&prop=revisions&rvprop=content&rvslots=main&titles=Template:资料卡片|Template:歌曲|Template:Os/对话|Template:Os/声音|Template:Os/文件|Template:角色|Template:曲包|Template:Im/帖|Template:Oa/文件|Template:Gallery文件",
+  "template_count": 1,
+  "parameter_count": 6,
+  "templates": {
+    "歌曲": {
+      "title": "Template:歌曲",
+      "param_count": 6,
+      "required": [
+        "必填"
+      ],
+      "conditional": [
+        "条件",
+        "条件2"
+      ],
+      "params": {
+        "必填": {
+          "required": true,
+          "default": null,
+          "conditional": false
+        },
+        "选项": {
+          "required": false,
+          "default": "默认",
+          "conditional": false
+        },
+        "条件": {
+          "required": false,
+          "default": "",
+          "conditional": true
+        },
+        "条件2": {
+          "required": false,
+          "default": "备选",
+          "conditional": true
+        },
+        "冲突": {
+          "required": false,
+          "default": "甲",
+          "conditional": false,
+          "defaults_conflict": true,
+          "defaults": [
+            "甲",
+            "乙"
+          ]
+        },
+        "ver": {
+          "required": false,
+          "default": "|",
+          "conditional": false,
+          "defaults_conflict": true,
+          "defaults": [
+            "|",
+            ""
+          ]
+        }
+      }
+    }
+  }
+}

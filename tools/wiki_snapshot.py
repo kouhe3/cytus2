@@ -1,0 +1,1180 @@
+#!/usr/bin/env python3
+"""Refresh offline snapshots of the BiliGame Cytus II wiki.
+
+Three artifacts are produced under ``wiki/snapshot/``:
+
+``titles.json``
+    Main-namespace titles split into non-redirect pages and redirects, with
+    fetch time and the exact source query.
+
+``template_params.json``
+    Parameter catalog of the ten wiki templates used by the renderer, with
+    ``required`` / ``default`` / ``conditional`` classification.
+
+``pages.json``
+    Existing entity pages per entity template, with the parameters parsed from
+    the page's top-level template invocation.
+
+Refresh uses a real Edge tab through ``C:/tmp/cdp_fetch.py`` so the EdgeOne WAF
+sees a browser session.  The WAF-safe pattern (documented in ticket #2) is:
+
+* ``list=embeddedin`` pagination for page titles (500 per request),
+* ``prop=revisions`` POST batches of 50 titles,
+* ~1.2 s between requests, one dedicated tab, no parallel tabs.
+
+``--offline`` never touches the network: it reads the committed snapshots,
+validates them, and rewrites them in canonical form.  ``--check`` validates
+without writing.
+
+Run from the repository root::
+
+    python tools/wiki_snapshot.py --out wiki/snapshot
+    python tools/wiki_snapshot.py --out wiki/snapshot --offline
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import importlib.util
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+from typing import Any, Iterable, Mapping, Sequence
+
+SCHEMA_VERSION = 1
+SITE = "https://wiki.biligame.com/cytus2"
+HOME_URL = SITE + "/%E9%A6%96%E9%A1%B5"
+API_PATH = "/cytus2/api.php"
+
+SNAPSHOT_FILES = {
+    "titles": "titles.json",
+    "template_params": "template_params.json",
+    "pages": "pages.json",
+}
+
+# Ten templates used by the wiki renderer.  The first seven are entity page
+# templates; the remaining three are layout/helper templates.
+CATALOG_TEMPLATES: tuple[tuple[str, str], ...] = (
+    ("资料卡片", "Template:资料卡片"),
+    ("歌曲", "Template:歌曲"),
+    ("Os/对话", "Template:Os/对话"),
+    ("Os/声音", "Template:Os/声音"),
+    ("Os/文件", "Template:Os/文件"),
+    ("角色", "Template:角色"),
+    ("曲包", "Template:曲包"),
+    ("Im/帖", "Template:Im/帖"),
+    ("Oa/文件", "Template:Oa/文件"),
+    ("Gallery文件", "Template:Gallery文件"),
+)
+
+# Entity page templates: pages embedding these are the entity-page mapping.
+PAGE_TEMPLATES: tuple[str, ...] = (
+    "Im/帖",
+    "Os/文件",
+    "Oa/文件",
+    "Gallery文件",
+    "歌曲",
+    "角色",
+    "曲包",
+)
+
+TITLES_SOURCE_QUERY = (
+    "action=query&list=allpages&apnamespace=0&aplimit=500"
+    "&apfilterredir=nonredirects|redirects"
+)
+TEMPLATE_SOURCE_QUERY = (
+    "action=query&prop=revisions&rvprop=content&rvslots=main"
+    "&titles=Template:资料卡片|Template:歌曲|Template:Os/对话|"
+    "Template:Os/声音|Template:Os/文件|Template:角色|Template:曲包|"
+    "Template:Im/帖|Template:Oa/文件|Template:Gallery文件"
+)
+PAGES_SOURCE_QUERY = (
+    "action=query&list=embeddedin&eititle=Template:<name>&eilimit=500; "
+    "action=query&prop=revisions&rvprop=content&rvslots=main"
+    "&titles=<50 titles>&redirects=0 (1.2s spacing)"
+)
+
+COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+REDIRECT_RE = re.compile(r"^\s*#redirect\b", re.I)
+NON_ARTICLE_PREFIX_RE = re.compile(
+    r"^(模板|Template|模块|Module|分类|Category|文件|File|用户|User|"
+    r"帮助|Help|MediaWiki|特殊|Special):",
+    re.I,
+)
+
+
+class SnapshotError(RuntimeError):
+    """Raised when a snapshot cannot be fetched, parsed, or validated."""
+
+
+# ---------------------------------------------------------------------------
+# Wikitext parsing
+# ---------------------------------------------------------------------------
+
+
+def normalize_template_name(name: str) -> str:
+    """Normalize a template name the way MediaWiki matches transclusions."""
+    return name.replace("_", " ").strip().lower()
+
+
+def _brace_run(text: str, start: int, char: str) -> tuple[int, int]:
+    """Return ``(run_length, index_after_run)`` for a run of ``char``."""
+    i = start
+    n = len(text)
+    while i < n and text[i] == char:
+        i += 1
+    return i - start, i
+
+
+def _braced_end(text: str, start: int, opener_len: int) -> int:
+    """Return the index just past the matching braces, or -1.
+
+    ``start`` points at the first ``{`` of ``{{`` (opener_len=2) or ``{{{``
+    (opener_len=3).  Braces are handled as runs so ``}}}}`` closes a nested
+    ``{{...}}`` and the outer ``{{...}}`` without being mistaken for one
+    ``}}}`` token; isolated ``{`` / ``}`` characters are treated as literals.
+    """
+    stack = [opener_len]
+    i = start + opener_len
+    n = len(text)
+    while i < n:
+        char = text[i]
+        if char == "{":
+            run, i = _brace_run(text, i, "{")
+            while run >= 4:
+                stack.append(2)
+                run -= 2
+            if run == 3:
+                stack.append(3)
+            elif run == 2:
+                stack.append(2)
+            continue
+        if char == "}":
+            run, end = _brace_run(text, i, "}")
+            while run > 0 and stack:
+                need = stack[-1]
+                if run >= need:
+                    run -= need
+                    stack.pop()
+                else:
+                    break
+            if not stack:
+                return end - run
+            i = end
+            continue
+        i += 1
+    return -1
+
+
+def _split_top_level(text: str, delimiter: str) -> list[str]:
+    """Split on ``delimiter`` outside ``{{...}}``, ``{{{...}}}`` and ``[[...]]``."""
+    parts: list[str] = []
+    buf: list[str] = []
+    brace_depth = 0
+    link_depth = 0
+    i = 0
+    n = len(text)
+    while i < n:
+        char = text[i]
+        if char in "{}":
+            run, end = _brace_run(text, i, char)
+            if run >= 2:
+                brace_depth += run if char == "{" else -run
+                if brace_depth < 0:
+                    brace_depth = 0
+            buf.append(text[i:end])
+            i = end
+        elif text.startswith("[[", i):
+            link_depth += 1
+            buf.append("[[")
+            i += 2
+        elif text.startswith("]]", i):
+            link_depth -= 1
+            buf.append("]]")
+            i += 2
+        elif char == delimiter and brace_depth <= 0 and link_depth <= 0:
+            parts.append("".join(buf))
+            buf = []
+            i += 1
+        else:
+            buf.append(char)
+            i += 1
+    parts.append("".join(buf))
+    return parts
+
+
+def _split_key_value(part: str) -> tuple[str | None, str]:
+    """Split ``name=value`` at the first top-level ``=``; None for positional."""
+    brace_depth = 0
+    link_depth = 0
+    i = 0
+    n = len(part)
+    while i < n:
+        char = part[i]
+        if char in "{}":
+            run, end = _brace_run(part, i, char)
+            if run >= 2:
+                brace_depth += run if char == "{" else -run
+                if brace_depth < 0:
+                    brace_depth = 0
+            i = end
+        elif part.startswith("[[", i):
+            link_depth += 1
+            i += 2
+        elif part.startswith("]]", i):
+            link_depth -= 1
+            i += 2
+        elif char == "=" and brace_depth <= 0 and link_depth <= 0:
+            return part[:i].strip(), part[i + 1 :]
+        else:
+            i += 1
+    return None, part
+
+
+def parse_template_parameters(source: str) -> dict[str, dict[str, Any]]:
+    """Return the parameter catalog declared by a template's wikitext.
+
+    Every ``{{{name}}}`` / ``{{{name|default}}}`` occurrence is recorded.
+    ``required`` means the parameter is *only* ever used without a default,
+    ``conditional`` means both forms occur (normally guarded by ``#if``), and
+    ``default`` is the first default seen in source order.  ``defaults`` keeps
+    the distinct defaults when they conflict.
+    """
+    seen: dict[str, dict[str, Any]] = {}
+    i = 0
+    n = len(source)
+    while True:
+        start = source.find("{{{", i)
+        if start < 0:
+            break
+        end = _braced_end(source, start, 3)
+        if end < 0:
+            raise SnapshotError("unbalanced {{{ parameter in template source")
+        inner = source[start + 3 : end - 3]
+        name, has_default, default = inner.partition("|")
+        name = name.strip()
+        record = seen.setdefault(
+            name, {"bare": 0, "defaults": []}
+        ) if name else None
+        if record is not None:
+            if has_default:
+                record["defaults"].append(default)
+            else:
+                record["bare"] += 1
+        i = end
+
+    catalog: dict[str, dict[str, Any]] = {}
+    for name, record in seen.items():
+        defaults: list[str] = record["defaults"]
+        bare: int = record["bare"]
+        catalog[name] = {
+            "required": bare > 0 and not defaults,
+            "default": defaults[0] if defaults else None,
+            "conditional": bare > 0 and bool(defaults),
+            "defaults": defaults,
+        }
+    return catalog
+
+
+def _iter_invocations(
+    content: str, start: int = 0, end: int | None = None, depth: int = 0
+) -> Iterable[tuple[int, int, int, str]]:
+    """Yield ``(depth, start, end, name)`` for every template invocation.
+
+    ``end`` is the index just past the closing ``}}``.  Nested invocations are
+    yielded with ``depth + 1``; the caller picks the shallowest target.
+    """
+    if end is None:
+        end = len(content)
+    i = start
+    while i < end:
+        if content.startswith("{{{", i):
+            close = _braced_end(content, i, 3)
+            i = close if close > 0 else i + 3
+            continue
+        if content.startswith("{{", i):
+            close = _braced_end(content, i, 2)
+            if close < 0:
+                return
+            k = i + 2
+            limit = min(close, end)
+            while k < limit and content[k] not in "|}\n":
+                k += 1
+            name = content[i + 2 : k]
+            if "{" not in name:
+                yield depth, i, close, name
+            yield from _iter_invocations(content, i + 2, close - 2, depth + 1)
+            i = close
+            continue
+        i += 1
+
+
+def parse_page_params(content: str, template_name: str) -> dict[str, str] | None:
+    """Parse the shallowest invocation of ``template_name`` in a page.
+
+    Returns the parameter mapping (positional arguments keyed by their 1-based
+    number) or ``None`` when the page does not invoke the template.  Nested
+    invocations of the same template are ignored in favour of the page-level
+    one; this keeps layout wrappers out of the entity parameters.
+    """
+    target = normalize_template_name(template_name)
+    candidates: list[tuple[int, int, int]] = []
+    for depth, start, end, name in _iter_invocations(content):
+        if normalize_template_name(name) == target:
+            candidates.append((depth, start, end))
+    if not candidates:
+        return None
+    _, start, end = min(candidates)
+
+    segments = _split_top_level(content[start + 2 : end - 2], "|")
+    params: dict[str, str] = {}
+    positional = 0
+    for segment in segments[1:]:
+        key, value = _split_key_value(segment)
+        if key is None or key == "":
+            positional += 1
+            while str(positional) in params:
+                positional += 1
+            key = str(positional)
+            value = segment
+        params[key] = value.strip()
+    return params
+
+
+def _strip_page_comments(content: str) -> str:
+    return COMMENT_RE.sub("", content)
+
+
+def is_redirect(content: str) -> bool:
+    return bool(REDIRECT_RE.match(_strip_page_comments(content)))
+
+
+# ---------------------------------------------------------------------------
+# Snapshot construction
+# ---------------------------------------------------------------------------
+
+
+def utc_now() -> str:
+    return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+
+
+def _sorted_unique(values: Iterable[str]) -> list[str]:
+    return sorted(set(values))
+
+
+def build_titles_snapshot(
+    article_titles: Iterable[str],
+    redirect_titles: Iterable[str],
+    *,
+    fetched_at: str,
+    source_query: str = TITLES_SOURCE_QUERY,
+    site: str = SITE,
+) -> dict[str, Any]:
+    """Build ``titles.json`` data with sorted, disjoint title lists."""
+    articles = _sorted_unique(article_titles)
+    redirects = _sorted_unique(redirect_titles)
+    overlap = set(articles) & set(redirects)
+    if overlap:
+        sample = ", ".join(sorted(overlap)[:5])
+        raise SnapshotError(f"titles are both article and redirect: {sample}")
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "kind": "titles",
+        "site": site,
+        "namespace": 0,
+        "fetched_at": fetched_at,
+        "source_query": source_query,
+        "article_definition": (
+            "main-namespace pages that are not redirects "
+            "(list=allpages&apfilterredir=nonredirects)"
+        ),
+        "counts": {
+            "articles": len(articles),
+            "redirects": len(redirects),
+            "total": len(articles) + len(redirects),
+        },
+        "articles": articles,
+        "redirects": redirects,
+    }
+
+
+def _trim_parameter(record: Mapping[str, Any]) -> dict[str, Any]:
+    trimmed: dict[str, Any] = {
+        "required": bool(record["required"]),
+        "default": record["default"],
+        "conditional": bool(record["conditional"]),
+    }
+    defaults = list(dict.fromkeys(record.get("defaults", [])))
+    if len(defaults) > 1:
+        trimmed["defaults_conflict"] = True
+        trimmed["defaults"] = defaults
+    return trimmed
+
+
+def build_template_params_snapshot(
+    sources: Mapping[str, str],
+    *,
+    fetched_at: str,
+    source_query: str = TEMPLATE_SOURCE_QUERY,
+    site: str = SITE,
+    templates: Sequence[tuple[str, str]] = CATALOG_TEMPLATES,
+) -> dict[str, Any]:
+    """Build ``template_params.json`` data from template wikitext."""
+    catalog: dict[str, Any] = {}
+    parameter_count = 0
+    for name, full_title in sorted(templates, key=lambda item: item[0]):
+        source = _template_source(sources, name, full_title)
+        parsed = parse_template_parameters(source)
+        params = {param: _trim_parameter(record) for param, record in parsed.items()}
+        parameter_count += len(params)
+        catalog[name] = {
+            "title": full_title,
+            "param_count": len(params),
+            "required": [p for p, r in params.items() if r["required"]],
+            "conditional": [p for p, r in params.items() if r["conditional"]],
+            "params": params,
+        }
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "kind": "template_params",
+        "site": site,
+        "fetched_at": fetched_at,
+        "source_query": source_query,
+        "template_count": len(catalog),
+        "parameter_count": parameter_count,
+        "templates": catalog,
+    }
+
+
+def _template_source(
+    sources: Mapping[str, str], name: str, full_title: str
+) -> str:
+    """Look up a template source, tolerating the wiki's localized namespace.
+
+    The API answers ``Template:角色`` with the localized title ``模板:角色`` on
+    this wiki, so an exact-key lookup is not enough.
+    """
+    value = sources.get(full_title)
+    if value:
+        return value
+    target = normalize_template_name(name)
+    for key, candidate in sources.items():
+        bare = key.split(":", 1)[1] if ":" in key else key
+        if normalize_template_name(bare) == target and candidate:
+            return candidate
+    raise SnapshotError(f"missing template source: {full_title}")
+
+
+def build_pages_snapshot(
+    pages_by_template: Mapping[str, Sequence[Mapping[str, Any]]],
+    *,
+    fetched_at: str,
+    source_query: str = PAGES_SOURCE_QUERY,
+    site: str = SITE,
+    template_titles: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Build ``pages.json`` data from fetched page revisions.
+
+    ``pages_by_template`` maps an entity template name to page records with
+    ``title``, ``ns`` and ``content``.  Non-article namespaces, redirects and
+    pages that do not invoke the template are rejected or skipped explicitly.
+    """
+    titles = dict(template_titles or {})
+    for name, full_title in CATALOG_TEMPLATES:
+        titles.setdefault(name, full_title)
+
+    result: dict[str, Any] = {}
+    for template in sorted(pages_by_template):
+        seen: dict[str, dict[str, str]] = {}
+        skipped: list[str] = []
+        for page in pages_by_template[template]:
+            title = str(page.get("title", ""))
+            namespace = page.get("ns", 0)
+            content = page.get("content")
+            if namespace != 0 or NON_ARTICLE_PREFIX_RE.match(title):
+                skipped.append(title)
+                continue
+            if content is None:
+                raise SnapshotError(
+                    f"{template}: no revision content for page {title!r}"
+                )
+            if is_redirect(content):
+                skipped.append(title)
+                continue
+            params = parse_page_params(_strip_page_comments(content), template)
+            if params is None:
+                raise SnapshotError(
+                    f"{template}: template invocation not found in page {title!r}"
+                )
+            seen[title] = params
+        pages = [
+            {"title": title, "params": seen[title]} for title in sorted(seen)
+        ]
+        if skipped:
+            print(
+                f"wiki_snapshot: {template}: skipped {len(skipped)} "
+                f"non-article/redirect page(s)",
+                file=sys.stderr,
+            )
+        result[template] = {
+            "title": titles.get(template, f"Template:{template}"),
+            "page_count": len(pages),
+            "pages": pages,
+        }
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "kind": "pages",
+        "site": site,
+        "fetched_at": fetched_at,
+        "source_query": source_query,
+        "templates": result,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+
+
+def _require(condition: bool, message: str) -> None:
+    if not condition:
+        raise SnapshotError(f"invalid snapshot: {message}")
+
+
+def validate_titles_snapshot(data: Mapping[str, Any]) -> None:
+    _require(data.get("schema_version") == SCHEMA_VERSION, "schema_version")
+    _require(data.get("kind") == "titles", "kind")
+    _require(isinstance(data.get("site"), str) and data["site"], "site")
+    _require(data.get("namespace") == 0, "namespace")
+    _require(isinstance(data.get("fetched_at"), str) and data["fetched_at"], "fetched_at")
+    _require(
+        isinstance(data.get("source_query"), str) and data["source_query"],
+        "source_query",
+    )
+    articles = data.get("articles")
+    redirects = data.get("redirects")
+    _require(isinstance(articles, list) and all(isinstance(t, str) and t for t in articles),
+             "articles")
+    _require(isinstance(redirects, list) and all(isinstance(t, str) and t for t in redirects),
+             "redirects")
+    _require(articles == sorted(articles), "articles must be sorted")
+    _require(redirects == sorted(redirects), "redirects must be sorted")
+    _require(len(set(articles)) == len(articles), "duplicate article title")
+    _require(len(set(redirects)) == len(redirects), "duplicate redirect title")
+    _require(not set(articles) & set(redirects), "title is both article and redirect")
+    counts = data.get("counts")
+    _require(isinstance(counts, dict), "counts")
+    _require(counts.get("articles") == len(articles), "counts.articles")
+    _require(counts.get("redirects") == len(redirects), "counts.redirects")
+    _require(counts.get("total") == len(articles) + len(redirects), "counts.total")
+
+
+def validate_template_params_snapshot(data: Mapping[str, Any]) -> None:
+    _require(data.get("schema_version") == SCHEMA_VERSION, "schema_version")
+    _require(data.get("kind") == "template_params", "kind")
+    _require(isinstance(data.get("fetched_at"), str) and data["fetched_at"], "fetched_at")
+    _require(
+        isinstance(data.get("source_query"), str) and data["source_query"],
+        "source_query",
+    )
+    templates = data.get("templates")
+    _require(isinstance(templates, dict) and templates, "templates")
+    _require(data.get("template_count") == len(templates), "template_count")
+    parameter_count = 0
+    for name, template in templates.items():
+        _require(isinstance(template.get("title"), str) and template["title"], f"{name}.title")
+        params = template.get("params")
+        _require(isinstance(params, dict) and params, f"{name}.params")
+        _require(template.get("param_count") == len(params), f"{name}.param_count")
+        parameter_count += len(params)
+        required = []
+        conditional = []
+        for param, record in params.items():
+            _require(isinstance(param, str) and param, f"{name}.params key")
+            _require(isinstance(record, dict), f"{name}.{param}")
+            _require(isinstance(record.get("required"), bool), f"{name}.{param}.required")
+            _require(isinstance(record.get("conditional"), bool), f"{name}.{param}.conditional")
+            default = record.get("default", object())
+            _require(default is None or isinstance(default, str), f"{name}.{param}.default")
+            if record["required"]:
+                required.append(param)
+                _require(default is None, f"{name}.{param}: required with default")
+                _require(not record["conditional"], f"{name}.{param}: required+conditional")
+            if record["conditional"]:
+                conditional.append(param)
+                _require(default is not None, f"{name}.{param}: conditional without default")
+            if record.get("defaults_conflict"):
+                _require(isinstance(record.get("defaults"), list), f"{name}.{param}.defaults")
+                _require(len(set(record["defaults"])) > 1, f"{name}.{param}.defaults")
+        _require(template.get("required") == required, f"{name}.required")
+        _require(template.get("conditional") == conditional, f"{name}.conditional")
+    _require(data.get("parameter_count") == parameter_count, "parameter_count")
+
+
+def validate_pages_snapshot(data: Mapping[str, Any]) -> None:
+    _require(data.get("schema_version") == SCHEMA_VERSION, "schema_version")
+    _require(data.get("kind") == "pages", "kind")
+    _require(isinstance(data.get("fetched_at"), str) and data["fetched_at"], "fetched_at")
+    _require(
+        isinstance(data.get("source_query"), str) and data["source_query"],
+        "source_query",
+    )
+    templates = data.get("templates")
+    _require(isinstance(templates, dict) and templates, "templates")
+    for name, template in templates.items():
+        _require(name in PAGE_TEMPLATES, f"unknown entity template {name}")
+        _require(template.get("title") == f"Template:{name}", f"{name}.title")
+        pages = template.get("pages")
+        _require(isinstance(pages, list), f"{name}.pages")
+        _require(template.get("page_count") == len(pages), f"{name}.page_count")
+        titles = [page.get("title") for page in pages]
+        _require(
+            all(isinstance(title, str) and title for title in titles),
+            f"{name}.pages title",
+        )
+        _require(titles == sorted(titles), f"{name}.pages must be sorted")
+        _require(len(set(titles)) == len(titles), f"{name}: duplicate page title")
+        for page in pages:
+            params = page.get("params")
+            _require(isinstance(params, dict), f"{name}/{page['title']}.params")
+            for key, value in params.items():
+                _require(isinstance(key, str) and key, f"{name}/{page['title']} param key")
+                _require(isinstance(value, str), f"{name}/{page['title']}/{key}")
+
+
+VALIDATORS = {
+    "titles": validate_titles_snapshot,
+    "template_params": validate_template_params_snapshot,
+    "pages": validate_pages_snapshot,
+}
+
+
+# ---------------------------------------------------------------------------
+# Snapshot files
+# ---------------------------------------------------------------------------
+
+
+def _snapshot_path(out_dir: Path, kind: str) -> Path:
+    return out_dir / SNAPSHOT_FILES[kind]
+
+
+def dump_snapshot(data: Mapping[str, Any]) -> str:
+    """Canonical JSON: UTF-8, no ASCII escaping, no insignificant whitespace."""
+    return json.dumps(
+        data, ensure_ascii=False, separators=(",", ":"), allow_nan=False
+    ) + "\n"
+
+
+def write_snapshots(out_dir: Path, data: Mapping[str, Mapping[str, Any]]) -> None:
+    """Validate and atomically write all snapshots."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for kind in SNAPSHOT_FILES:
+        if kind not in data:
+            raise SnapshotError(f"missing snapshot data: {kind}")
+        VALIDATORS[kind](data[kind])
+    for kind, filename in SNAPSHOT_FILES.items():
+        target = out_dir / filename
+        payload = dump_snapshot(data[kind])
+        fd, tmp_name = tempfile.mkstemp(
+            prefix=f".{filename}.", suffix=".tmp", dir=str(out_dir)
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(payload)
+            _replace_with_retry(tmp_name, target)
+        finally:
+            try:
+                os.unlink(tmp_name)
+            except FileNotFoundError:
+                pass
+
+
+def _replace_with_retry(source: str, target: Path, attempts: int = 6) -> None:
+    """Atomically replace ``target``, retrying transient Windows sharing errors."""
+    last_error: OSError | None = None
+    for attempt in range(attempts):
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError as exc:
+            last_error = exc
+            time.sleep(0.2 * (attempt + 1))
+    raise SnapshotError(f"cannot replace {target}: {last_error}")
+
+
+def load_snapshot(out_dir: Path, kind: str) -> dict[str, Any]:
+    path = _snapshot_path(Path(out_dir), kind)
+    try:
+        with path.open(encoding="utf-8") as handle:
+            data = json.load(handle)
+    except FileNotFoundError as exc:
+        raise SnapshotError(f"snapshot not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise SnapshotError(f"snapshot is not valid JSON: {path}: {exc}") from exc
+    VALIDATORS[kind](data)
+    return data
+
+
+def load_snapshots(out_dir: Path) -> dict[str, dict[str, Any]]:
+    return {kind: load_snapshot(out_dir, kind) for kind in SNAPSHOT_FILES}
+
+
+# ---------------------------------------------------------------------------
+# Edge/CDP fetching
+# ---------------------------------------------------------------------------
+
+
+def _uv_prefix() -> list[str] | None:
+    """Return a working ``uv run --with websocket-client python`` prefix."""
+    if importlib.util.find_spec("websocket") is not None:
+        return None
+    base = ["uv", "run", "--with", "websocket-client", "python"]
+    offline = ["uv", "run", "--offline", "--with", "websocket-client", "python"]
+    try:
+        proc = subprocess.run(
+            offline + ["-c", "import websocket"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=60,
+        )
+        if proc.returncode == 0:
+            return offline
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return base
+
+
+class CdpClient:
+    """Run same-origin API scripts through the dedicated Edge tab."""
+
+    def __init__(
+        self,
+        helper: str = "C:/tmp/cdp_fetch.py",
+        tab: str = "snapshot",
+        home: str = HOME_URL,
+        api_path: str = API_PATH,
+        wait: float = 6.0,
+        timeout: float = 300.0,
+        retries: int = 3,
+        retry_wait: float = 15.0,
+        verbose: bool = False,
+    ) -> None:
+        self.helper = helper
+        self.tab = tab
+        self.home = home
+        self.api_path = api_path
+        self.wait = wait
+        self.timeout = timeout
+        self.retries = retries
+        self.retry_wait = retry_wait
+        self.verbose = verbose
+        self._prefix = _uv_prefix()
+
+    def _command(self, js: str, wait: float) -> list[str]:
+        prefix = list(self._prefix) if self._prefix is not None else [sys.executable]
+        return prefix + [
+            self.helper,
+            self.home,
+            "--tab",
+            self.tab,
+            "--wait",
+            str(wait),
+            "--timeout",
+            str(int(self.timeout)),
+            "--js",
+            js,
+        ]
+
+    def eval(self, js: str, *, label: str = "request") -> Any:
+        last_error = "unknown error"
+        for attempt in range(self.retries + 1):
+            wait = self.wait + attempt * 2
+            command = self._command(js, wait)
+            if self.verbose:
+                print(
+                    f"wiki_snapshot: {label}: attempt {attempt + 1}, "
+                    f"{len(js)} chars of JS via tab {self.tab!r}",
+                    file=sys.stderr,
+                )
+            try:
+                proc = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=self.timeout + 90,
+                )
+            except FileNotFoundError as exc:
+                raise SnapshotError(
+                    f"{label}: cannot start CDP helper {self.helper!r}: {exc}"
+                ) from exc
+            except subprocess.TimeoutExpired:
+                last_error = f"cdp helper timed out after {self.timeout + 90:.0f}s"
+            else:
+                text = proc.stdout.strip()
+                if proc.returncode != 0:
+                    last_error = (
+                        f"cdp helper exit {proc.returncode}: "
+                        f"{(proc.stderr or text).strip()[:400]}"
+                    )
+                else:
+                    try:
+                        payload = json.loads(text)
+                    except json.JSONDecodeError:
+                        last_error = f"non-JSON CDP output: {text[:300]!r}"
+                    else:
+                        if isinstance(payload, dict) and payload.get("error"):
+                            last_error = f"API error: {payload['error']}"
+                        else:
+                            return payload
+            if attempt < self.retries:
+                delay = self.retry_wait * (attempt + 1)
+                print(
+                    f"wiki_snapshot: {label} failed ({last_error}); "
+                    f"retrying in {delay:.0f}s",
+                    file=sys.stderr,
+                )
+                time.sleep(delay)
+        raise SnapshotError(f"{label}: {last_error}")
+
+    # -- API calls ---------------------------------------------------------
+
+    def fetch_titles(self) -> dict[str, Any]:
+        """Fetch non-redirect and redirect main-namespace titles."""
+        js = r"""
+(async () => {
+  const api = __API__;
+  async function all(filter) {
+    const out = [];
+    let cont = null;
+    for (let round = 0; round < 40; round++) {
+      const p = new URLSearchParams({
+        action: 'query', list: 'allpages', apnamespace: '0',
+        aplimit: '500', apfilterredir: filter,
+        format: 'json', formatversion: '2'
+      });
+      if (cont) { for (const k in cont) p.set(k, cont[k]); }
+      const res = await fetch(api + '?' + p.toString(), {credentials: 'include'});
+      const text = await res.text();
+      let json;
+      try { json = JSON.parse(text); }
+      catch (e) {
+        return {error: 'non-json allpages ' + filter + ' status ' + res.status,
+                body: text.slice(0, 300), pages: out};
+      }
+      if (json.error) return {error: json.error, pages: out};
+      for (const item of (json.query.allpages || [])) {
+        out.push({title: item.title, pageid: item.pageid});
+      }
+      if (!json.continue) return {error: null, pages: out};
+      cont = json.continue;
+      await new Promise(r => setTimeout(r, 1200));
+    }
+    return {error: 'allpages pagination did not terminate', pages: out};
+  }
+  const articles = await all('nonredirects');
+  await new Promise(r => setTimeout(r, 1200));
+  const redirects = await all('redirects');
+  return JSON.stringify({articles, redirects});
+})()
+""".replace("__API__", json.dumps(self.api_path))
+        payload = self.eval(js, label="titles")
+        for key in ("articles", "redirects"):
+            if payload.get(key, {}).get("error"):
+                raise SnapshotError(
+                    f"titles {key}: {payload[key]['error']} "
+                    f"{payload[key].get('body', '')}"
+                )
+        return payload
+
+    def fetch_template_sources(
+        self, templates: Sequence[tuple[str, str]] = CATALOG_TEMPLATES
+    ) -> dict[str, str]:
+        """Fetch the wikitext of the ten catalog templates in one batch."""
+        titles = [full_title for _, full_title in templates]
+        js = r"""
+(async () => {
+  const api = __API__;
+  const titles = __TITLES__;
+  const body = new URLSearchParams();
+  body.set('action', 'query');
+  body.set('prop', 'revisions');
+  body.set('rvprop', 'content');
+  body.set('rvslots', 'main');
+  body.set('titles', titles.join('|'));
+  body.set('format', 'json');
+  body.set('formatversion', '2');
+  body.set('redirects', '1');
+  const res = await fetch(api, {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: body.toString()
+  });
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); }
+  catch (e) {
+    return JSON.stringify({error: 'non-json template batch status ' + res.status,
+                           body: text.slice(0, 300)});
+  }
+  if (json.error) return JSON.stringify({error: json.error});
+  const out = {};
+  for (const page of (json.query.pages || [])) {
+    let content = null;
+    try { content = page.revisions[0].slots.main.content; } catch (e) {}
+    out[page.title] = content;
+  }
+  return JSON.stringify({templates: out});
+})()
+""".replace("__API__", json.dumps(self.api_path)).replace(
+            "__TITLES__", json.dumps(titles, ensure_ascii=False)
+        )
+        payload = self.eval(js, label="template sources")
+        sources = payload.get("templates")
+        if not isinstance(sources, dict):
+            raise SnapshotError("template sources: response has no templates map")
+        missing: list[str] = []
+        for name, full_title in templates:
+            try:
+                _template_source(sources, name, full_title)
+            except SnapshotError:
+                missing.append(full_title)
+        if missing:
+            raise SnapshotError(
+                "template sources missing: " + ", ".join(missing)
+            )
+        return sources
+
+    def fetch_pages(self, template_name: str) -> list[dict[str, Any]]:
+        """Fetch every page embedding one entity template, with wikitext.
+
+        ``list=embeddedin`` is paginated serially; revisions are then fetched in
+        POST batches of 50 with a 1.2 s pause.  This is the WAF-safe shape.
+        """
+        js = r"""
+(async () => {
+  const api = __API__;
+  const template = __TEMPLATE__;
+  const listed = [];
+  let cont = null;
+  for (let round = 0; round < 40; round++) {
+    const p = new URLSearchParams({
+      action: 'query', list: 'embeddedin', eititle: template,
+      eilimit: '500', format: 'json', formatversion: '2'
+    });
+    if (cont) { for (const k in cont) p.set(k, cont[k]); }
+    const res = await fetch(api + '?' + p.toString(), {credentials: 'include'});
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch (e) {
+      return JSON.stringify({error: 'non-json embeddedin status ' + res.status,
+                             body: text.slice(0, 300), pages: []});
+    }
+    if (json.error) return JSON.stringify({error: json.error, pages: []});
+    for (const item of (json.query.embeddedin || [])) {
+      listed.push({title: item.title, pageid: item.pageid, ns: item.ns});
+    }
+    if (!json.continue) break;
+    cont = json.continue;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  const pages = [];
+  for (let i = 0; i < listed.length; i += 50) {
+    const batch = listed.slice(i, i + 50).map(x => x.title);
+    const body = new URLSearchParams();
+    body.set('action', 'query');
+    body.set('prop', 'revisions');
+    body.set('rvprop', 'content');
+    body.set('rvslots', 'main');
+    body.set('titles', batch.join('|'));
+    body.set('format', 'json');
+    body.set('formatversion', '2');
+    body.set('redirects', '0');
+    const res = await fetch(api, {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: body.toString()
+    });
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch (e) {
+      return JSON.stringify({error: 'non-json revisions status ' + res.status,
+                             body: text.slice(0, 300), pages});
+    }
+    if (json.error) return JSON.stringify({error: json.error, pages});
+    for (const page of (json.query.pages || [])) {
+      let content = null;
+      try { content = page.revisions[0].slots.main.content; } catch (e) {}
+      pages.push({title: page.title, pageid: page.pageid, ns: page.ns,
+                  content: content, missing: page.missing === true});
+    }
+    await new Promise(r => setTimeout(r, 1200));
+  }
+  return JSON.stringify({template, listed: listed.length, pages});
+})()
+""".replace("__API__", json.dumps(self.api_path)).replace(
+            "__TEMPLATE__", json.dumps(f"Template:{template_name}", ensure_ascii=False)
+        )
+        payload = self.eval(js, label=f"pages {template_name}")
+        if payload.get("error"):
+            raise SnapshotError(
+                f"pages {template_name}: {payload['error']} {payload.get('body', '')}"
+            )
+        pages = payload.get("pages")
+        if not isinstance(pages, list):
+            raise SnapshotError(f"pages {template_name}: response has no pages list")
+        return pages
+
+
+# ---------------------------------------------------------------------------
+# Refresh / offline commands
+# ---------------------------------------------------------------------------
+
+
+def refresh(
+    out_dir: Path,
+    client: CdpClient,
+    *,
+    page_templates: Sequence[str] = PAGE_TEMPLATES,
+) -> dict[str, dict[str, Any]]:
+    """Fetch all snapshots and write them.  Returns the written data."""
+    fetched_at = utc_now()
+    print("wiki_snapshot: fetching titles", file=sys.stderr)
+    titles_raw = client.fetch_titles()
+    titles_data = build_titles_snapshot(
+        (p["title"] for p in titles_raw["articles"]["pages"]),
+        (p["title"] for p in titles_raw["redirects"]["pages"]),
+        fetched_at=fetched_at,
+    )
+    print(
+        f"wiki_snapshot: titles {titles_data['counts']['articles']} articles / "
+        f"{titles_data['counts']['redirects']} redirects",
+        file=sys.stderr,
+    )
+
+    print("wiki_snapshot: fetching template sources", file=sys.stderr)
+    sources = client.fetch_template_sources()
+    params_data = build_template_params_snapshot(
+        sources, fetched_at=fetched_at
+    )
+    print(
+        f"wiki_snapshot: templates {params_data['template_count']} / "
+        f"{params_data['parameter_count']} params",
+        file=sys.stderr,
+    )
+
+    pages_by_template: dict[str, list[dict[str, Any]]] = {}
+    for template in page_templates:
+        print(f"wiki_snapshot: fetching pages for {template}", file=sys.stderr)
+        pages_by_template[template] = client.fetch_pages(template)
+    pages_data = build_pages_snapshot(
+        pages_by_template, fetched_at=fetched_at
+    )
+    for template in page_templates:
+        print(
+            f"wiki_snapshot: {template}: {pages_data['templates'][template]['page_count']} pages",
+            file=sys.stderr,
+        )
+
+    data = {
+        "titles": titles_data,
+        "template_params": params_data,
+        "pages": pages_data,
+    }
+    write_snapshots(out_dir, data)
+    return data
+
+
+def offline(out_dir: Path, *, check_only: bool = False) -> dict[str, dict[str, Any]]:
+    """Validate committed snapshots and rewrite them canonically."""
+    data = load_snapshots(out_dir)
+    if not check_only:
+        write_snapshots(out_dir, data)
+    return data
+
+
+def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Refresh or validate BiliGame Cytus II wiki snapshots."
+    )
+    parser.add_argument(
+        "--out",
+        default="wiki/snapshot",
+        help="snapshot directory (default: wiki/snapshot)",
+    )
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="read and rewrite committed snapshots; never use the network",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="validate snapshots only (implies --offline)",
+    )
+    parser.add_argument(
+        "--tab",
+        default="snapshot",
+        help="dedicated Edge CDP tab name (default: snapshot)",
+    )
+    parser.add_argument(
+        "--cdp-helper",
+        default="C:/tmp/cdp_fetch.py",
+        help="path to the Edge CDP helper (default: C:/tmp/cdp_fetch.py)",
+    )
+    parser.add_argument("--home", default=HOME_URL, help="wiki page used for the CDP tab")
+    parser.add_argument("--api", default=API_PATH, help="API path on the wiki host")
+    parser.add_argument("--wait", type=float, default=6.0, help="seconds after navigation")
+    parser.add_argument("--timeout", type=float, default=300.0, help="CDP timeout")
+    parser.add_argument("--retries", type=int, default=3, help="transport retries")
+    parser.add_argument("-v", "--verbose", action="store_true")
+    return parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parse_args(argv)
+    out_dir = Path(args.out)
+    try:
+        if args.offline or args.check:
+            data = offline(out_dir, check_only=args.check)
+            if not args.check:
+                print(
+                    f"wiki_snapshot: rewrote {len(data)} snapshots in {out_dir}",
+                    file=sys.stderr,
+                )
+        else:
+            client = CdpClient(
+                helper=args.cdp_helper,
+                tab=args.tab,
+                home=args.home,
+                api_path=args.api,
+                wait=args.wait,
+                timeout=args.timeout,
+                retries=args.retries,
+                verbose=args.verbose,
+            )
+            data = refresh(out_dir, client)
+        for kind, filename in SNAPSHOT_FILES.items():
+            path = out_dir / filename
+            size = path.stat().st_size if path.exists() else 0
+            print(f"wiki_snapshot: {filename}: {size} bytes", file=sys.stderr)
+        return 0
+    except SnapshotError as exc:
+        print(f"wiki_snapshot: error: {exc}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

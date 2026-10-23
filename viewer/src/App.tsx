@@ -4,6 +4,7 @@ import {
   loadIm,
   loadIndex,
   loadOs,
+  loadSubsIndex,
   navigate,
   useAsync,
   useLang,
@@ -52,6 +53,7 @@ export default function App() {
   const needOs = view === "timeline" || q.length >= 2 || (index ? isOsId(index, route.id) : false);
   const needExtra =
     view === "oa" || view === "backup" || view === "branching" || view === "extras" || q.length >= 2;
+  const needSubs = q.length >= 2;
 
   const imAsync = useAsync<ImContent>(() => loadIm(lang), [lang]);
   const osAsync = useAsync<OsContent>(() => (needOs ? loadOs(lang) : Promise.resolve(EMPTY_OS)), [lang, needOs]);
@@ -59,6 +61,7 @@ export default function App() {
     () => (needExtra ? loadExtra(lang) : Promise.resolve(EMPTY_EXTRA)),
     [lang, needExtra],
   );
+  const subsAsync = useAsync(() => (needSubs ? loadSubsIndex() : Promise.resolve({})), [needSubs]);
 
   useEffect(() => {
     readerRef.current?.scrollTo({ top: 0 });
@@ -88,6 +91,7 @@ export default function App() {
   const im = imAsync.state === "ready" ? imAsync.data : undefined;
   const os = osAsync.state === "ready" ? osAsync.data : EMPTY_OS;
   const extra = extraAsync.state === "ready" ? extraAsync.data : undefined;
+  const subs = subsAsync.state === "ready" ? subsAsync.data : null;
 
   const options = useMemo(
     () => (index ? filterOptions(index, filters) : { chapters: [], versions: [], folders: [], characters: [] }),
@@ -107,7 +111,7 @@ export default function App() {
 
   const rows = useMemo<Row[]>(() => {
     if (!index) return [];
-    if (q.length >= 2) return searchRows(index, lang, im ?? null, os ?? null, extra ?? null, q);
+    if (q.length >= 2) return searchRows(index, lang, im ?? null, os ?? null, extra ?? null, q, subs);
     // 细节视图（os）没有自己的列表，复用时间线的「按角色」列表，保证左侧能看到当前档案
     const listView = view === "os" ? "timeline" : view;
     const listMode = view === "os" ? "version" : timelineMode;
@@ -119,7 +123,7 @@ export default function App() {
       listMode,
       view === "im" ? imFilter : "",
     );
-  }, [index, view, lang, q, im, os, extra, filters, activeFilters, timelineMode, imFilter]);
+  }, [index, view, lang, q, im, os, extra, subs, filters, activeFilters, timelineMode, imFilter]);
 
   const viewMeta = VIEWS.find((v) => v.id === view);
 

@@ -1,5 +1,13 @@
 import type { Block, ExtraContent, ImContent, IndexData, Lang, OsContent, ReplyNode } from "./types";
+import type { SubsIndex } from "./data";
 import type { Row } from "./rows";
+
+/** 秒 → mm:ss，用于字幕命中行 */
+function clock(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
 function blocksToText(blocks: Block[] | undefined): string {
   if (!blocks) return "";
@@ -41,6 +49,7 @@ export function searchRows(
   os: OsContent | null,
   extra: ExtraContent | null,
   query: string,
+  subs: SubsIndex | null = null,
 ): Row[] {
   const q = query.trim().toLowerCase();
   if (q.length === 0) return [];
@@ -115,6 +124,29 @@ export function searchRows(
   }
 
   // 备份数据库（gallerydata）
+  // 过场字幕：按台词正文命中（每组只出一条，优先当前语言）
+  if (subs) {
+    for (const [group, langs] of Object.entries(subs)) {
+      const order = [lang, "zh-Hans", "zh-Hant", "en", "ja", "ko"];
+      for (const l of order) {
+        const cues = langs[l];
+        if (!cues) continue;
+        const hit = cues.find(([, , text]) => text.toLowerCase().includes(q));
+        if (!hit) continue;
+        rows.push({
+          key: `subs:${group}:${l}`,
+          view: "extras",
+          id: `cutscenes|${group}|${encodeURIComponent(q)}`,
+          title: `字幕 · ${group}`,
+          sub: `${clock(hit[0])} · ${hit[2]}`,
+          badge: l,
+          group: "过场字幕",
+        });
+        break;
+      }
+    }
+  }
+
   for (const it of index.gallery.items) {
     const haystack = `${it.name} ${it.location} ${it.folder} ${it.conditions.join(" ")}`.toLowerCase();
     if (!haystack.includes(q)) continue;

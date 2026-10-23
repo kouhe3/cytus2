@@ -100,17 +100,21 @@ export function Reader(props: ReaderProps) {
           onNavigate={onNavigate}
         />
       );
-    case "extras":
+    case "extras": {
+      // 字幕搜索结果形如 cutscenes|<group>|<urlencoded 词>，其余 section 不带 |
+      const [section, ...rest] = id.split("|");
       return (
         <ExtrasReader
           index={index}
-          section={id}
+          section={section}
+          focus={rest.length ? rest.join("|") : ""}
           extra={props.extra}
           loading={props.loadingExtra}
           lang={props.lang}
           onNavigate={onNavigate}
         />
       );
+    }
     default:
       return <Overview index={index} />;
   }

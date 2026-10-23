@@ -139,11 +139,27 @@ function pickSong(key: string, songs: string[]): string | undefined {
 }
 
 /** 字幕 ↔ 过场影片对照。字幕来自 srtfile_*.ab，影片来自 video_story_* / video_endplay_* / video_trueend_*。 */
-function CutsceneSection({ onNavigate }: { onNavigate: (view: string, id?: string) => void }) {
+function CutsceneSection({
+  focus,
+  onNavigate,
+}: {
+  focus: string;
+  onNavigate: (view: string, id?: string) => void;
+}) {
   const manifest = useManifest();
   const subsIndex = useAsync(loadSubsIndex, []);
   const endplay = useAsync(loadEndplayMap, []);
-  const [query, setQuery] = useState("");
+  // focus = "<group>|<urlencoded 词>"（来自全局搜索的字幕命中）
+  const [focusPhrase] = useState(() => {
+    const parts = focus.split("|");
+    if (parts.length < 2) return "";
+    try {
+      return decodeURIComponent(parts.slice(1).join("|"));
+    } catch {
+      return "";
+    }
+  });
+  const [query, setQuery] = useState(focusPhrase);
   const q = query.trim().toLowerCase();
   const matches = new Map<string, { lang: string; t: number; text: string }[]>();
   if (q && subsIndex.state === "ready") {
@@ -598,6 +614,7 @@ export function ExtrasReader({
   extra,
   loading,
   lang,
+  focus,
   onNavigate,
 }: {
   index: IndexData;
@@ -605,6 +622,7 @@ export function ExtrasReader({
   extra?: ExtraContent;
   loading: boolean;
   lang: Lang;
+  focus?: string;
   onNavigate: (view: string, id?: string) => void;
 }) {
   if (loading) {
@@ -680,7 +698,7 @@ export function ExtrasReader({
     return <SongSection index={index} lang={lang} onNavigate={onNavigate} />;
   }
   if (section === "cutscenes") {
-    return <CutsceneSection onNavigate={onNavigate} />;
+    return <CutsceneSection focus={focus ?? ""} onNavigate={onNavigate} />;
   }
   const manifest = useManifest();
   const allTitles = Object.entries(manifest?.titles ?? {});

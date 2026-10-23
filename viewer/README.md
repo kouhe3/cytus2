@@ -602,6 +602,17 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 
 分支剧情每个节点页顶部都有这张图（可横向滚动），点方块直接跳转；当前节点用 accent 描边。
 
+### 全局搜索覆盖字幕
+
+顶栏搜索（`/`）此前只查 iM / OS / 分支 / 备份库，台词文本搜不到；现在 `searchRows` 会遍历
+`data/subs-index.json`，每组字幕出一条（优先当前语言），结果格式 `字幕 · <组> · m:ss · 台词`，
+点进去落到 `#/extras/cutscenes|<组>|<编码词>`，页面自动带词过滤并定位到命中处。
+
+`Ending05_Staffroll` 那组字幕（37 条）是 5.0 片尾的开场旁白：前 132 秒由 `?????` 回顾到 4.0 的事件
+（除役事件、建造者復甦、A.R.C. 重启 cyTus），124.5–318.05 秒之间没有台词（制作人员名单段），
+最后 318–369.9 秒是收尾对话。它只被 `StoryEnding05MainAction/ReplayAction.StaffrollEndPlay` 引用；
+4.0 的片尾是场景 `end04_StaffRoll`（Animator + AudioSource，没有视频）。
+
 ### 结场/片尾的音轨
 
 `export_endplay_map.py` 从 `dump.cs` 抓 `IEndPlayEvent` 的常量生成 `data/endplay.json`，`export_endplay_audio.py`

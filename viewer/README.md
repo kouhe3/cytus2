@@ -642,13 +642,21 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 CAPSO! 抽奖 103、付费包购买 25、OA 分析记录 68（补上了 Who Am I? 的 Glitch）、无本地记录 3（1 首：vanessa001_023 Cocytus，`HideWhenLocked: true`）。
 
 本地数据完全没有触发点、但游戏里确实能解锁的谱面，写进 **`cytus2_work/song_notes.json`**（入仓库的
-手工资料，不是派生数据），导出时并入 `songs.json.notes`，页面标「外部资料」。现有条目：`ivy001_049` Heroic Age —— 链是「Ivy 结局剧情（等级门槛 88 / 90 两说）→ 制作人员名单播完 → 自动获得」。
-等级阈值两版 wiki 不一致（bili 88、Fandom 90）；数据侧的旁证是 `global-metadata.dat` 里有字符串字面量
-`ivy001_049_0,1,2`，说明它是代码里直接发放的，不经过任何解锁表。
+手工资料，不是派生数据），导出时并入 `songs.json.notes`，页面标「外部资料」。现有条目（均由代码验证）：
 
-附带的彩蛋（不属于曲目数据）：Cytus I 皮肤要在 bad ending 的制作人员名单里点击逐渐淡出的字母拼出
-`CYTUS I` 才能拿到，`global-metadata.dat` 里没有这条判定字符串。
-各来源两两重叠为 0，可以按优先级判定。
+| 曲目 | 解锁 | 依据 |
+|:--|:--|:--|
+| `ivy001_049` Heroic Age | Ivy Lv90 → 5.0 终章 → 片尾名单播完自动获得 | `StoryEnding05Main._ConditionCheck`（`level(ivy001)+1 > 89`），步骤 `STEP_0_PLAY_END_PLAY_STAFF_ROLL` → `STEP_0_GAIN_REWARD` |
+| `vanessa001_023` Cocytus | 同一场景一起发放 | `UnlockAfterStoryScene.ENDING_05_UNLOCK_CHART = {"ivy001_049_0,1,2","vanessa001_023_0,1,2"}`（`.cctor` @0x2246358） |
+
+同一场景还会解锁 `note_skin_alpha`（显示名 `Cytus α`，`judge_skin_alpha`）——见
+`UnlockAfterStoryScene._ProcessEnding05Reward`（@0x2248548）：先建 `NoteSkinManager` 处理 `note_skin_alpha`，
+再把 `ENDING_05_UNLOCK_CHART` 送进奖励流程。`ShouldCharacterShowAsBroken` 另有 PAFF Lv90（`level == 89`）
++ `story_ending03_good_ending2` + `story_ending04_main` 的“角色破损”判定。
+
+附带的彩蛋：`note_skin_nostalgic`/`judge_skin_nostalgic` 的显示名是 `Cytus I`，发放点在
+`End03TrueEndStaffRollRunner._InitUnlockedConditions` / `_UnlockedOneCondition(int)`——是 **ending03 true ending**
+的片尾逐字母点击判定（代码里没有 `CYTUS I` 整串字面量，只有逐个回调索引）。
 
 等级 +1 已用 Fandom 交叉验证：Aroma（`paff002`）7 首的 15 个解锁等级全部吻合
 （Bring the light 6/6/7、Make U Mine 8/9/11、Anzen Na Kusuri 14/16/18、漂流 19/19/19、

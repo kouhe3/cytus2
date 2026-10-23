@@ -1,11 +1,19 @@
 {
-  "_comment": "本地数据里查不到触发点的谱面，用手工整理的资料补上。d = Difficulty 索引（0 Easy / 1 Hard / 2 Chaos / 3 Glitch / 4 Crash / 5 Dream）；story 可选，会链到结局闸。同一难度有多个来源时全部保留，页面标为「记载冲突」。",
+  "_comment": "本地数据里查不到触发点的谱面，用代码/资料补上。d = Difficulty 索引（0 Easy / 1 Hard / 2 Chaos / 3 Glitch / 4 Crash / 5 Dream）；story 可选，只有存在于结局闸（index.gates）时才会渲染成链接。",
   "ivy001_049": [
     {
       "d": [0, 1, 2],
-      "text": "Ivy 结局剧情（等级门槛 88 或 90，两版 wiki 不一致）→ 制作人员名单播完自动获得",
-      "story": "story_ending02",
-      "source": "bili wiki / Fandom + 代码内字面量 ivy001_049_0,1,2"
+      "text": "Ivy Lv90 触发 5.0 终章，制作人员名单播完自动获得；同一场景同时发放 Cytus α 皮肤与 Cocytus",
+      "story": "story_ending05_main",
+      "source": "代码验证 UnlockAfterStoryScene.ENDING_05_UNLOCK_CHART"
+    }
+  ],
+  "vanessa001_023": [
+    {
+      "d": [0, 1, 2],
+      "text": "5.0 终章片尾名单播完，与 Heroic Age 一起自动获得",
+      "story": "story_ending05_main",
+      "source": "代码验证 UnlockAfterStoryScene.ENDING_05_UNLOCK_CHART"
     }
   ]
 }

@@ -354,6 +354,7 @@ function SongSection({
   const catalog: SongCatalog = songs.data;
 
   const total = catalog.packs.reduce((n, p) => n + p.songs.length, 0) + catalog.other.length;
+  const gateIds = new Set(index.gates.map((g) => g.id));
   const capsoIndex = new Map<string, { pack: import("../types").CapsoPack; diffs: number[] }>();
   for (const pack of catalog.capso) {
     for (const item of pack.songs) capsoIndex.set(item.id, { pack, diffs: item.diffs });
@@ -500,7 +501,7 @@ function SongSection({
                                   {i ? "；" : ""}
                                   {n.text}
                                   {n.source ? `（${n.source}）` : ""}
-                                  {n.story ? (
+                                  {n.story && gateIds.has(n.story) ? (
                                     <>
                                       {" "}
                                       <button type="button" className="chip chip-btn" onClick={() => onNavigate("gates", n.story!)}>

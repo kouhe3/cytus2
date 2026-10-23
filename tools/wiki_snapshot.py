@@ -15,6 +15,10 @@ Three artifacts are produced under ``wiki/snapshot/``:
     Existing entity pages per entity template, with the parameters parsed from
     the page's top-level template invocation.
 
+``known_missing.json`` is hand-written, not fetched: it lists red-link targets
+that the game data names but the wiki never created.  The snapshot tools leave
+it untouched.
+
 Refresh uses a real Edge tab through ``C:/tmp/cdp_fetch.py`` so the EdgeOne WAF
 sees a browser session.  The WAF-safe pattern (documented in ticket #2) is:
 

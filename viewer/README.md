@@ -265,3 +265,9 @@ OA「场景」页签在每段视频上方标出「初始（默认场景）/ 变�
 | `bobo001` | paff 76 / neko 69 / robo 69 / vanessa 24 |
 
 低于阈值时进入该角色内容会先弹 `LevelLockPanelData.PanelTypes.SPOILER_ALERT`（=2）。
+
+### 帖子解锁的谱面
+
+`im_topic_data.UnlockCharts` 是「同一首歌 × 难度」的列表，同一首常有 2–3 档；页面按 `SongId` 聚合成一个 chip：
+`paff001_004 · 简单 / 困难`。难度枚举取自 `dump.cs` 的 `Difficulties`：
+0 Easy / 1 Hard / 2 Chaos / 3 Glitch / 4 Crash / 5 Dream / 6 Drop。

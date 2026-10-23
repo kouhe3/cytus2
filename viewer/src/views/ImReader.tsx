@@ -25,6 +25,31 @@ function Replies({ nodes, onNavigate }: { nodes: ReplyNode[]; onNavigate: (view:
   );
 }
 
+/** 同一帖解锁的歌可能有多档难度：按 SongId 聚合成一行 */
+// Difficulties 枚举（dump.cs）：0 Easy / 1 Hard / 2 Chaos / 3 Glitch / 4 Crash / 5 Dream / 6 Drop
+const DIFFICULTY_LABEL: Record<number, string> = {
+  0: "简单",
+  1: "困难",
+  2: "混沌",
+  3: "Glitch",
+  4: "Crash",
+  5: "Dream",
+  6: "Drop",
+};
+
+function groupCharts(charts: { SongId?: string; Difficulty?: number }[]) {
+  const bySong = new Map<string, number[]>();
+  for (const c of charts) {
+    const id = c.SongId ?? "chart";
+    if (!bySong.has(id)) bySong.set(id, []);
+    bySong.get(id)!.push(c.Difficulty ?? -1);
+  }
+  return [...bySong.entries()].map(([song, diffs]) => ({
+    song,
+    diffs: [...new Set(diffs)].sort((a, b) => a - b),
+  }));
+}
+
 export function ImReader({
   index,
   lang,
@@ -97,9 +122,9 @@ export function ImReader({
         {meta.attachments.map((a) => (
           <Chip key={a}>附件 {a}</Chip>
         ))}
-        {meta.charts.map((c, i) => (
-          <Chip key={i}>
-            {c.SongId ?? "chart"} · {c.Difficulty ?? "?"}
+        {groupCharts(meta.charts).map(({ song, diffs }) => (
+          <Chip key={song}>
+            {song} · {diffs.map((d) => DIFFICULTY_LABEL[d] ?? `难度 ${d}`).join(" / ")}
           </Chip>
         ))}
       </div>

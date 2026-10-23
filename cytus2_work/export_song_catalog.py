@@ -110,6 +110,60 @@ def read_capso() -> list:
     return out
 
 
+def read_gacha() -> dict:
+    """gacharewarddata.ab（split_assets_pack_1）→ CAPSO! 抽奖机奖励
+
+    gachareward: [{Id, Type, Gacha Machine ID, Weight, IsSecret, RewardLocks}]
+      Type 0=Chart 1=Skin 2=TapFX 3=Gallery；Chart 的 Id 形如 `robo001_001_3` / `neko001_005_0,1`
+    gachamachines: [{ID, Name, DefaultPrice}]（本地只有 `capso` = The CAPSO!）
+    """
+    dst = os.path.join(TMP, "gacharewarddata.ab")
+    if not os.path.exists(dst):
+        with zipfile.ZipFile(os.path.join(HERE, "..", "split_assets_pack_1.apk")) as z:
+            members = [n for n in z.namelist() if n.endswith("gacharewarddata.ab")]
+            if not members:
+                return {"machines": [], "charts": {}, "others": []}
+            with open(dst, "wb") as fh:
+                fh.write(z.read(members[0]))
+
+    import UnityPy
+
+    env = UnityPy.load(dst)
+    rewards, machines = [], []
+    for obj in env.objects:
+        if obj.type.name != "TextAsset":
+            continue
+        ta = obj.read()
+        if ta.m_Name not in ("gachareward", "gachamachines"):
+            continue
+        raw = ta.m_Script
+        parsed = json.loads(raw if isinstance(raw, str) else bytes(raw).decode("utf-8", "replace"))
+        if ta.m_Name == "gachareward":
+            rewards = parsed
+        else:
+            machines = parsed
+
+    by_id = {m["ID"]: m for m in machines}
+    charts, others = {}, []
+    for r in rewards:
+        machine = by_id.get(r.get("Gacha Machine ID") or "", {})
+        entry = {
+            "machine": r.get("Gacha Machine ID") or "",
+            "machineName": machine.get("Name") or r.get("Gacha Machine ID") or "",
+            "price": machine.get("DefaultPrice") or "",
+            "weight": r.get("Weight"),
+            "secret": bool(r.get("IsSecret")),
+        }
+        if r.get("Type") == 0:
+            parts = r["Id"].rsplit("_", 1)
+            diffs = [int(x) for x in parts[1].split(",") if x.isdigit()] if len(parts) == 2 else []
+            for d in diffs:
+                charts.setdefault(parts[0], []).append({"d": d, **entry})
+        else:
+            others.append({"id": r["Id"], "type": r.get("Type"), **entry})
+    return {"machines": machines, "charts": charts, "others": others}
+
+
 def read_story_chart_unlock() -> dict:
     """chartunlock.ab → {songId: [{d, story}]}（storychartunlock）"""
     import UnityPy
@@ -223,16 +277,18 @@ def main():
         "storyCharts": read_story_chart_unlock(),
         "expansion": read_expansion(),
         "capso": read_capso(),
+        "gacha": read_gacha(),
     }
     json.dump(data, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     songs = sum(len(p["songs"]) for p in packs) + len(other)
     n_story = len(data["storyCharts"])
     n_dlc = sum(len(x["songs"]) for x in data["expansion"])
     n_capso = sum(len(x["songs"]) for x in data["capso"])
+    n_gacha = sum(len(v) for v in data["gacha"]["charts"].values())
     print(
         f"{len(packs)} 个曲包 / {songs} 首歌（另有 DLC {len(data['expansion'])} 包 {n_dlc} 首、"
         f"CAPSO {len(data['capso'])} 包 {n_capso} 首）/ {len(unlocks)} 首有帖子或节点获取方式 / "
-        f"{n_story} 首有通关解锁 → {os.path.relpath(OUT, HERE)}"
+        f"{n_story} 首有通关解锁 / CAPSO! 抽奖 {n_gacha} 个谱面 → {os.path.relpath(OUT, HERE)}"
     )
 
 

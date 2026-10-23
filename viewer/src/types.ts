@@ -257,6 +257,21 @@ export interface ExpansionPack {
   songs: ExpansionSong[];
 }
 
+export interface GachaChart {
+  d: number;
+  machine: string;
+  machineName: string;
+  price: string;
+  weight?: number;
+  secret: boolean;
+}
+
+export interface GachaData {
+  machines: { ID: string; Name: string; DefaultPrice: string; IconPath?: string }[];
+  charts: Record<string, GachaChart[]>;
+  others: { id: string; type: number; machineName: string; weight?: number; secret: boolean }[];
+}
+
 export interface SongCatalog {
   packs: SongPack[];
   other: SongInfo[];
@@ -265,6 +280,7 @@ export interface SongCatalog {
   storyCharts: Record<string, { d: number; story: string }[]>;
   expansion: ExpansionPack[];
   capso: CapsoPack[];
+  gacha: GachaData;
 }
 
 export interface IndexData {

@@ -629,14 +629,15 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 | 分支节点 | `branchingosdata.UnlockedCharts` + `UnlockCondition.Level` |
 | 通关剧情 | `chartunlock.ab` 的 TextAsset `storychartunlock`：`{storyId:[{SongId,Difficulty}]}` |
 | CAPSO 商店 | `capsoshopdata.ab` 的 `capsoshoppacks`：条目 `songId_0,1,2`（下划线后是难度） |
+| CAPSO! 抽奖 | `gacharewarddata.ab`（**split_assets_pack_1**，不在 assetpack）：`gachareward` 里 `Type:0` 是谱面，`Id` 形如 `robo001_001_3`；`gachamachines` 只有 `capso`（The CAPSO!，$9.99） |
 | 购买曲包 / DLC | `song_pack_data.is_iap_pack`；DLC 曲目另在 `expansion_pack_data`（50 包 252 首，不在离线曲库里） |
 
 输出 `data/songs.json`：27 个曲包 / 461 首歌 / 53 首有帖子或节点来源 / 8 首有通关解锁。
 附录「歌曲与获取方式」按曲包折叠，每个难度一行，状态共五种：
 `iM 帖` / `分支节点` / `通关剧情` / `默认解锁（NeedUnlock=false）` / `需解锁 · 本地无记录`。
 
-实测统计（1402 个谱面）：默认解锁 472、iM 帖或分支节点 145、通关剧情 8、CAPSO 67、付费包购买 413、
-无本地记录 297（集中在 `hasIM=false` 的曲包，例如 BO BO / Cherry II / Vanessa）。
+实测统计（1402 个谱面）：默认解锁 472、iM 帖或分支节点 145、通关剧情 8、CAPSO 商店 67、
+CAPSO! 抽奖 103、付费包购买 393、无本地记录 214（77 首，集中在 `hasIM=false` 的曲包）。
 
-抽奖机（gacha）在代码里存在（`ObtainableSource.Gacha = 8`、`SongMetaInfo.GachaMachineId`、
-`IGachaReward`），但配置表由服务器下发，APK 内无 `gacha` 字样，无法按曲目列出。
+抽奖限定谱面以 Glitch 为主（103 个里 43 个只给 Glitch），`IsSecret` 的 9 个是隐藏奖励；
+`gachaexpreward` 是抽到经验奖励的概率表，与会话无关。

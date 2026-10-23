@@ -358,6 +358,7 @@ function SongSection({
   for (const pack of catalog.capso) {
     for (const item of pack.songs) capsoIndex.set(item.id, { pack, diffs: item.diffs });
   }
+  const gachaIndex = catalog.gacha.charts;
   const capsoLabel = (entry: { pack: import("../types").CapsoPack }) =>
     `CAPSO 商店「${entry.pack.name}」· ${entry.pack.price}${entry.pack.capsoPrice ? ` / ${entry.pack.capsoPrice} CAPSO` : ""}`;
 
@@ -377,8 +378,8 @@ function SongSection({
         <b>分支节点</b>（<span className="mono">UnlockedCharts</span>）→
         <b>通关剧情</b>（<span className="mono">storychartunlock</span>）→
         <b>默认解锁</b> → <b>CAPSO 商店</b>（<span className="mono">capsoshoppacks</span>）→
-        <b>购买曲包</b>（IAP）。都不匹配的写「需解锁 · 本地无记录」：可能是抽奖机（gacha）或后续活动内容，
-        其配置表不在 APK 内。
+        <b>CAPSO! 抽奖</b>（<span className="mono">gacharewarddata.ab</span>）→ <b>购买曲包</b>（IAP）。
+        都不匹配的写「需解锁 · 本地无记录」。
       </p>
       {catalog.packs.map((pack) => (
         <details key={pack.id} style={{ marginBottom: 10 }}>
@@ -410,6 +411,7 @@ function SongSection({
                         .join("、");
                       const story = (catalog.storyCharts[song.id] ?? []).find((x) => x.d === d);
                       const capso = capsoIndex.get(song.id);
+                      const gacha = (gachaIndex[song.id] ?? []).find((x) => x.d === d);
                       const free = !(song.needUnlock?.[key] ?? false);
                       return (
                         <div key={key} className="mono" style={{ lineHeight: 1.7 }}>
@@ -437,6 +439,13 @@ function SongSection({
                             <span style={{ color: "var(--muted)" }}>默认解锁（NeedUnlock=false）</span>
                           ) : capso && capso.diffs.includes(d) ? (
                             <span>{capsoLabel(capso)}</span>
+                          ) : gacha ? (
+                            <span>
+                              {gacha.machineName} 抽奖
+                              {gacha.weight ? `（权重 ${gacha.weight}` : "（"}
+                              {gacha.secret ? " · 隐藏" : ""}
+                              {gacha.price ? ` · ${gacha.price}` : ""}）
+                            </span>
                           ) : pack.iap ? (
                             <span style={{ color: "var(--muted)" }}>购买曲包后解锁</span>
                           ) : (
@@ -488,12 +497,12 @@ function SongSection({
         </details>
       ))}
 
-      <h3 style={{ marginTop: 18 }}>CAPSO 商店（{catalog.capso.length} 包）</h3>
+      <h3 style={{ marginTop: 18 }}>CAPSO 商店与抽奖机</h3>
       <p className="lede">
-        曲目以 <span className="mono">{`songId_难度`}</span> 形式挂在 CAPSO 包里，可用 CAPSO 点数或 IAP 购买；
-        这是本地数据里唯一的「商城 / 抽奖」型来源。<b>抽奖机（gacha）</b>本体走
-        <span className="mono"> ObtainableSource.Gacha </span>＋<span className="mono">GachaMachineId</span>，
-        配置表不在 APK 内（服务器下发），所以无法按曲目列出。
+        曲目以 <span className="mono">{`songId_难度`}</span> 形式挂在 CAPSO 包里，可用 CAPSO 点数或 IAP 购买。
+        抽奖机配置在 <span className="mono">gacharewarddata.ab</span>（split_assets_pack_1）：
+        <b>{catalog.gacha.machines.map((m) => `${m.Name}（${m.DefaultPrice}）`).join("、")}</b>
+        ，共 {Object.values(catalog.gacha.charts).reduce((n, v) => n + v.length, 0)} 个抽奖限定谱面。
       </p>
       <table className="grid">
         <tbody>

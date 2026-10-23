@@ -107,7 +107,7 @@ export function ImReader({
       <div className="chips">
         {meta.packs.map(([pack, level]) => (
           <NavChip key={`${pack}:${level}`} onClick={() => onNavigate("packs", pack)}>
-            {pack} · Lv{level}
+            {pack} · Lv{dispLevel(level)}
           </NavChip>
         ))}
         {gate ? (

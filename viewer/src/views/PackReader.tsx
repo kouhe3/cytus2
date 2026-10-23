@@ -1,5 +1,5 @@
 import type { IndexData, Lang } from "../types";
-import { characterName, tierLabel } from "../data";
+import { characterName, dispLevel, tierLabel } from "../data";
 import { Chip, Facts } from "../components/ui";
 
 export function PackReader({
@@ -94,7 +94,7 @@ export function PackReader({
         </div>
         {pack.levels.map((row) => (
           <div className="ladder-row" key={row.level}>
-            <span className="ladder-lv">Lv{row.level}</span>
+            <span className="ladder-lv">Lv{dispLevel(row.level)}</span>
             {pack.kind === "branching" ? (
               <>
                 <span>

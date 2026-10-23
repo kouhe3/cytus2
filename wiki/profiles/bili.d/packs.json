@@ -1,0 +1,38 @@
+{
+  "categories": {
+    "pack": "分类:曲包"
+  },
+  "templates": {
+    "曲包": {
+      "template": "曲包",
+      "source": "wiki/snapshot/template_params.json (模板:曲包, fetched from wiki.biligame.com/cytus2 on 2026-10-23)",
+      "param_order": [
+        "曲包名",
+        "所属角色",
+        "属性"
+      ],
+      "params": {
+        "曲包名": {"required": false, "conditional": false, "default": ""},
+        "所属角色": {"required": false, "conditional": false, "default": ""},
+        "属性": {"required": false, "conditional": false, "default": ""}
+      },
+      "fields": {
+        "pack_name": "曲包名",
+        "characters": "所属角色",
+        "attribute": "属性"
+      }
+    }
+  },
+  "pages": {
+    "pack": {
+      "template": "曲包",
+      "title": {
+        "field": "page_title",
+        "fallback": "game_id",
+        "disambiguator": "（{game_id}）"
+      },
+      "preserve_unknown_params": true,
+      "observed_unknown_params": []
+    }
+  }
+}

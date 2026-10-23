@@ -1,0 +1,30 @@
+[
+  {
+    "TopicId": "P0101",
+    "TopicLockId": "",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": [{"SongPackId": "alpha001", "Level": 0, "IsLevelLocked": false}]
+  },
+  {
+    "TopicId": "P0201",
+    "TopicLockId": "P0101",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": []
+  },
+  {
+    "TopicId": "P0301",
+    "TopicLockId": "",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": []
+  },
+  {
+    "TopicId": "P0401",
+    "TopicLockId": "",
+    "StoryLockId": "story_alpha01",
+    "LevelLockDisplay": false,
+    "LevelLocks": []
+  }
+]

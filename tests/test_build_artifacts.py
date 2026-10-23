@@ -36,7 +36,7 @@ def test_one_command_writes_jsonl_sqlite_and_spa(built_db: Path) -> None:
     for name in ENTITY_TYPES:
         assert (built_db / "db" / f"{name}.jsonl").is_file(), name
     assert (built_db / "db" / "edges.jsonl").is_file()
-    assert (built_db / "db" / "edges.jsonl").read_text(encoding="utf-8") == ""
+    assert read_jsonl(built_db / "db" / "edges.jsonl")
     assert (built_db / "db.sqlite").is_file()
     assert (built_db / "spa" / "data.json").is_file()
 
@@ -207,7 +207,8 @@ def test_sqlite_is_queryable(built_db: Path) -> None:
             "character/alpha001",
             "asset/illustration/alpha001_s001",
         )
-        assert connection.execute("SELECT COUNT(*) FROM edges").fetchone()[0] == 0
+        edges = read_jsonl(built_db / "db" / "edges.jsonl")
+        assert connection.execute("SELECT COUNT(*) FROM edges").fetchone()[0] == len(edges)
     finally:
         connection.close()
 
@@ -218,7 +219,7 @@ def test_spa_projection(built_db: Path) -> None:
     assert data["counts"]["chart"] == 11
     assert data["counts"]["song"] == 3
     assert data["difficulties"] == list(DIFFICULTIES)
-    assert data["edges"] == []
+    assert data["edges"] == read_jsonl(built_db / "db" / "edges.jsonl")
     chart = next(row for row in data["entities"]["chart"] if row["id"] == "song/alpha001_000@Glitch")
     assert chart["difficulty"] == "Glitch"
     assert chart["level"] == "10"
@@ -232,6 +233,9 @@ def test_build_is_deterministic(tmp_path: Path, fixture_input: Path, built_db: P
         assert (built_db / "db" / f"{name}.jsonl").read_bytes() == (
             second / "db" / f"{name}.jsonl"
         ).read_bytes()
+    assert (built_db / "db" / "edges.jsonl").read_bytes() == (
+        second / "db" / "edges.jsonl"
+    ).read_bytes()
     assert (built_db / "spa" / "data.json").read_bytes() == (
         second / "spa" / "data.json"
     ).read_bytes()

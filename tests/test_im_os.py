@@ -72,7 +72,7 @@ def test_im_posts_are_entities_in_reading_order(built: Path) -> None:
         "song/alpha001_000@Easy",
         "song/alpha001_000@Chaos",
     ]
-    assert first["story_gate"] == "story01"
+    assert first["story_gate"] == "story_alpha01"
     assert first["topic_gate"] is None
     assert first["level_locks"] == [
         {"character": "character/alpha001", "level": 9}

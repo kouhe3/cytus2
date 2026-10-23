@@ -88,15 +88,25 @@ def write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
             handle.write("\n")
 
 
-def write_edges(path: Path) -> None:
+def write_edges(path: Path, edges: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("", encoding="utf-8", newline="\n")
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        for edge in sorted(
+            edges, key=lambda item: (item["source"], item["relation"], item["target"])
+        ):
+            handle.write(
+                json.dumps(
+                    edge, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                )
+            )
+            handle.write("\n")
 
 
 def write_sqlite(
     path: Path,
     entities: dict[str, list[dict[str, Any]]],
     counts: dict[str, int],
+    edges: list[dict[str, Any]],
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
@@ -134,6 +144,30 @@ def write_sqlite(
             "CREATE TABLE edges (source TEXT NOT NULL, relation TEXT NOT NULL, "
             "target TEXT NOT NULL, data TEXT)"
         )
+        connection.executemany(
+            "INSERT INTO edges (source, relation, target, data) VALUES (?, ?, ?, ?)",
+            [
+                (
+                    edge["source"],
+                    edge["relation"],
+                    edge["target"],
+                    json.dumps(
+                        edge,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                )
+                for edge in sorted(
+                    edges,
+                    key=lambda item: (
+                        item["source"],
+                        item["relation"],
+                        item["target"],
+                    ),
+                )
+            ],
+        )
         connection.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
 
         for table, column in _INDEXES:
@@ -143,13 +177,18 @@ def write_sqlite(
 
         meta = [("schema_version", str(SCHEMA_VERSION))]
         meta.extend((f"count:{key}", str(value)) for key, value in sorted(counts.items()))
+        meta.append(("count:edge", str(len(edges))))
         connection.executemany("INSERT INTO meta (key, value) VALUES (?, ?)", meta)
         connection.commit()
     finally:
         connection.close()
 
 
-def write_spa(path: Path, entities: dict[str, list[dict[str, Any]]]) -> None:
+def write_spa(
+    path: Path,
+    entities: dict[str, list[dict[str, Any]]],
+    edges: list[dict[str, Any]],
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     counts = {name: len(records) for name, records in entities.items()}
     payload = {
@@ -157,7 +196,9 @@ def write_spa(path: Path, entities: dict[str, list[dict[str, Any]]]) -> None:
         "counts": counts,
         "difficulties": list(DIFFICULTIES),
         "entities": entities,
-        "edges": [],
+        "edges": sorted(
+            edges, key=lambda item: (item["source"], item["relation"], item["target"])
+        ),
     }
     path.write_text(
         json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))

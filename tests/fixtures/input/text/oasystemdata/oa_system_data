@@ -140,5 +140,11 @@
       "IsHidden": true
     }
   ],
-  "Rewards": []
+  "Rewards": [
+    {
+      "RewardId": "alpha001_000_2",
+      "ObjectId": "alpha001_obj001",
+      "Type": 0
+    }
+  ]
 }

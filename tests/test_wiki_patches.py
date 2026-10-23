@@ -141,12 +141,12 @@ def test_pack_and_character_match_by_their_template_parameters() -> None:
 
 def test_os_pages_match_on_filename_and_owner() -> None:
     snapshot = Snapshot(
-        articles=frozenset({"日志（Alpha）"}),
+        articles=frozenset({"日志（Main Folder）"}),
         pages=(
             SnapshotPage(
-                "日志（Alpha）",
+                "日志（Main Folder）",
                 "Os/文件",
-                {"文件名": "日志", "所属角色": "Alpha"},
+                {"文件名": "Log_01", "所属角色": "Main_Folder"},
             ),
         ),
     )
@@ -154,14 +154,19 @@ def test_os_pages_match_on_filename_and_owner() -> None:
         "os_log/ivos001",
         "os_log",
         "Os/文件",
-        "日志（Alpha）",
-        {"文件名": "日志", "所属角色": "Alpha"},
+        "日志（Main Folder）",
+        {"文件名": "Log_01", "所属角色": "Main Folder"},
     )
 
     match = match_pages([page], snapshot)["os_log/ivos001"]
 
     assert match.matched is True
+    assert match.title == "日志（Main Folder）"
     assert match.source == "snapshot"
+
+    entry = plan_patches([page], snapshot)["os_log/ivos001"]
+    assert entry.patch is not None
+    assert entry.patch["params"] == {}
 
 
 def test_im_duplicate_titles_are_disambiguated_by_global_sort() -> None:
@@ -257,6 +262,10 @@ def test_punctuation_variant_matches_by_the_existing_page_title() -> None:
     assert match.matched is True
     assert match.title == "CODE:RED"
     assert match.source == "snapshot:title"
+
+    entry = plan_patches([page], snapshot)["song/alpha001_000"]
+    assert entry.patch is not None
+    assert "曲名" not in entry.patch["params"]
 
 
 def test_two_entities_never_patch_the_same_page() -> None:

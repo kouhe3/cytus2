@@ -383,7 +383,7 @@ def _build_index(
         rule = _RULES.get(record.template)
         if rule is None:
             continue
-        key = tuple(_match_value(record.params.get(name, "")) for name in rule.key)
+        key = tuple(_key_value(name, record.params.get(name, "")) for name in rule.key)
         by_key[key].append(record)
         by_first[key[0]].append(record)
     return dict(by_key), dict(by_first)
@@ -401,9 +401,17 @@ def _match_one(
     empty_index: tuple[dict, dict] = ({}, {})
     by_key, by_first = indexes.get(page.template, empty_index)
 
+    exact_all = [
+        item
+        for item in by_template.get(page.template, ())
+        if _title_value(page.template, item.title)
+        == _title_value(page.template, page.title)
+        and item.title not in claimed
+    ]
+
     key_candidates: list[SnapshotPage] = []
     if rule is not None:
-        key = tuple(_match_value(page.params.get(name, "")) for name in rule.key)
+        key = tuple(_key_value(name, page.params.get(name, "")) for name in rule.key)
         key_candidates = by_key.get(key, [])
         if not key_candidates and len(rule.key) == 2:
             # Older OA pages carry no 所属角色 parameter; fall back to the
@@ -411,6 +419,19 @@ def _match_one(
             loose = by_first.get(key[0], [])
             if len(loose) == 1:
                 key_candidates = loose
+
+    if page.template != "Im/帖" and len(exact_all) == 1:
+        same_as_key = (
+            len(key_candidates) == 1
+            and key_candidates[0].title == exact_all[0].title
+        )
+        return PageMatch(
+            title=exact_all[0].title,
+            source="snapshot" if same_as_key else "snapshot:title",
+            matched=True,
+            keep_page=False,
+            existing=exact_all[0],
+        )
 
     available = [item for item in key_candidates if item.title not in claimed]
     if len(available) == 1:
@@ -435,16 +456,6 @@ def _match_one(
                 )
             if narrowed:
                 available = narrowed
-        if page.template != "Im/帖":
-            exact = [item for item in available if item.title == page.title]
-            if len(exact) == 1:
-                return PageMatch(
-                    title=exact[0].title,
-                    source="snapshot:title",
-                    matched=True,
-                    keep_page=False,
-                    existing=exact[0],
-                )
         conflicts.append(
             Conflict(
                 "title_conflict",
@@ -465,18 +476,13 @@ def _match_one(
         )
         return _disambiguated(page, snapshot, conflicts)
 
-    exact = [
-        item
-        for item in by_template.get(page.template, ())
-        if item.title == page.title and item.title not in claimed
-    ]
-    if len(exact) == 1:
+    if page.template == "Im/帖" and len(exact_all) == 1:
         return PageMatch(
-            title=exact[0].title,
+            title=exact_all[0].title,
             source="snapshot:title",
             matched=True,
             keep_page=False,
-            existing=exact[0],
+            existing=exact_all[0],
         )
 
     if snapshot.has_title(page.title):
@@ -553,6 +559,22 @@ def _disambiguated(
     )
 
 
+def _key_value(name: str, value: str) -> str:
+    """Normalise a match key; file names treat ``_`` as MediaWiki space."""
+    text = _match_value(value)
+    if name in ("文件名", "所属角色"):
+        text = " ".join(text.replace("_", " ").split()).casefold()
+    return text
+
+
+def _title_value(template: str, title: str) -> str:
+    """Compare titles case-insensitively for file-named page families."""
+    text = _match_value(title)
+    if template in ("Os/文件", "Oa/文件", "Gallery文件"):
+        text = " ".join(text.replace("_", " ").split()).casefold()
+    return text
+
+
 def _match_value(value: str) -> str:
     text = " ".join(str(value or "").split())
     text = re.sub(r"\{\{DISPLAYTITLE:[^{}]*\}\}", "", text).strip()
@@ -571,9 +593,29 @@ def plan_patches(
         patch = None
         if match.matched and match.existing is not None:
             changed: dict[str, str] = {}
+            rule = _RULES.get(page.template)
+            protected: frozenset[str] = frozenset()
+            if match.source == "snapshot:title":
+                # A title-based match already proves the page identity; never
+                # rewrite the parameters that identity is keyed on.
+                if rule is not None:
+                    protected = frozenset(rule.key)
             for name, value in page.params.items():
+                if name in protected:
+                    continue
                 current = match.existing.params.get(name)
-                if current is None or current.strip() != value.strip():
+                if current is None:
+                    changed[name] = value
+                    continue
+                if (
+                    rule is not None
+                    and name in rule.key
+                    and _key_value(name, current) == _key_value(name, value)
+                ):
+                    # Same identity under the matching normalisation (case,
+                    # underscores, template markup): keep the site spelling.
+                    continue
+                if current.strip() != value.strip():
                     changed[name] = value
             patch = {
                 "title": match.title,

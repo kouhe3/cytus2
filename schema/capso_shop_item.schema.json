@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "capso_shop_item.schema.json",
+  "title": "capso_shop_item",
+  "type": "object",
+  "oneOf": [
+    {"$ref": "#/$defs/chart_item"},
+    {"$ref": "#/$defs/illustration_item"},
+    {"$ref": "#/$defs/tap_fx_item"}
+  ],
+  "$defs": {
+    "chart_item": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "game_id",
+        "pack_id",
+        "item_id",
+        "item_type",
+        "kind",
+        "position",
+        "song_id",
+        "chart_ids",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^capso_shop_item/[^\\s]+$"
+        },
+        "type": {
+          "const": "capso_shop_item"
+        },
+        "game_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pack_id": {
+          "type": "string",
+          "pattern": "^capso_shop_pack/[^\\s]+$"
+        },
+        "item_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "item_type": {
+          "const": 0
+        },
+        "kind": {
+          "const": "chart"
+        },
+        "position": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "song_id": {
+          "type": "string",
+          "pattern": "^song/[^@\\s]+$"
+        },
+        "chart_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^song/[^@\\s]+@(Easy|Hard|Chaos|Glitch|Crash|Dream|Drop)$"
+          }
+        },
+        "provenance": {
+          "$ref": "common.schema.json#/$defs/provenance"
+        }
+      }
+    },
+    "illustration_item": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "game_id",
+        "pack_id",
+        "item_id",
+        "item_type",
+        "kind",
+        "position",
+        "illustration_id",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^capso_shop_item/[^\\s]+$"
+        },
+        "type": {
+          "const": "capso_shop_item"
+        },
+        "game_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pack_id": {
+          "type": "string",
+          "pattern": "^capso_shop_pack/[^\\s]+$"
+        },
+        "item_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "item_type": {
+          "const": 1
+        },
+        "kind": {
+          "const": "illustration"
+        },
+        "position": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "illustration_id": {
+          "type": "string",
+          "pattern": "^illustration/[^\\s]+$"
+        },
+        "provenance": {
+          "$ref": "common.schema.json#/$defs/provenance"
+        }
+      }
+    },
+    "tap_fx_item": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "game_id",
+        "pack_id",
+        "item_id",
+        "item_type",
+        "kind",
+        "position",
+        "tap_fx_id",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^capso_shop_item/[^\\s]+$"
+        },
+        "type": {
+          "const": "capso_shop_item"
+        },
+        "game_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pack_id": {
+          "type": "string",
+          "pattern": "^capso_shop_pack/[^\\s]+$"
+        },
+        "item_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "item_type": {
+          "const": 2
+        },
+        "kind": {
+          "const": "tap_fx"
+        },
+        "position": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tap_fx_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provenance": {
+          "$ref": "common.schema.json#/$defs/provenance"
+        }
+      }
+    }
+  }
+}

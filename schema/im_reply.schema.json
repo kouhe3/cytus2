@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "im_reply.schema.json",
+  "title": "im_reply",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "post_id",
+    "order",
+    "author",
+    "avatar",
+    "text_ref",
+    "missing_languages",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^im_reply/[A-Za-z0-9_]+#[0-9]+$"
+    },
+    "type": {
+      "const": "im_reply"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "post_id": {
+      "type": "string",
+      "pattern": "^im/[A-Za-z0-9_]+$"
+    },
+    "order": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1
+    },
+    "avatar": {
+      "type": "string",
+      "minLength": 1
+    },
+    "text_ref": {
+      "type": "string",
+      "pattern": "^im_reply/[A-Za-z0-9_]+#[0-9]+$"
+    },
+    "missing_languages": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/language"
+      }
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  },
+  "$defs": {
+    "language": {
+      "enum": ["en", "ja", "zh-Hant", "ko", "zh-Hans"]
+    }
+  }
+}

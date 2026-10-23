@@ -530,3 +530,10 @@ table.grid tr:hover td { background: var(--surface); }
   .search { width: 100%; }
   .topbar { flex-wrap: wrap; }
 }
+
+/* Tairitsu 的 Branching OS 分支图 */
+.branch-map { overflow-x: auto; margin: 6px 0 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.branch-map svg { display: block; }
+.branch-node { cursor: pointer; }
+.branch-node:hover rect { stroke: var(--accent); }
+.branch-node-label { fill: var(--fg); font-size: 11px; font-family: var(--mono, ui-monospace, monospace); }

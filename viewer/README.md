@@ -585,3 +585,19 @@ Tairitsu 有曲包（`songdata_tairitsu001_001…`、`exp_data` 里也有 `tairi
 | `等级解锁` | 27 个角色（新增 `tairitsu001`），该角色没有 iM / OS 两列，改为「分支节点 / 解锁谱面」两列 |
 | `分支剧情` | 节点详情显示 `解锁等级 Lv*`、`分支状态 StateId 0 = 0`、关联谱面，并有「等级解锁 · tairitsu001 →」回链 |
 | OA | Tairitsu 本来就有 OA 档案（12 个 OA 角色之一） |
+
+### 分支图（Branching OS 的二维布局）
+
+Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴是 `ViewSetting.Position`（1–21），纵轴是分支行 `a / b / c`，
+连线来自 `ViewSetting.LinkedFileIds`。Wiki 那张 `tos-grid` 就是它的网页复刻（列 2/4/6…、行 1–3、`c-in`/`c-out` 箭头）。
+
+本仓库的 `BranchMap`（`viewer/src/components/BranchMap.tsx`）按同样规则渲染：
+
+| 数据 | 用途 |
+|:--|:--|
+| `ViewSetting.Position` | 列 x |
+| 节点 id 后缀 `a/b/c` | 行 y（0/1/2）；无后缀的收束节点放中间行，同列多个时上下错开 |
+| `ViewSetting.LinkedFileIds` | 贝塞尔连线（`taos010 → taos012a/012b/011`、`taos019 → taos020/021` 这类分叉都能看到） |
+| `UnlockCondition.Level` / `StateValue` | 方块 tooltip（`taos010 · Lv10 · 分支 收束`） |
+
+分支剧情每个节点页顶部都有这张图（可横向滚动），点方块直接跳转；当前节点用 accent 描边。

@@ -1,6 +1,7 @@
 import type { ExtraContent, IndexData, Lang } from "../types";
 import { Script } from "../components/Script";
 import { Chip, Facts, Skeleton } from "../components/ui";
+import { BranchMap } from "../components/BranchMap";
 
 export function BranchingReader({
   index,
@@ -35,6 +36,9 @@ export function BranchingReader({
       <p className="lede">
         Tairitsu 的 <b>Branching OS（分支 OS）</b>节点：按「曲包等级 + 分支状态」解锁，不是线性档案。
       </p>
+      <h3>分支图（{index.branching.length} 节点，点方块跳转）</h3>
+      <BranchMap nodes={index.branching} activeId={node.id} onNavigate={(id) => onNavigate("branching", id)} />
+
       <Facts
         items={[
           ["解锁等级", node.level ? `Lv${node.level}` : "—"],

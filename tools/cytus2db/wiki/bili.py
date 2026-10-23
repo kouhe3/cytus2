@@ -103,6 +103,17 @@ def load_profile(path: Path | str) -> Profile:
     if not isinstance(data, dict):
         raise InputError(f"{source}: profile must be a JSON object")
 
+    overlay_dir = source.parent / f"{source.stem}.d"
+    if overlay_dir.is_dir():
+        for overlay in sorted(overlay_dir.glob("*.json")):
+            try:
+                extra = json.loads(overlay.read_text(encoding="utf-8-sig"))
+            except json.JSONDecodeError as exc:
+                raise InputError(f"invalid JSON in {overlay}: {exc}") from exc
+            if not isinstance(extra, dict):
+                raise InputError(f"{overlay}: profile overlay must be a JSON object")
+            _deep_merge(data, extra)
+
     site = str(data.get("site") or "")
     if not site:
         raise BuildError(f"{source}: missing site")
@@ -134,6 +145,14 @@ def load_profile(path: Path | str) -> Profile:
         pages=pages,
         path=source,
     )
+
+
+def _deep_merge(base: dict, overlay: dict) -> None:
+    for key, value in overlay.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            _deep_merge(base[key], value)
+        else:
+            base[key] = value
 
 
 def _load_template(source: Path, name: str, raw: Any) -> TemplateSpec:

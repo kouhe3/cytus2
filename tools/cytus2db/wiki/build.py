@@ -16,11 +16,23 @@ from ..errors import BuildError
 from .bili import RenderedPage, load_profile, render_page, resolve_titles
 from .db import Database
 from .model import Conflict, PageModel
-from .songs import build_song_pages
 
 
 def build_page_models(db: Database) -> list[PageModel]:
-    return build_song_pages(db)
+    """Run every page builder discovered under ``cytus2db.wiki.pages``."""
+    import importlib
+    import pkgutil
+
+    from . import pages as pages_package
+
+    models: list[PageModel] = []
+    for info in sorted(pkgutil.iter_modules(pages_package.__path__), key=lambda item: item.name):
+        module = importlib.import_module(f"{pages_package.__name__}.{info.name}")
+        builder = getattr(module, "build", None)
+        if builder is None:
+            continue
+        models.extend(builder(db))
+    return models
 
 
 def render_wiki(

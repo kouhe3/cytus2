@@ -206,6 +206,8 @@ export interface OaItem {
   disable?: string[];
   details?: string;
   text?: string;
+  /** 描述按数据里的 `---` 切成的对话段落（游戏内一段一段显示） */
+  lines?: string[];
   blocks?: Block[];
   object?: string | null;
   character?: string;

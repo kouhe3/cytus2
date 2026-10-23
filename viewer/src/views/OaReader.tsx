@@ -37,7 +37,15 @@ function Description({ id, item }: { id: string; item: OaItem }) {
           {conditions.join(" · ")}
         </p>
       ) : null}
-      <p className="nar">{item.text}</p>
+      {item.lines?.length ? (
+        <div className="oa-lines">
+          {item.lines.map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
+        </div>
+      ) : item.text ? (
+        <p className="nar">{item.text}</p>
+      ) : null}
     </div>
   );
 }

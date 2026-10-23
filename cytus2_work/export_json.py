@@ -534,9 +534,11 @@ def main():
             }
         for d in oa.get("Descriptions", []):
             body = (d.get("Contents") or [""] * 6)[slot]
-            # 游戏原文以 `</p>` + 换行分隔段落，作者还会用 `---` 当分隔线（数据里就是三个连字符）
-            body = re.sub(r"</p>\s*<p>", "\n\n", body)
+            # `---` 是数据里的对话分段标记（游戏里描述是一段一段的对话，不是台词里的三条杠）
+            body = re.sub(r"</p>\s*<p>", "\n", body)
             body = re.sub(r"</?p>", "", body)
+            segments = [strip_tags(seg).strip() for seg in re.split(r"\n\s*-{3,}\s*\n", body)]
+            lines = [ln.strip() for seg in segments for ln in seg.split("\n") if ln.strip()]
             def _conds(items):
                 out = []
                 for c in items or []:
@@ -565,7 +567,8 @@ def main():
                 # 描述名在游戏数据里只有一份（繁体中文），不随语言切换
                 "name": one_line(d.get("Name", "")),
                 "nameLocked": True,
-                "text": strip_tags(body).strip(),
+                "lines": lines,
+                "text": "\n".join(lines),
             }
         for d in oa.get("Documents", []):
             oav[d.get("DocumentId")] = {

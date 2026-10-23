@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "pages",
+  "site": "https://wiki.biligame.com/cytus2",
+  "fetched_at": "2026-01-01T00:00:00+00:00",
+  "source_query": "action=query&list=embeddedin&eititle=Template:<name>&eilimit=500; action=query&prop=revisions&rvprop=content&rvslots=main&titles=<50 titles>&redirects=0 (1.2s spacing)",
+  "templates": {
+    "歌曲": {
+      "title": "Template:歌曲",
+      "page_count": 2,
+      "pages": [
+        {
+          "title": "Alpha",
+          "params": {
+            "甲": "1",
+            "未知": "keep",
+            "条件": "x"
+          }
+        },
+        {
+          "title": "Gamma",
+          "params": {
+            "甲": "2",
+            "1": "位置参数"
+          }
+        }
+      ]
+    }
+  }
+}

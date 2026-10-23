@@ -1,0 +1,15 @@
+{
+  "articles": {
+    "error": null,
+    "pages": [
+      {"title": "Gamma", "pageid": 3},
+      {"title": "Alpha", "pageid": 1}
+    ]
+  },
+  "redirects": {
+    "error": null,
+    "pages": [
+      {"title": "Beta", "pageid": 2}
+    ]
+  }
+}

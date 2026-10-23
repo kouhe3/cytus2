@@ -735,8 +735,15 @@ def _uv_prefix() -> list[str] | None:
     """Return a working ``uv run --with websocket-client python`` prefix."""
     if importlib.util.find_spec("websocket") is not None:
         return None
-    base = ["uv", "run", "--with", "websocket-client", "python"]
-    offline = ["uv", "run", "--offline", "--with", "websocket-client", "python"]
+    # --no-project keeps uv from syncing the repository's UnityPy environment;
+    # the CDP helper only needs websocket-client.
+    base = [
+        "uv", "run", "--no-project", "--with", "websocket-client", "python"
+    ]
+    offline = [
+        "uv", "run", "--no-project", "--offline",
+        "--with", "websocket-client", "python",
+    ]
     try:
         proc = subprocess.run(
             offline + ["-c", "import websocket"],

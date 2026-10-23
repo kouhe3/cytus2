@@ -1,0 +1,17 @@
+[project]
+name = "cytus2db"
+version = "0.1.0"
+description = "Cytus II canonical DB builder"
+requires-python = ">=3.10"
+dependencies = ["UnityPy>=1.25,<1.26"]
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "tools"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tools"]

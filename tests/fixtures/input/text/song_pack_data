@@ -1,0 +1,78 @@
+{
+  "offline_song_pack_list": [
+    {
+      "song_pack_id": "alpha001",
+      "song_pack_name": "Alpha",
+      "theme_color": "#112233",
+      "is_iap_pack": false,
+      "hasIM": true,
+      "price": "",
+      "Category": "Main",
+      "Descriptions": {"en": "Alpha pack", "zh-Hans": "Alpha 曲包"},
+      "song_info_list": [
+        {
+          "song_id": "alpha001_000",
+          "song_name": "First",
+          "artist": "Artist A",
+          "charts": {
+            "Easy": {"Level": "1", "MusicID": "", "NeedUnlock": false},
+            "Hard": {"Level": "5", "MusicID": "", "NeedUnlock": false},
+            "Chaos": {"Level": "9", "MusicID": "", "NeedUnlock": true},
+            "Glitch": {"Level": "10", "MusicID": "music_glitch", "NeedUnlock": true}
+          },
+          "is_hidden": false,
+          "IsDownloadOnly": false,
+          "Category": "",
+          "HideWhenLocked": false,
+          "AlternativeSearchTerms": ["first alt"]
+        },
+        {
+          "song_id": "alpha001_001",
+          "song_name": "Second",
+          "artist": "Artist B",
+          "charts": {
+            "Easy": {"Level": "2", "MusicID": "", "NeedUnlock": false},
+            "Hard": {"Level": "6", "MusicID": "", "NeedUnlock": true},
+            "Chaos": {"Level": "11", "MusicID": "", "NeedUnlock": true},
+            "Crash": {"Level": "β", "MusicID": "", "NeedUnlock": true}
+          },
+          "is_hidden": true,
+          "IsDownloadOnly": true,
+          "Category": "VOEZ",
+          "HideWhenLocked": true,
+          "AlternativeSearchTerms": []
+        }
+      ]
+    },
+    {
+      "song_pack_id": "beta001",
+      "song_pack_name": "Beta",
+      "theme_color": "#445566",
+      "is_iap_pack": true,
+      "hasIM": false,
+      "price": "USD 1.99",
+      "Category": "Extra",
+      "Descriptions": {},
+      "song_info_list": [
+        {
+          "song_id": "beta001_000",
+          "song_name": "Third",
+          "artist": null,
+          "charts": {
+            "Easy": {"Level": "3", "MusicID": "", "NeedUnlock": false},
+            "Dream": {"Level": "12", "MusicID": "", "NeedUnlock": true},
+            "Drop": {"Level": "13", "MusicID": "", "NeedUnlock": true}
+          },
+          "is_hidden": false,
+          "IsDownloadOnly": false,
+          "Category": "",
+          "HideWhenLocked": false,
+          "AlternativeSearchTerms": [""]
+        }
+      ]
+    }
+  ],
+  "other_song_info_list": [
+    {"song_id": "story_004", "song_name": null, "artist": null, "charts": null, "is_hidden": false}
+  ]
+}

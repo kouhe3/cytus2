@@ -1,0 +1,20 @@
+[
+  {
+    "Id": "aos001",
+    "Type": 3,
+    "Names": ["First file", "First file", "First file", "First file", "First file", "First file"],
+    "TimelineChapter": {"Folder": "Alpha", "Chapter": "Architects", "Index": 1},
+    "OSLockCondition": {},
+    "Contents": [
+      "##bgm=alpha_bgm\n##conversation=Alpha\nHello\n##image=img001\n##sound=Beep,Beep sound\n##movie=mov001"
+    ]
+  },
+  {
+    "Id": "aos002",
+    "Type": 3,
+    "Names": ["Second file", "Second file", "Second file", "Second file", "Second file", "Second file"],
+    "TimelineChapter": {"Folder": "Alpha & Beta", "Chapter": "Side Stories", "Index": 2},
+    "OSLockCondition": {},
+    "Contents": ["##bgm=MUTE\n##image=img002"]
+  }
+]

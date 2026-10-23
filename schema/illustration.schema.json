@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "illustration.schema.json",
+  "title": "illustration",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "character_id",
+    "costume",
+    "available",
+    "description",
+    "asset_id",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^illustration/[^\\s]+$"
+    },
+    "type": {
+      "const": "illustration"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "character_id": {
+      "type": "string",
+      "pattern": "^character/[^\\s]+$"
+    },
+    "costume": {
+      "type": "string"
+    },
+    "available": {
+      "type": "boolean"
+    },
+    "description": {
+      "type": "string"
+    },
+    "asset_id": {
+      "type": "string",
+      "pattern": "^asset/illustration/[^\\s]+$"
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

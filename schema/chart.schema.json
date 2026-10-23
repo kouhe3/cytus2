@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "chart.schema.json",
+  "title": "chart",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "song_id",
+    "difficulty",
+    "level",
+    "need_unlock",
+    "music_id",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^song/[^@\\s]+@(Easy|Hard|Chaos|Glitch|Crash|Dream|Drop)$"
+    },
+    "type": {
+      "const": "chart"
+    },
+    "game_id": {
+      "type": "string",
+      "pattern": "^[^@\\s]+@(Easy|Hard|Chaos|Glitch|Crash|Dream|Drop)$"
+    },
+    "song_id": {
+      "type": "string",
+      "pattern": "^song/[^@\\s]+$"
+    },
+    "difficulty": {
+      "enum": ["Easy", "Hard", "Chaos", "Glitch", "Crash", "Dream", "Drop"]
+    },
+    "level": {
+      "type": "string",
+      "minLength": 1
+    },
+    "need_unlock": {
+      "type": "boolean"
+    },
+    "music_id": {
+      "type": "string"
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

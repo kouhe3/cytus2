@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edge.schema.json",
+  "title": "edge",
+  "type": "object",
+  "required": ["source", "relation", "target"],
+  "additionalProperties": false,
+  "properties": {
+    "source": {
+      "type": "string",
+      "pattern": "^[a-z_]+/[^\\s]+$"
+    },
+    "relation": {
+      "type": "string",
+      "pattern": "^[a-z_]+$"
+    },
+    "target": {
+      "type": "string",
+      "pattern": "^[a-z_]+/[^\\s]+$"
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

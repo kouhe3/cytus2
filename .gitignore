@@ -56,6 +56,9 @@ viewer/node_modules/
 viewer/dist/
 viewer/.shots/
 
+# canonical DB 派生产物（JSONL / SQLite / SPA 投影，全部可重建）
+/build/
+
 # 其它
 *.log
 __pycache__/

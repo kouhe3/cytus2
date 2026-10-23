@@ -1,0 +1,72 @@
+{
+  "categories": {
+    "character": "分类:角色"
+  },
+  "templates": {
+    "角色": {
+      "template": "角色",
+      "source": "wiki/snapshot/template_params.json (模板:角色, fetched from wiki.biligame.com/cytus2 on 2026-10-23)",
+      "param_order": [
+        "角色排序",
+        "角色名",
+        "拥有系统",
+        "角色分类",
+        "IMID",
+        "主题色",
+        "最高等级",
+        "获取方式",
+        "曲风",
+        "个人档案",
+        "简介",
+        "皮肤图片",
+        "画廊图片",
+        "其他图片",
+        "游戏评言",
+        "轶事",
+        "其他",
+        "注释与外部链接"
+      ],
+      "params": {
+        "角色排序": {"required": false, "conditional": false, "default": ""},
+        "角色名": {"required": false, "conditional": false, "default": ""},
+        "拥有系统": {"required": true, "conditional": false, "default": ""},
+        "角色分类": {"required": false, "conditional": false, "default": ""},
+        "IMID": {"required": false, "conditional": false, "default": ""},
+        "主题色": {"required": false, "conditional": false, "default": ""},
+        "最高等级": {"required": false, "conditional": false, "default": ""},
+        "获取方式": {"required": false, "conditional": false, "default": ""},
+        "曲风": {"required": false, "conditional": false, "default": ""},
+        "个人档案": {"required": false, "conditional": false, "default": ""},
+        "简介": {"required": false, "conditional": false, "default": ""},
+        "皮肤图片": {"required": false, "conditional": false, "default": ""},
+        "画廊图片": {"required": false, "conditional": false, "default": ""},
+        "其他图片": {"required": false, "conditional": false, "default": ""},
+        "游戏评言": {"required": false, "conditional": false, "default": ""},
+        "轶事": {"required": false, "conditional": false, "default": ""},
+        "其他": {"required": false, "conditional": false, "default": ""},
+        "注释与外部链接": {"required": false, "conditional": false, "default": ""}
+      },
+      "fields": {
+        "name": "角色名",
+        "systems": "拥有系统",
+        "category": "角色分类",
+        "imid": "IMID",
+        "theme_color": "主题色",
+        "max_level": "最高等级",
+        "unlock_method": "获取方式"
+      }
+    }
+  },
+  "pages": {
+    "character": {
+      "template": "角色",
+      "title": {
+        "field": "page_title",
+        "fallback": "game_id",
+        "disambiguator": "（{game_id}）"
+      },
+      "preserve_unknown_params": true,
+      "observed_unknown_params": []
+    }
+  }
+}

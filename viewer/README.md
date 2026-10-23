@@ -625,6 +625,10 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 `SONG_ID`/`VIDEO_ID` 与 `BOSS_SONG_ID`/`BOSS_MOVIE_ID`/`BOSS_STAGE_ID`（5.0 片尾 `StaffrollEndPlay`
 只有后者），脚本两套都认；只给 `BOSS_MOVIE_ID` 时曲目名取视频名小写（`Ending05_Staffroll` → `ending05_staffroll`）。
 
+`vos075_bossstage`（4.0 结局）同理：原片 280.2s 无音轨，旁白/配乐在 `songdata_vos075_bossstage`
+（277.9s）里——字幕首句正好 25.30s，音频的静音段在 25.299s 结束，说明字幕是对着这条轨排的；
+合成版 `videos/vos075_bossstage__vos075_bossstage.mp4`（H.264 + AAC，280.2s）才是带人声的版本。
+
 结果：`videos/Ending05_Staffroll.mp4`（原片 6:13，无音轨）＋ `videos/Ending05_Staffroll__ending05_staffroll.mp4`
 （H.264 + AAC 6:13）。ending03 的 true ending 片尾 **不是视频**，是场景 `end03_TrueEnd_StaffRoll`，
 字母是 UI（`End03TrueEndStaffRollRunner` 逐字母回调），只有它前后的过场是 `true_ending.mp4` /

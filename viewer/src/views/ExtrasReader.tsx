@@ -229,6 +229,11 @@ function CutsceneSection({
             {[...matches.entries()].map(([key, hits]) => {
               const base = key.replace(/_\d+$/, "");
               const entry = findMovie(manifest, key) ?? findMovie(manifest, base);
+              // 有配乐的事件优先用合成版（原片是 video_endplay_*，本身无音轨）
+              const songs =
+                endplay.state === "ready" ? (endplay.data[base] ?? endplay.data[key])?.map((it) => it.song) ?? [] : [];
+              const song = pickSong(key, songs);
+              const muxed = song ? findVideoWithSong(manifest, base, song) : undefined;
               return (
                 <details key={key} open={matches.size <= 3}>
                   <summary className="mono">
@@ -242,7 +247,9 @@ function CutsceneSection({
                     ))}
                     {hits.length > 12 ? <li>…… 其余 {hits.length - 12} 处</li> : null}
                   </ul>
-                  {entry ? <Video entry={entry} id={base} subtitleKey={key} startAt={hits[0].t} /> : null}
+                  {entry ? (
+                    <Video entry={muxed?.entry ?? entry} id={base} subtitleKey={key} startAt={hits[0].t} />
+                  ) : null}
                 </details>
               );
             })}

@@ -38,6 +38,33 @@ def run_build(input_dir: Path, out_dir: Path, *extra: str) -> subprocess.Complet
     )
 
 
+def run_render(
+    db_dir: Path, out_dir: Path, *extra: str
+) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(TOOLS) + os.pathsep + env.get("PYTHONPATH", "")
+    return subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "cytus2db",
+            "render",
+            "--db",
+            str(db_dir),
+            "--out",
+            str(out_dir),
+            "--profile",
+            str(ROOT / "wiki" / "profiles" / "bili.json"),
+            *extra,
+        ],
+        cwd=str(ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+
+
 def copy_input(source: Path, destination: Path) -> None:
     shutil.copytree(source, destination)
 

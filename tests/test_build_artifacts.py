@@ -199,6 +199,14 @@ def test_sqlite_is_queryable(built_db: Path) -> None:
             "SELECT name FROM pack WHERE id = ?", ("pack/alpha001",)
         ).fetchone()
         assert pack == ("Alpha",)
+        illustration = connection.execute(
+            "SELECT character_id, asset_id FROM illustration WHERE id = ?",
+            ("illustration/alpha001_s001",),
+        ).fetchone()
+        assert illustration == (
+            "character/alpha001",
+            "asset/illustration/alpha001_s001",
+        )
         assert connection.execute("SELECT COUNT(*) FROM edges").fetchone()[0] == 0
     finally:
         connection.close()

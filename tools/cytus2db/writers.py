@@ -53,6 +53,7 @@ TABLE_COLUMNS: dict[str, tuple[tuple[str, str], ...]] = {
         ("character_id", "TEXT"),
         ("costume", "TEXT"),
         ("available", "INTEGER"),
+        ("asset_id", "TEXT"),
     ),
     "asset": (
         ("game_id", "TEXT"),

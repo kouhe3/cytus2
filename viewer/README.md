@@ -1,5 +1,10 @@
 # Cytus II 剧情阅览器
 
+> **已冻结（deprecated）**：本阅览器不再接收功能、数据或文档更新，也不再参与构建或产出数据。
+> 新的本地阅读入口是 [`web/`](../web/README.md)：
+> `cd web && pnpm dev`。本文档仅记录旧版实现与逆向结论，供历史参考；文中
+> `export_*.py` 数据导出命令与 `public/data/` 已不属于当前管线，不再是构建目标。
+
 把 `cytus2_story/` 里的剧情文本以结构化 JSON 的形式在浏览器里阅读。暗色为默认主题，可切换亮色。
 
 - 技术栈：Vite 8 + React 19 + TypeScript 7（`pnpm init` 起步，无 UI 框架依赖，样式为手写 CSS + CSS 变量令牌）

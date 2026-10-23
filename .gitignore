@@ -7,7 +7,7 @@
 /icon.png
 /viewer/dist.zip
 
-# 生成物：剧情文本图 / 媒体
+# 历史生成物：Markdown 剧情图 / 旧 viewer 的媒体与数据（当前管线不写、不读）
 /cytus2_story/
 viewer/public/media/
 viewer/public/data/
@@ -51,7 +51,7 @@ cytus2_work/sys_probe/
 cytus2_work/gif_probe/
 cytus2_work/*.zip
 
-# 前端
+# 旧 viewer（已冻结，仅供历史复现）
 viewer/node_modules/
 viewer/dist/
 viewer/.shots/

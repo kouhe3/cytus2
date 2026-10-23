@@ -154,8 +154,9 @@ export default function App() {
           <StateBlock title="数据加载失败">
             <p className="mono">{indexAsync.error.message}</p>
             <p>
-              请先运行 <span className="mono">python cytus2_work/export_json.py</span> 生成{" "}
-              <span className="mono">viewer/public/data/</span>。
+              旧阅览器已冻结，不再产出数据。当前阅读入口是{" "}
+              <span className="mono">web/</span>（<span className="mono">cd web && pnpm dev</span>
+              ）；旧版数据的复现方式见 <span className="mono">viewer/README.md</span>。
             </p>
           </StateBlock>
         </div>

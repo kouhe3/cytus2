@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { fallbackLabel } from "../data/language";
 import { formatFieldValue } from "../data/selectors";
 import { loadTextRecord } from "../data/text";
-import type { TextBlock, TextRecord } from "../types";
+import type { Lang, TextBlock, TextRecord } from "../types";
 
 type TextState =
   | { readonly status: "idle" }
@@ -11,7 +12,9 @@ type TextState =
 
 function readString(block: TextBlock, key: string): string {
   const value = block[key];
-  return typeof value === "string" ? value : "";
+  return typeof value === "string"
+    ? value.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ")
+    : "";
 }
 
 function Block({ block }: { block: TextBlock }) {
@@ -68,7 +71,24 @@ function Block({ block }: { block: TextBlock }) {
   }
 }
 
-export function TextBody({ textRef }: { textRef: string | null }) {
+function bodyParagraphs(text: string): string[] {
+  const cleaned = text
+    .replace(/^\s*##\w+.*$/gm, "")
+    .replace(/<\s*br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+  return cleaned.split(/\n{2,}/).filter((paragraph) => paragraph.trim() !== "");
+}
+
+export function TextBody({
+  textRef,
+  lang,
+}: {
+  textRef: string | null;
+  lang: Lang;
+}) {
   const [state, setState] = useState<TextState>({ status: "idle" });
 
   useEffect(() => {
@@ -78,7 +98,7 @@ export function TextBody({ textRef }: { textRef: string | null }) {
     }
     let active = true;
     setState({ status: "loading" });
-    loadTextRecord(textRef)
+    loadTextRecord(textRef, lang)
       .then((record) => {
         if (active) {
           setState({ status: "ready", record });
@@ -95,7 +115,7 @@ export function TextBody({ textRef }: { textRef: string | null }) {
     return () => {
       active = false;
     };
-  }, [textRef]);
+  }, [textRef, lang]);
 
   if (!textRef) {
     return <p className="muted">No text record for this entity.</p>;
@@ -108,25 +128,48 @@ export function TextBody({ textRef }: { textRef: string | null }) {
   }
   const record = state.record;
   if (!record) {
-    return <p className="muted">No text record for this entity.</p>;
-  }
-  if (record.text) {
     return (
-      <div className="prose" data-testid="entity-body" data-lang={record.lang}>
-        {record.text.split(/\n{2,}/).map((paragraph, index) => (
-          <p key={index}>{paragraph}</p>
-        ))}
+      <div className="fallback-note" data-testid="language-fallback" data-lang="none">
+        {fallbackLabel(lang, null)}.
       </div>
+    );
+  }
+  const fallbackNotice = record.fallback ? (
+    <div className="fallback-note" data-testid="language-fallback">
+      {fallbackLabel(record.requested_lang ?? lang, record.lang)}
+    </div>
+  ) : null;
+  if (record.text) {
+    const paragraphs = bodyParagraphs(record.text);
+    return (
+      <>
+        {fallbackNotice}
+        <div className="prose" data-testid="entity-body" data-lang={record.lang}>
+          {paragraphs.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
+        </div>
+      </>
     );
   }
   if (record.blocks && record.blocks.length > 0) {
     return (
-      <div className="prose blocks" data-testid="entity-body" data-lang={record.lang}>
-        {record.blocks.map((block, index) => (
-          <Block key={index} block={block} />
-        ))}
-      </div>
+      <>
+        {fallbackNotice}
+        <div className="prose blocks" data-testid="entity-body" data-lang={record.lang}>
+          {record.blocks.map((block, index) => (
+            <Block key={index} block={block} />
+          ))}
+        </div>
+      </>
     );
   }
-  return <p className="muted">This language has no body text.</p>;
+  return (
+    <>
+      {fallbackNotice}
+      <p className="muted">
+        This language has no body text.
+      </p>
+    </>
+  );
 }

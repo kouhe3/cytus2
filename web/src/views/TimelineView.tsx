@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { TimelineCard } from "../components/TimelineCard";
+import { useLanguage } from "../data/language";
 import {
   maxTimelineLevel,
   selectTimeline,
@@ -20,6 +21,7 @@ const TIER_OPTIONS: { value: ReadingTier; label: string }[] = [
 ];
 
 export function TimelineView({ db }: { db: Database }) {
+  const { lang } = useLanguage();
   const maxLevel = useMemo(() => maxTimelineLevel(db), [db]);
   const [level, setLevel] = useState(maxLevel);
   const [type, setType] = useState<TimelineTypeFilter>("all");
@@ -28,8 +30,8 @@ export function TimelineView({ db }: { db: Database }) {
   );
 
   const entries = useMemo(
-    () => selectTimeline(db, { maxLevel: level, type, tiers }),
-    [db, level, type, tiers],
+    () => selectTimeline(db, { maxLevel: level, type, tiers }, lang),
+    [db, level, type, tiers, lang],
   );
 
   const toggleTier = (tier: ReadingTier) => {

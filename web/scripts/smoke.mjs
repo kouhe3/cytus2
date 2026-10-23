@@ -7,8 +7,11 @@
  *
  * It drives the real app through the DevTools protocol: history routing,
  * reading-order cards, the level slider, type/tier filters, the Ctrl+K command
- * palette, a chart page reached from a card, an unlock-source jump, and the
- * return to the timeline. Screenshots are written to web/.shots/.
+ * palette, a chart page reached from a card, the chart → post → chart round
+ * trip, OA archives and documents, backup media, story nodes, CAPSO/gacha/shop
+ * bundles, grouped full-text search with keyboard navigation, and the
+ * five-language switch including its missing-language fallback.
+ * Screenshots are written to web/.shots/.
  *
  * CDP_ENDPOINT defaults to http://127.0.0.1:9333 (the edge-cdp service).
  * Pass a different app URL as the first argument.
@@ -197,6 +200,13 @@ const SET_SLIDER = (value) => `(() => {
   return input.value;
 })()`;
 
+const SET_LANGUAGE = (code) => `(() => {
+  const button = document.querySelector('[data-testid="lang-${code}"]');
+  if (!button) throw new Error('language button missing: ${code}');
+  button.click();
+  return button.textContent;
+})()`;
+
 const TIMELINE_SNAPSHOT = `(() => {
   const cards = [...document.querySelectorAll('[data-testid="timeline-card"]')];
   const orders = cards.map((card) => Number(card.dataset.order));
@@ -245,6 +255,8 @@ try {
     mobile: false,
   });
 
+  await cdp.navigate(`${appBase}/timeline`);
+  await cdp.evaluate(`localStorage.setItem('cytus2.language', 'zh-Hans')`);
   await cdp.navigate(`${appBase}/timeline`);
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="timeline-card"]').length > 0`,
@@ -426,6 +438,27 @@ try {
     "unlock source opens its entity",
   );
   check(true, "unlock source entity is clickable and opens");
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="relations-outgoing"]')) &&
+     Boolean(document.querySelector('[data-testid="relations-incoming"]'))`,
+    "entity detail shows outgoing and incoming edge sections",
+  );
+  check(true, "entity detail shows outgoing and incoming edge sections");
+  const roundTripHref = await cdp.evaluate(
+    `document.querySelector('[data-testid="chart-link"]').getAttribute('href')`,
+  );
+  await cdp.evaluate(`document.querySelector('[data-testid="chart-link"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === ${JSON.stringify(roundTripHref)} && Boolean(document.querySelector('[data-testid="chart-view"]'))`,
+    "chart reopened from the post",
+  );
+  check(true, "chart → post → chart round trip returns to the same chart");
+  await cdp.evaluate(`document.querySelector('[data-testid="back-button"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/im/P0101' && Boolean(document.querySelector('[data-testid="entity-view"]'))`,
+    "back button returns to the post",
+  );
+  check(true, "back button returns from the chart to the post");
   await cdp.evaluate(`document.querySelector('[data-testid="back-to-timeline"]').click()`);
   await cdp.waitFor(
     `location.pathname === '/timeline' && document.querySelectorAll('[data-testid="timeline-card"]').length > 0`,
@@ -493,15 +526,16 @@ try {
   );
   check(
     (await cdp.evaluate(
-      `Boolean(document.querySelector('.entity-facts'))`,
+      `Boolean(document.querySelector('[data-testid="capso-item-detail"]'))`,
     )) === true,
-    "generic source entity detail renders schema facts",
+    "CAPSO item detail renders the typed CAPSO section",
   );
-  await cdp.evaluate(`document.querySelector('[data-testid="back-to-timeline"]').click()`);
+  await cdp.evaluate(`document.querySelector('[data-testid="back-to-collection"]').click()`);
   await cdp.waitFor(
-    `location.pathname === '/timeline' && document.querySelectorAll('[data-testid="timeline-card"]').length > 0`,
-    "generic source detail returns to the timeline",
+    `location.pathname === '/shop' && Boolean(document.querySelector('[data-testid="shop-stats"]'))`,
+    "CAPSO detail returns to the shop",
   );
+  check(true, "CAPSO detail returns to the shop");
 
   await cdp.navigate(`${appBase}/`);
   await cdp.waitFor(
@@ -509,6 +543,401 @@ try {
     "root redirects to /timeline",
   );
   check(true, "/ redirects to /timeline");
+
+  // ------------------------------------------------------------- OA archive
+  await cdp.navigate(`${appBase}/oa`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="oa-index"]'))`,
+    "OA index loads",
+  );
+  const oaIndex = await cdp.evaluate(`(() => ({
+    characters: document.querySelectorAll('[data-testid="oa-character-card"]').length,
+    firstHref: document.querySelector('[data-testid="oa-character-card"]')?.getAttribute('href'),
+    stats: document.querySelector('[data-testid="oa-stats"]')?.textContent ?? '',
+  }))()`);
+  check(oaIndex.characters === 12, `OA index lists 12 characters (got ${oaIndex.characters})`);
+  check(oaIndex.firstHref === "/oa/alice001", "OA index links a character archive");
+  check(oaIndex.stats.includes("101 documents"), "OA index counts 101 documents");
+  await cdp.evaluate(`document.querySelector('[data-testid="oa-character-card"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/oa/alice001' && Boolean(document.querySelector('[data-testid="oa-workspace"]'))`,
+    "OA character archive opens",
+  );
+  const oaTabCount = await cdp.evaluate(
+    `document.querySelectorAll('[data-testid="oa-object-tab"]').length`,
+  );
+  check(oaTabCount >= 2, `OA archive exposes object tabs (got ${oaTabCount})`);
+  const firstObjectText = await cdp.evaluate(
+    `document.querySelector('[data-testid="oa-object-panel"] .prose')?.textContent ?? ''`,
+  );
+  await cdp.evaluate(
+    `document.querySelectorAll('[data-testid="oa-object-tab"]')[1].click()`,
+  );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="oa-object-tab"]')[1].classList.contains('active')`,
+    "second OA object tab becomes active",
+  );
+  const secondObjectText = await cdp.evaluate(
+    `document.querySelector('[data-testid="oa-object-panel"] .prose')?.textContent ?? ''`,
+  );
+  check(
+    secondObjectText !== firstObjectText,
+    "OA object tabs switch the object text",
+  );
+  await cdp.evaluate(`document.querySelector('[data-testid="oa-document-link"]').click()`);
+  await cdp.waitFor(
+    `location.pathname.startsWith('/oa_document/') &&
+     Boolean(document.querySelector('[data-testid="entity-view"][data-entity-type="oa_document"]')) &&
+     Boolean(document.querySelector('[data-testid="entity-body"]'))`,
+    "OA document detail loads",
+  );
+  const oaDocument = await cdp.evaluate(`(() => ({
+    path: location.pathname,
+    title: document.querySelector('.detail-head h1')?.textContent ?? '',
+    bodyLang: document.querySelector('[data-testid="entity-body"]')?.dataset.lang ?? '',
+    bodyLength: (document.querySelector('[data-testid="entity-body"]')?.textContent ?? '').trim().length,
+    outgoing: Boolean(document.querySelector('[data-testid="relations-outgoing"]')),
+    incoming: Boolean(document.querySelector('[data-testid="relations-incoming"]')),
+    backCollection: document.querySelector('[data-testid="back-to-collection"]')?.getAttribute('href') ?? '',
+  }))()`);
+  check(/^\/oa_document\//.test(oaDocument.path), "OA document URL is /oa_document/<id>");
+  check(oaDocument.title.length > 0, "OA document shows a title");
+  check(oaDocument.bodyLength > 20, "OA document renders its text body");
+  check(oaDocument.bodyLang === "zh-Hans", "OA document body uses the selected language");
+  check(
+    oaDocument.outgoing && oaDocument.incoming,
+    "OA document shows inbound and outbound relation sections",
+  );
+  check(oaDocument.backCollection === "/oa", "OA document links back to the OA index");
+  await cdp.screenshot("oa-document.png");
+  await cdp.evaluate(`document.querySelector('[data-testid="back-button"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/oa/alice001' && Boolean(document.querySelector('[data-testid="oa-workspace"]'))`,
+    "back from OA document",
+  );
+  check(true, "back button returns from an OA document to its archive");
+
+  // ------------------------------------------------------- Backup Database
+  await cdp.navigate(`${appBase}/backup`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="backup-index"]'))`,
+    "Backup index loads",
+  );
+  const backupIndex = await cdp.evaluate(`(() => ({
+    folders: document.querySelectorAll('[data-testid="backup-folder-card"]').length,
+    stats: document.querySelector('[data-testid="backup-stats"]')?.textContent ?? '',
+    firstHref: document.querySelector('[data-testid="backup-folder-card"]')?.getAttribute('href'),
+  }))()`);
+  check(backupIndex.folders === 25, `Backup index lists 25 folders (got ${backupIndex.folders})`);
+  check(backupIndex.stats.includes("84 entries"), "Backup index counts 84 media entries");
+  check(backupIndex.firstHref === "/backup/alice001", "Backup index links a folder");
+  await cdp.evaluate(`document.querySelector('[data-testid="backup-folder-card"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/backup/alice001' && Boolean(document.querySelector('[data-testid="backup-folder"]'))`,
+    "Backup folder opens",
+  );
+  const backupFolder = await cdp.evaluate(`(() => ({
+    items: document.querySelectorAll('[data-testid="backup-item-card"]').length,
+    firstHref: document.querySelector('[data-testid="backup-item-card"]')?.getAttribute('href'),
+    kinds: [...new Set([...document.querySelectorAll('[data-testid="backup-item-card"]')].map(card => card.dataset.kind))].sort(),
+  }))()`);
+  check(backupFolder.items === 3, `Backup folder shows its 3 entries (got ${backupFolder.items})`);
+  check(
+    backupFolder.firstHref?.startsWith("/gallery_item/") === true,
+    "Backup folder links gallery items",
+  );
+  check(
+    JSON.stringify(backupFolder.kinds) === JSON.stringify(["boss_stage", "video"]),
+    "Backup folder covers video and boss-stage entries",
+  );
+  await cdp.evaluate(`document.querySelector('[data-testid="backup-item-card"]').click()`);
+  await cdp.waitFor(
+    `location.pathname.startsWith('/gallery_item/') &&
+     Boolean(document.querySelector('[data-testid="gallery-item-detail"]'))`,
+    "Gallery item detail loads",
+  );
+  const galleryItem = await cdp.evaluate(`(() => ({
+    path: location.pathname,
+    kind: document.querySelector('[data-testid="gallery-item-detail"] .media-kind')?.textContent ?? '',
+    conditionHref: document.querySelector('[data-testid="condition-link"]')?.getAttribute('href') ?? '',
+    folderHref: [...document.querySelectorAll('[data-testid="gallery-item-detail"] a')].map(a => a.getAttribute('href')).find(href => href?.startsWith('/gallery_folder/')) ?? '',
+    backCollection: document.querySelector('[data-testid="back-to-collection"]')?.getAttribute('href') ?? '',
+  }))()`);
+  check(galleryItem.kind === "Boss stage", "Gallery item shows its media kind");
+  check(galleryItem.conditionHref === "/os/alos023", "Gallery item links its unlock condition");
+  check(
+    galleryItem.folderHref === "/gallery_folder/alice001",
+    "Gallery item links its folder",
+  );
+  check(galleryItem.backCollection === "/backup", "Gallery item links back to Backup Database");
+  await cdp.screenshot("gallery-item.png");
+  await cdp.evaluate(`document.querySelector('[data-testid="back-button"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/backup/alice001' && Boolean(document.querySelector('[data-testid="backup-folder"]'))`,
+    "back from gallery item",
+  );
+  check(true, "back button returns from a gallery item to its folder");
+
+  // ------------------------------------------------------------- story nodes
+  await cdp.navigate(`${appBase}/story`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="story-feed"]'))`,
+    "story index loads",
+  );
+  const storyIndex = await cdp.evaluate(`(() => ({
+    cards: document.querySelectorAll('[data-testid="story-node-card"]').length,
+    kinds: [...new Set([...document.querySelectorAll('[data-testid="story-node-card"]')].map(card => card.dataset.kind))].sort(),
+  }))()`);
+  check(
+    storyIndex.cards === 90,
+    `default story sequence hides the test01 staging node (got ${storyIndex.cards})`,
+  );
+  check(
+    JSON.stringify(storyIndex.kinds) === JSON.stringify(["branch", "event"]),
+    "story index contains events and Branching OS nodes",
+  );
+  await cdp.evaluate(`document.querySelector('[data-testid="story-sort-version"]').click()`);
+  await cdp.waitFor(
+    `(document.querySelector('[data-testid="story-sort-note"]')?.textContent ?? '').includes('4 of 91')`,
+    "version sort notes annotated nodes",
+  );
+  check(true, "version sort explains its reading-order fallback");
+  await cdp.evaluate(`document.querySelector('[data-testid="story-kind-branch"]').click()`);
+  await cdp.waitFor(
+    `(() => {
+      const cards = [...document.querySelectorAll('[data-testid="story-node-card"]')];
+      return cards.length === 48 && cards.every(card => card.dataset.kind === 'branch');
+    })()`,
+    "Branching OS filter",
+  );
+  check(true, "kind filter shows the 48 Branching OS nodes");
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="story-node-card"][data-kind="branch"]').click()`,
+  );
+  await cdp.waitFor(
+    `location.pathname.startsWith('/story_node/') &&
+     Boolean(document.querySelector('[data-testid="story-branch-detail"]')) &&
+     Boolean(document.querySelector('[data-testid="entity-body"]'))`,
+    "Branching OS node detail loads",
+  );
+  const storyNode = await cdp.evaluate(`(() => ({
+    path: location.pathname,
+    kind: document.querySelector('.story-kind')?.textContent ?? '',
+    bodyLength: (document.querySelector('[data-testid="entity-body"]')?.textContent ?? '').trim().length,
+    nextLinks: document.querySelectorAll('[data-testid="story-next"] [data-entity-id]').length,
+  }))()`);
+  check(/^\/story_node\//.test(storyNode.path), "story node URL is /story_node/<id>");
+  check(storyNode.kind === "Branching OS", "story node is labelled Branching OS");
+  check(storyNode.bodyLength > 20, "Branching OS node renders its text body");
+  check(storyNode.nextLinks > 0, "Branching OS node links its next node");
+  await cdp.screenshot("story-node.png");
+  await cdp.evaluate(`document.querySelector('[data-testid="back-to-collection"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/story' && Boolean(document.querySelector('[data-testid="story-feed"]'))`,
+    "back from story node",
+  );
+  check(true, "story node returns to the story index");
+
+  // ------------------------------------------------------------------- shop
+  await cdp.navigate(`${appBase}/shop`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="shop-stats"]'))`,
+    "shop index loads",
+  );
+  const shopIndex = await cdp.evaluate(`(() => ({
+    packs: document.querySelectorAll('[data-testid="capso-pack-card"]').length,
+    gacha: document.querySelectorAll('[data-testid="gacha-card"]').length,
+    bundles: document.querySelectorAll('[data-testid="bundle-card"]').length,
+    blackMarket: document.querySelectorAll('[data-testid="black-market-badge"]').length,
+    blackCard: document.querySelector('[data-testid="bundle-card"][data-black-market="true"] .collection-title')?.textContent ?? '',
+    firstPackHref: document.querySelector('[data-testid="capso-pack-card"]')?.getAttribute('href'),
+  }))()`);
+  check(shopIndex.packs === 13, `shop lists 13 CAPSO packs (got ${shopIndex.packs})`);
+  check(shopIndex.gacha === 1, "shop lists the gacha machine");
+  check(shopIndex.bundles === 2, "shop lists two IAP bundles");
+  check(shopIndex.blackMarket === 1, "shop marks exactly one bundle as Black Market");
+  check(shopIndex.blackCard === "VOL2", "Black Market badge belongs to VOL2");
+  check(
+    shopIndex.firstPackHref?.startsWith("/capso_shop_pack/") === true,
+    "shop links a CAPSO pack",
+  );
+  await cdp.evaluate(`document.querySelector('[data-testid="capso-pack-card"]').click()`);
+  await cdp.waitFor(
+    `location.pathname.startsWith('/capso_shop_pack/') &&
+     Boolean(document.querySelector('[data-testid="capso-pack-detail"]'))`,
+    "CAPSO pack detail loads",
+  );
+  const capsoPack = await cdp.evaluate(`(() => ({
+    title: document.querySelector('.detail-head h1')?.textContent ?? '',
+    items: document.querySelectorAll('[data-testid="capso-item-link"]').length,
+    facts: [...document.querySelectorAll('[data-testid="capso-pack-detail"] .fact')].map(fact => fact.textContent),
+  }))()`);
+  check(capsoPack.title.trim().length > 0, "CAPSO pack shows its name");
+  check(capsoPack.items === 4, `CAPSO pack lists its 4 items (got ${capsoPack.items})`);
+  check(
+    capsoPack.facts.some((fact) => fact.includes("CAPSO price")),
+    "CAPSO pack shows its CAPSO price",
+  );
+  await cdp.screenshot("capso-pack.png");
+  await cdp.navigate(`${appBase}/shop_bundle/VOL2`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="shop-bundle-detail"]'))`,
+    "Black Market bundle loads",
+  );
+  const bundle = await cdp.evaluate(`(() => ({
+    badge: document.querySelector('[data-testid="black-market-badge"]')?.textContent ?? '',
+    items: document.querySelectorAll('[data-testid="shop-bundle-items"] [data-entity-id]').length,
+    tiers: document.querySelectorAll('[data-testid="shop-bundle-tiers"] tbody tr').length,
+  }))()`);
+  check(bundle.badge === "Black Market", "VOL2 detail shows the Black Market badge");
+  check(bundle.items > 0, "bundle detail links its character items");
+  check(bundle.tiers === 20, `bundle detail lists its 20 IAP tiers (got ${bundle.tiers})`);
+
+  // ----------------------------------------------------------------- search
+  await cdp.navigate(`${appBase}/search?q=paff`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="search-result"]').length > 0`,
+    "search results for paff",
+  );
+  const paffGroups = await cdp.evaluate(
+    `[...document.querySelectorAll('[data-testid="search-group"]')].map(group => group.dataset.groupType)`,
+  );
+  check(
+    paffGroups.includes("im_post") && paffGroups.includes("os_log"),
+    "search covers iM posts and OS logs",
+  );
+  await cdp.navigate(`${appBase}/search?q=OA`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="search-result"]').length > 0`,
+    "search results for OA",
+  );
+  const oaGroups = await cdp.evaluate(
+    `[...document.querySelectorAll('[data-testid="search-group"]')].map(group => group.dataset.groupType)`,
+  );
+  check(
+    oaGroups.includes("oa_document") && oaGroups.includes("subtitle_line"),
+    "search covers OA documents and subtitle lines",
+  );
+  await cdp.navigate(`${appBase}/search?q=Diary`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="search-result"]').length > 0`,
+    "search results for Diary",
+  );
+  const searchState = await cdp.evaluate(`(() => ({
+    groups: [...document.querySelectorAll('[data-testid="search-group"]')].map(group => ({type: group.dataset.groupType, hits: group.querySelectorAll('[data-testid="search-result"]').length})),
+    marks: document.querySelectorAll('mark').length,
+    summary: document.querySelector('[data-testid="search-summary"]')?.textContent ?? '',
+  }))()`);
+  check(
+    searchState.groups.some((group) => group.type === "oa_document" && group.hits > 0),
+    "Diary search finds OA documents",
+  );
+  check(searchState.marks > 0, "search results highlight the query");
+  check(searchState.summary.includes("matches"), "search summary reports the match count");
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="search-input"]').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))`,
+  );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="search-result"][aria-selected="true"]').length === 1`,
+    "keyboard selects one search result",
+  );
+  const selectedHit = await cdp.evaluate(
+    `document.querySelector('[data-testid="search-result"][aria-selected="true"]').getAttribute('href')`,
+  );
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="search-input"]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))`,
+  );
+  await cdp.waitFor(
+    `location.pathname === ${JSON.stringify(selectedHit)} && Boolean(document.querySelector('[data-testid="entity-body"]'))`,
+    "Enter opens the selected search hit",
+  );
+  check(true, "keyboard Enter opens the selected search hit");
+  await cdp.screenshot("search.png");
+
+  // ------------------------------------------------------- relation graph
+  await cdp.navigate(`${appBase}/boss_stage/vos054_bossstage`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="entity-view"]'))`,
+    "relation-rich entity loads",
+  );
+  const relations = await cdp.evaluate(`(() => ({
+    outgoing: document.querySelectorAll('[data-testid="relations-outgoing"] [data-testid="relation-link"]').length,
+    incoming: document.querySelectorAll('[data-testid="relations-incoming"] [data-testid="relation-link"]').length,
+  }))()`);
+  check(relations.outgoing > 0, "entity shows outbound edges");
+  check(relations.incoming > 0, "entity shows inbound edges");
+  const relationHref = await cdp.evaluate(
+    `document.querySelector('[data-testid="relations-incoming"] [data-testid="relation-link"]').getAttribute('href')`,
+  );
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="relations-incoming"] [data-testid="relation-link"]').click()`,
+  );
+  await cdp.waitFor(
+    `location.pathname === ${JSON.stringify(relationHref)}`,
+    "relation link navigates",
+  );
+  check(true, "relation links navigate to the referenced entity");
+  await cdp.evaluate(`document.querySelector('[data-testid="back-button"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/boss_stage/vos054_bossstage'`,
+    "back from relation target",
+  );
+  check(true, "back button returns from a relation target");
+
+  // --------------------------------------------------------------- language
+  await cdp.navigate(`${appBase}/os/aios001`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="entity-body"][data-lang="zh-Hans"]'))`,
+    "OS body loads in zh-Hans",
+  );
+  const zhBody = await cdp.evaluate(
+    `document.querySelector('[data-testid="entity-body"]')?.textContent ?? ''`,
+  );
+  await cdp.evaluate(SET_LANGUAGE("ja"));
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="entity-body"][data-lang="ja"]'))`,
+    "language switch to ja",
+  );
+  const jaState = await cdp.evaluate(`(() => ({
+    body: document.querySelector('[data-testid="entity-body"]')?.textContent ?? '',
+    active: document.querySelector('[data-testid="language-switcher"] .lang-option.active')?.textContent ?? '',
+    stored: localStorage.getItem('cytus2.language'),
+  }))()`);
+  check(jaState.active === "JA", "language switcher marks ja active");
+  check(jaState.stored === "ja", "language switch persists to localStorage");
+  check(jaState.body !== zhBody && jaState.body.length > 0, "language switch reloads the text body");
+  await cdp.screenshot("language-ja.png");
+  await cdp.navigate(`${appBase}/im/N0901`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="language-fallback"]'))`,
+    "missing-language fallback notice",
+  );
+  const missingLanguage = await cdp.evaluate(`(() => ({
+    notice: document.querySelector('[data-testid="language-fallback"]')?.textContent ?? '',
+    body: Boolean(document.querySelector('[data-testid="entity-body"]')),
+  }))()`);
+  check(
+    missingLanguage.notice.includes("No text in ja"),
+    "missing language shows an explicit fallback notice",
+  );
+  check(!missingLanguage.body, "missing-language entity renders no body");
+  await cdp.evaluate(SET_LANGUAGE("zh-Hans"));
+  await cdp.waitFor(
+    `(document.querySelector('[data-testid="language-fallback"]')?.textContent ?? '').includes('No text in zh-Hans')`,
+    "fallback notice follows the switched language",
+  );
+  check(true, "fallback notice is recomputed for the selected language");
+  await cdp.navigate(`${appBase}/timeline`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="timeline-card"]').length > 0`,
+    "timeline reloads after language reset",
+  );
+  const resetSnippet = await cdp.evaluate(
+    `document.querySelector('[data-testid="timeline-card"] .card-snippet')?.textContent ?? ''`,
+  );
+  check(resetSnippet.length > 0, "timeline snippets render after resetting to zh-Hans");
+  await cdp.evaluate(`localStorage.setItem('cytus2.language', 'zh-Hans')`);
+
   check(
     cdp.exceptions.length === 0,
     `no uncaught page exceptions (${cdp.exceptions.join(" | ") || "none"})`,

@@ -31,6 +31,17 @@ export interface LevelLock {
   level: number;
 }
 
+export interface ConditionEntry {
+  readonly kind: string;
+  readonly value: string;
+}
+
+export interface StoryBossStageRef {
+  readonly entity_id: string | null;
+  readonly raw: string;
+  readonly status: string;
+}
+
 export interface BaseEntity {
   readonly id: string;
   readonly type: string;
@@ -111,6 +122,223 @@ export interface SpoilerAlertEntity extends BaseEntity {
   readonly conditions: LevelLock[];
 }
 
+export interface OaCharacterEntity extends BaseEntity {
+  readonly type: "oa_character";
+  readonly game_id: string;
+  readonly character_id: string;
+  readonly name: string;
+  readonly gallery_folder_id: string | null;
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface OaObjectEntity extends BaseEntity {
+  readonly type: "oa_object";
+  readonly game_id: string;
+  readonly character_id: string;
+  readonly text_ref: string;
+  readonly analyze_type_id: string | null;
+  readonly analyze_type: number;
+  readonly level_locks: LevelLock[];
+  readonly conditions: ConditionEntry[];
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface OaDocumentEntity extends BaseEntity {
+  readonly type: "oa_document";
+  readonly game_id: string;
+  readonly character_id: string;
+  readonly object_id: string | null;
+  readonly mission_id: string | null;
+  readonly text_ref: string;
+  readonly digit_lock: string | null;
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface OaDescriptionEntity extends BaseEntity {
+  readonly type: "oa_description";
+  readonly game_id: string;
+  readonly character_id: string;
+  readonly description_object_id: string;
+  readonly weight: number;
+  readonly event: number;
+  readonly text_ref: string;
+  readonly enable_level_locks: LevelLock[];
+  readonly enable_conditions: ConditionEntry[];
+  readonly disable_level_locks: LevelLock[];
+  readonly disable_conditions: ConditionEntry[];
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface GalleryFolderEntity extends BaseEntity {
+  readonly type: "gallery_folder";
+  readonly game_id: string;
+  readonly name: string;
+  readonly avatar_id: string | null;
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface GalleryItemEntity extends BaseEntity {
+  readonly type: "gallery_item";
+  readonly game_id: string;
+  readonly folder_id: string;
+  readonly location: string;
+  readonly name: string;
+  readonly icon: string;
+  readonly format: number;
+  readonly kind: string;
+  readonly size: [number, number] | null;
+  readonly conditions: ConditionEntry[];
+  readonly obtainable: boolean;
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface StoryNodeEntity extends BaseEntity {
+  readonly type: "story_node";
+  readonly kind: "event" | "branch";
+  readonly game_id: string;
+  readonly names?: LocalizedText;
+  readonly text_ref?: string;
+  readonly class_name?: string;
+  readonly actions?: string[];
+  readonly steps?: string[];
+  readonly topic_ids?: string[];
+  readonly start_topic_id?: string | null;
+  readonly end_topic_id?: string | null;
+  readonly deleted_topic_id?: string | null;
+  readonly trigger_os_id?: string | null;
+  readonly trigger_topic_id?: string | null;
+  readonly trigger_topics?: string[];
+  readonly boss_stages?: StoryBossStageRef[];
+  readonly gallery_ref?: string | null;
+  readonly movie_files?: string[];
+  readonly charts?: string[];
+  readonly level?: number;
+  readonly level_locks?: LevelLock[];
+  readonly next?: string[];
+  readonly node_type?: number;
+  readonly order?: number;
+  readonly position?: number;
+  readonly source_file?: string;
+  readonly state_id?: number;
+  readonly state_value?: string;
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface IllustrationEntity extends BaseEntity {
+  readonly type: "illustration";
+  readonly game_id: string;
+  readonly character_id: string;
+  readonly costume: string;
+  readonly available: boolean;
+  readonly asset_id: string;
+  readonly description: string;
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface BossStageEntity extends BaseEntity {
+  readonly type: "boss_stage";
+  readonly game_id: string;
+  readonly display_name: string;
+  readonly aliases: string[];
+  readonly conditions: ConditionEntry[];
+  readonly folder_id: string;
+  readonly gallery_item_id: string;
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface CapsoShopPackEntity extends BaseEntity {
+  readonly type: "capso_shop_pack";
+  readonly game_id: string;
+  readonly name: string;
+  readonly create_order: number;
+  readonly icon_path: string;
+  readonly default_price_string: string;
+  readonly capso_price: number;
+  readonly available_for_capso: boolean;
+  readonly available_for_iap: boolean;
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface CapsoShopItemEntity extends BaseEntity {
+  readonly type: "capso_shop_item";
+  readonly game_id: string;
+  readonly pack_id: string;
+  readonly item_id: string;
+  readonly item_type: number;
+  readonly kind: string;
+  readonly position: number;
+  readonly song_id?: string;
+  readonly chart_ids?: string[];
+  readonly illustration_id?: string;
+  readonly tap_fx_id?: string;
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface GachaMachineEntity extends BaseEntity {
+  readonly type: "gacha_machine";
+  readonly game_id: string;
+  readonly name: string;
+  readonly create_order: number;
+  readonly icon_path: string;
+  readonly default_price: string;
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface GachaRewardEntity extends BaseEntity {
+  readonly type: "gacha_reward";
+  readonly game_id: string;
+  readonly machine_id: string;
+  readonly reward_type: number;
+  readonly kind: string;
+  readonly weight: number;
+  readonly create_order: number;
+  readonly secret: boolean;
+  readonly reward_locks: {
+    readonly im_topic_id: string;
+    readonly os_file_id: string;
+    readonly story_lock_id: string;
+  };
+  readonly song_id?: string;
+  readonly chart_ids?: string[];
+  readonly illustration_id?: string;
+  readonly tap_fx_id?: string;
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface ShopBundleItem {
+  readonly item_type: string;
+  readonly preorder: boolean;
+  readonly product_id: string;
+  readonly reference_price_iap_id: string;
+  readonly weight: number;
+}
+
+export interface ShopBundleTier {
+  readonly iap_id: string;
+  readonly remain_weight: number;
+}
+
+export interface ShopBundleEntity extends BaseEntity {
+  readonly type: "shop_bundle";
+  readonly game_id: string;
+  readonly milestone_key: string;
+  readonly trigger_free_character_level: number;
+  readonly black_market: boolean;
+  readonly message_ids: Record<string, string>;
+  readonly items: ShopBundleItem[];
+  readonly tiers: ShopBundleTier[];
+  readonly provenance: ProvenanceEntry[];
+}
+
+export interface SubtitleLineEntity extends BaseEntity {
+  readonly type: "subtitle_line";
+  readonly game_id: string;
+  readonly character: string;
+  readonly voice_asset_id: string;
+  readonly text: LocalizedText;
+  readonly provenance: ProvenanceEntry[];
+}
+
 export interface ReadingOrderRow extends BaseEntity {
   readonly type: "reading_order";
   readonly entity_id: string;
@@ -156,6 +384,8 @@ export interface TextBlock {
 export interface TextRecord {
   readonly ref: string;
   readonly lang: Lang;
+  readonly requested_lang?: Lang;
+  readonly fallback?: boolean;
   readonly text: string | null;
   readonly blocks: TextBlock[] | null;
   readonly missing?: boolean;
@@ -164,6 +394,7 @@ export interface TextRecord {
 export interface TextSummary {
   readonly languages: Lang[];
   readonly refs: Record<string, Partial<Record<Lang, string>>>;
+  readonly names: Record<string, Partial<Record<Lang, string>>>;
 }
 
 export interface Database {
@@ -173,6 +404,7 @@ export interface Database {
   readonly timelineOrders: ReadingOrderRow[];
   readonly readingOrderByEntity: Map<string, ReadingOrderRow>;
   readonly textRefs: TextSummary["refs"];
+  readonly textNames: TextSummary["names"];
   readonly characterById: Map<string, CharacterEntity>;
   readonly spoilerById: Map<string, SpoilerAlertEntity>;
   readonly chartsBySong: Map<string, ChartEntity[]>;
@@ -182,4 +414,27 @@ export interface Database {
   readonly unlockSourceIds: Map<string, string[]>;
   /** chart id -> entity ids that list the chart in `charts`/`chart_ids` */
   readonly chartReferrers: Map<string, string[]>;
+}
+
+export interface SearchHit {
+  readonly id: string;
+  readonly ref: string;
+  readonly type: string;
+  readonly title: string;
+  readonly snippet: string;
+  readonly lang: Lang;
+  readonly fallback: boolean;
+}
+
+export interface SearchGroup {
+  readonly type: string;
+  readonly label: string;
+  readonly hits: SearchHit[];
+}
+
+export interface SearchResponse {
+  readonly query: string;
+  readonly lang: Lang;
+  readonly groups: SearchGroup[];
+  readonly total: number;
 }

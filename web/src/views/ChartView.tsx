@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { EntityList } from "../components/EntityLink";
 import { TypeBadge } from "../components/ui";
 import { isSong, recordOf } from "../data/database";
 import {
@@ -6,16 +7,22 @@ import {
   entityHref,
   entityTitle,
   formatFieldValue,
+  outgoingEdges,
   unlockSourceEntities,
 } from "../data/selectors";
-import type { BaseEntity, ChartEntity, Database } from "../types";
+import { useLanguage } from "../data/language";
+import type { BaseEntity, ChartEntity, Database, Lang } from "../types";
 
 function SourceList({
   entities,
   testId,
+  db,
+  lang,
 }: {
   entities: BaseEntity[];
   testId: string;
+  db: Database;
+  lang: Lang;
 }) {
   if (entities.length === 0) {
     return <p className="muted">Nothing recorded.</p>;
@@ -30,7 +37,9 @@ function SourceList({
             data-testid={testId}
             data-source-id={entity.id}
           >
-            <span className="source-title">{entityTitle(entity)}</span>
+            <span className="source-title">
+              {entityTitle(db, entity, lang)}
+            </span>
             <span className="source-meta">
               <TypeBadge type={entity.type} />
               <code>{entity.id}</code>
@@ -44,11 +53,15 @@ function SourceList({
 
 export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
   const navigate = useNavigate();
+  const { lang } = useLanguage();
   const song = db.entityById.get(chart.song_id);
   const songName =
     song && isSong(song) ? song.name || song.game_id : chart.song_id;
   const sources = unlockSourceEntities(db, chart.id);
   const referrers = chartReferrerEntities(db, chart.id);
+  const outgoing = outgoingEdges(db, chart.id)
+    .map((edge) => db.entityById.get(edge.target))
+    .filter((entity): entity is BaseEntity => Boolean(entity));
   const siblings = db.chartsBySong.get(chart.song_id) ?? [];
   const data = recordOf(chart);
   const provenance = Array.isArray(data["provenance"]) ? data["provenance"] : [];
@@ -134,15 +147,39 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
             <p className="hint">
               Derived <code>unlocks_chart</code> edges that point at this chart.
             </p>
-            <SourceList entities={sources} testId="unlock-source" />
+            <SourceList
+              entities={sources}
+              testId="unlock-source"
+              db={db}
+              lang={lang}
+            />
           </section>
 
           <section className="detail-section" data-testid="chart-backlinks">
-            <h2>Backlinks</h2>
+            <h2>Inbound references</h2>
             <p className="hint">
               Entities that list this chart in their own chart references.
             </p>
-            <SourceList entities={referrers} testId="chart-backlink" />
+            <SourceList
+              entities={referrers}
+              testId="chart-backlink"
+              db={db}
+              lang={lang}
+            />
+          </section>
+
+          <section className="detail-section" data-testid="chart-outgoing">
+            <h2>Outgoing edges</h2>
+            <p className="hint">
+              Typed edges from this chart to other entities. Unlock sources above
+              are the inbound <code>unlocks_chart</code> edges.
+            </p>
+            <EntityList
+              db={db}
+              entities={outgoing}
+              lang={lang}
+              empty="No outgoing edges."
+            />
           </section>
 
           <section className="detail-section">

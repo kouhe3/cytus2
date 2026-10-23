@@ -1,5 +1,15 @@
 import { Link, NavLink } from "react-router-dom";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import type { Database } from "../types";
+
+const NAV_ITEMS = [
+  { to: "/timeline", label: "Timeline", testId: "nav-timeline" },
+  { to: "/search", label: "Search", testId: "nav-search" },
+  { to: "/oa", label: "OA", testId: "nav-oa" },
+  { to: "/backup", label: "Backup Database", testId: "nav-backup" },
+  { to: "/story", label: "Story", testId: "nav-story" },
+  { to: "/shop", label: "Shop", testId: "nav-shop" },
+] as const;
 
 export function Sidebar({
   db,
@@ -22,13 +32,17 @@ export function Sidebar({
       </Link>
 
       <nav className="nav" aria-label="Views">
-        <NavLink
-          to="/timeline"
-          className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
-        >
-          <span className="nav-dot" aria-hidden="true" />
-          Timeline
-        </NavLink>
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+            data-testid={item.testId}
+          >
+            <span className="nav-dot" aria-hidden="true" />
+            {item.label}
+          </NavLink>
+        ))}
       </nav>
 
       <button
@@ -40,6 +54,8 @@ export function Sidebar({
         <span>Search entities</span>
         <kbd>Ctrl K</kbd>
       </button>
+
+      <LanguageSwitcher compact />
 
       <dl className="stats">
         <div>
@@ -55,12 +71,16 @@ export function Sidebar({
           <dd>{(counts["os_log"] ?? 0).toLocaleString()}</dd>
         </div>
         <div>
-          <dt>Charts</dt>
-          <dd>{(counts["chart"] ?? 0).toLocaleString()}</dd>
+          <dt>OA documents</dt>
+          <dd>{(counts["oa_document"] ?? 0).toLocaleString()}</dd>
         </div>
         <div>
-          <dt>Songs</dt>
-          <dd>{(counts["song"] ?? 0).toLocaleString()}</dd>
+          <dt>Backup items</dt>
+          <dd>{(counts["gallery_item"] ?? 0).toLocaleString()}</dd>
+        </div>
+        <div>
+          <dt>Charts</dt>
+          <dd>{(counts["chart"] ?? 0).toLocaleString()}</dd>
         </div>
       </dl>
 

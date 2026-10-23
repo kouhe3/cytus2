@@ -6,13 +6,13 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from .entities import build_entities
+from .entities import build_entities, extension_modules
 from .errors import ValidationError
 from .sources import InputSource
 from .validate import SchemaValidator
 from .writers import write_edges, write_jsonl, write_spa, write_sqlite
 
-ENTITY_TYPES = (
+BASE_ENTITY_TYPES = (
     "character",
     "pack",
     "folder",
@@ -33,7 +33,7 @@ def build_database(
 ) -> dict[str, int]:
     source = InputSource(input_dir)
     entities = build_entities(source)
-    for entity_type in ENTITY_TYPES:
+    for entity_type in BASE_ENTITY_TYPES:
         entities.setdefault(entity_type, [])
 
     validate(entities)
@@ -43,9 +43,13 @@ def build_database(
         clean_outputs(out)
     out.mkdir(parents=True, exist_ok=True)
 
-    counts = {name: len(entities[name]) for name in ENTITY_TYPES}
-    for entity_type in ENTITY_TYPES:
-        write_jsonl(out / "db" / f"{entity_type}.jsonl", entities[entity_type])
+    counts = {name: len(records) for name, records in entities.items()}
+    for entity_type, records in entities.items():
+        write_jsonl(out / "db" / f"{entity_type}.jsonl", records)
+    for module in extension_modules():
+        writer = getattr(module, "write_artifacts", None)
+        if writer is not None:
+            writer(out, source, entities)
     write_edges(out / "db" / "edges.jsonl")
     write_sqlite(out / "db.sqlite", entities, counts)
     write_spa(out / "spa" / "data.json", entities)
@@ -55,8 +59,8 @@ def build_database(
 def validate(entities: dict[str, list[dict[str, Any]]]) -> None:
     validator = SchemaValidator()
     errors: list[str] = []
-    for entity_type in ENTITY_TYPES:
-        for record in entities[entity_type]:
+    for entity_type, records in entities.items():
+        for record in records:
             for message in validator.errors(entity_type, record):
                 errors.append(f"{entity_type} {record.get('id', '?')}: {message}")
     if errors:

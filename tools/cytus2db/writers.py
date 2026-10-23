@@ -103,7 +103,8 @@ def write_sqlite(
         path.unlink()
     connection = sqlite3.connect(path)
     try:
-        for entity_type, columns in TABLE_COLUMNS.items():
+        for entity_type in sorted(entities):
+            columns = TABLE_COLUMNS.get(entity_type, ())
             declarations = ["id TEXT PRIMARY KEY"]
             declarations.extend(f"{name} {kind}" for name, kind in columns)
             declarations.append("data TEXT NOT NULL")

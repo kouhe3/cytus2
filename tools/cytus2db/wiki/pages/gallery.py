@@ -49,6 +49,9 @@ def build(db: Database) -> list[PageModel]:
         for record in db.records("boss_stage")
         if record.get("gallery_item_id")
     }
+    song_titles = {
+        one_line(record.get("name")) for record in db.records("song")
+    }
     models: list[PageModel] = []
     for item in sorted(db.records("gallery_item"), key=lambda record: record["id"]):
         fields: list[Field] = []
@@ -93,7 +96,7 @@ def build(db: Database) -> list[PageModel]:
                 Conflict("unknown_item_kind", repr(item.get("kind")))
             )
 
-        content, content_conflicts = _content(item, boss_stages)
+        content, content_conflicts = _content(item, boss_stages, song_titles)
         conflicts.extend(content_conflicts)
         if content:
             fields.append(Field("content", Text.of(content)))
@@ -141,7 +144,9 @@ def _folder_order(item: dict[str, Any]) -> int | None:
 
 
 def _content(
-    item: dict[str, Any], boss_stages: dict[str, dict[str, Any]]
+    item: dict[str, Any],
+    boss_stages: dict[str, dict[str, Any]],
+    song_titles: set[str],
 ) -> tuple[str, list[Conflict]]:
     kind = str(item.get("kind") or "")
     if kind == "image":
@@ -152,9 +157,9 @@ def _content(
     if kind == "boss_stage":
         stage = boss_stages.get(item["id"])
         display = one_line(stage.get("display_name")) if stage else ""
-        if display:
+        if display and display in song_titles:
             return f"游玩[[{display}]]", []
-        return "", [Conflict("missing_boss_song", item["id"])]
+        return "", [Conflict("boss_song_missing", item["id"])]
     if kind == "video":
         return "", [Conflict("video_source_missing", item["id"])]
     return "", []

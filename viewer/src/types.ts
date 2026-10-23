@@ -71,6 +71,8 @@ export interface ImMeta {
   lockLevel?: number;
   /** 模型外的依赖（stage 98）：如 story_cherry02 需要 OS 过场 cpos033 */
   external?: string;
+  /** 结局分支（善终1 / 善终2 / 结局04）—— 同一周目只会走其中一条 */
+  branch?: string;
 }
 
 export interface OsMeta {

@@ -451,3 +451,23 @@ PAFF 分类里的顺序变成 `#1…P0701 → #36 P0801 → … → #146 Q6801`�
 
 这是对「免费主线先玩、付费主线与 DLC 通关后再刷」这条玩家习惯的建模；若某位玩家中途就买了 DLC，
 只需把下限从 `story_ending02` 换成「拥有该 DLC」即可。
+
+### `story_ending03_good_ending2` 的依赖（为什么结局帖现在排在最后）
+
+- `StoryEnding03GoodEnding2._ConditionCheck`（0x21DA2E8）反编译是 `return true` —— 它没有自己的等级/条件检查，
+  完全由剧情链决定位置；
+- 它属于**分支结局**：终战结场 `FinalBossStage` 的 `OnEnd(isSelectedChoice)` 决定去 `eos006`（善终1）
+  还是 `eos007`（善终2），而走哪条支线又由更早的 `IsFirstGamePlayCutsceneHit`（是否回应过 PAFF）决定。
+  所以「善终1」和「善终2」的帖子是**互斥的两套**，同一周目只会看到其中一套；
+- 之前它被排在 `Q2201`（NEKO 66 级，阶段 14）之前，是因为 `story_ending03_main` 在数据里没有等级锁，
+  模型一满足 `story_ending02` 就放行。v8 给终战补了等级前沿代理：
+
+```python
+STORY_LEVEL_REQ = {"story_ending03_main": {"paff001": 89, "neko001": 79, "robo001": 79}}
+```
+
+依据是 `Q6101`（ending04 的帖子）的 LevelLocks：paff 89 / neko 79 / robo 79 / cherry 39 / ivy 79 / vanessa 49 ——
+结局链发生在这道门槛之后。
+
+结果：`Q2201 #270（阶段 14）` → `Q4601 #298 / Q4701 #300（善终1，阶段 15）` → `Q5101 #301（善终2，阶段 15）`；
+列表对结局帖标出 `分支：善终1 / 善终2 / 结局04`，提示它们互斥。

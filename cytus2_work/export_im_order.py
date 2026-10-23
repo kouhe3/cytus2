@@ -48,6 +48,11 @@ STORY_AFTER = {
     "story_ending03_good_ending2": {"story_ending03_main"},
     "story_ending04_main": {"story_ending03_main"},
 }
+# 终战（ending03）的等级前沿：数据里 Q6101（ending04 的帖子）的 LevelLocks 是
+# paff001 89 / neko001 79 / robo001 79 / cherry002 39 / ivy001 79 / vanessa001 49，
+# 说明结局链发生在这些等级之后；ending03 自身没有等级锁，用三主角前沿作代理。
+STORY_LEVEL_REQ = {"story_ending03_main": {"paff001": 89, "neko001": 79, "robo001": 79}}
+
 # 假设玩家「OS 一解锁就去读」：这些剧情由 OS 档案里的过场触发，读到对应 OS 即视为可用
 #   story_cherry02 ← OS cpos033（StoryCherry02._ConditionCheck 0x21D8AC0 查 CUTSCENE_PLAYED_cpos033）
 OS_STORY_NEEDS = {"story_cherry02": "cpos033"}
@@ -193,9 +198,13 @@ def main():
         while changed:
             changed = False
             for sid, needs in STORY_AFTER.items():
-                if sid not in stories_done and needs <= stories_done:
-                    stories_done.add(sid)
-                    changed = True
+                if sid in stories_done or not needs <= stories_done:
+                    continue
+                req = STORY_LEVEL_REQ.get(sid)
+                if req and any(level.get(p, 0) < lv for p, lv in req.items()):
+                    continue
+                stories_done.add(sid)
+                changed = True
         newly = []
         changed = True
         while changed:
@@ -300,6 +309,13 @@ def main():
     for t in idx["im"]:
         t["stage"] = out["order"].get(t["id"]) or (98 if t["id"] in blocked_reason else 99)
         t["readIndex"] = read_index.get(t["id"], 10_000)
+        sl = locks[t["id"]]["StoryLockId"]
+        if sl == "story_ending03_good_ending1":
+            t["branch"] = "善终1"       # 回应过 PAFF 的分支
+        elif sl == "story_ending03_good_ending2":
+            t["branch"] = "善终2"       # 没回应 PAFF 的分支
+        elif sl == "story_ending04_main":
+            t["branch"] = "结局04"
         if t["id"] in blocked_reason:
             t["external"] = blocked_reason[t["id"]]
         t["lane"] = LANE_OF.get(resolve_identity(t["id"]), PLOT_LANE)

@@ -213,10 +213,18 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .row-body { flex: 1; min-width: 0; }
 .row:hover { background: var(--surface-2); }
 .row[aria-selected="true"] { background: var(--surface-3); border-left-color: var(--accent); }
-.row-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.row-title { font-size: 13px; }
-.row-id { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.row-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; min-width: 0; }
+.row-title {
+  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row-id { flex: none; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+/* span 默认是 inline，overflow/text-overflow 不生效，必须 block 才会出现省略号 */
 .row-sub {
+  display: block;
   margin-top: 2px;
   font-size: 12px;
   color: var(--muted);

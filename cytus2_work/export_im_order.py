@@ -108,104 +108,6 @@ def main():
     triggers = derive_triggers()
     exp = {e["song_pack_id"]: e["table"] for e in load("exptable/exp_data")["exp_table_list"]}
 
-    packs = sorted({x["SongPackId"] for e in locks.values() for x in e["LevelLocks"]})
-    level = {p: 0 for p in packs}
-    read, stories_done = set(), set(DONE_BY_DEFAULT)
-    stages = []
-
-    def caps():
-        cap = {p: 10_000 for p in packs}
-        for tid, e in locks.items():
-            for x in e["LevelLocks"]:
-                if not x.get("IsLevelLocked"):
-                    continue
-                others = {y["SongPackId"]: y["Level"] for y in e["LevelLocks"] if y["SongPackId"] != x["SongPackId"]}
-                if all(level[o] >= lv for o, lv in others.items()):
-                    continue
-                cap[x["SongPackId"]] = min(cap[x["SongPackId"]], x["Level"])
-        return cap
-
-    for stage in range(1, 200):
-        before = (dict(level), len(read), len(stories_done))
-        for p, c in caps().items():
-            level[p] = max(level[p], min(c, 99))
-        for sid, (pack, need) in LEVEL_STORY.items():
-            if level.get(pack, 0) >= need:
-                stories_done.add(sid)
-        stories_done |= ALWAYS
-        for sid, entry_id in OS_STORY_NEEDS.items():
-            if sid not in stories_done and os_ready(entry_id):
-                stories_done.add(sid)
-        # 剧情链：前置完成后，后续剧情视为可完成（ending03 的触发是 gallery/OS，不是 iM）
-        changed = True
-        while changed:
-            changed = False
-            for sid, needs in STORY_AFTER.items():
-                if sid not in stories_done and needs <= stories_done:
-                    stories_done.add(sid)
-                    changed = True
-        newly = []
-        changed = True
-        while changed:
-            changed = False
-            for tid, e in locks.items():
-                if tid in read:
-                    continue
-                if e["StoryLockId"] and e["StoryLockId"] not in stories_done:
-                    continue
-                if e["TopicLockId"] and e["TopicLockId"] not in read:
-                    continue
-                if any(level[x["SongPackId"]] < x["Level"] for x in e["LevelLocks"]):
-                    continue
-                read.add(tid)
-                newly.append(tid)
-                if tid in triggers:
-                    stories_done.add(triggers[tid])
-                changed = True
-        if not newly and (dict(level), len(read), len(stories_done)) == before:
-            break
-        cap_now = caps()
-        stages.append({
-            "stage": stage,
-            # 阶段门槛：三主角（PAFF/NEKO/ROBO）在这一段达到的等级，对应游戏里的 LOCK 点
-            "lockLevel": max([level.get(p, 0) for p in ("paff001", "neko001", "robo001")] or [0]),
-            "capped": {p: c for p, c in cap_now.items() if c < 10_000},
-            "levels": {p: level[p] for p in packs if level[p]},
-            "posts": newly,
-            "stories": sorted(stories_done),
-        })
-
-    blocked = [t for t in locks if t not in read]
-    out = {
-        "packs": packs,
-        "stages": stages,
-        "blocked": blocked,
-        "order": {tid: i + 1 for i, s in enumerate(stages) for tid in s["posts"]},
-        "triggers": triggers,
-        "osStories": OS_STORIES,
-        "expTables": {p: len(exp.get(p, [])) for p in packs},
-    }
-    # ---- 同阶段内的交错顺序：触发帖 → 本阶段活跃账号 → 三主角 → 其余主角 → 其他 ----
-    triggers_by_stage = {}
-    for i, st in enumerate(stages):
-        for tid in st["posts"]:
-            if tid in triggers:
-                triggers_by_stage.setdefault(i, []).append(tid)
-
-    # 剧情 → 主要账号（用于把「本阶段剧情所属账号」排前）
-    STORY_ACCOUNT = {
-        "story01_new": "paff", "story03": "paff", "story02": "robo",
-        "story_neko02": "neko", "story05": "robo", "story_ending02": "xenon",
-        "story04": "neko", "story_cherry02": "cherry",
-    }
-    MAIN = ["paff", "neko", "robo"]
-    OTHER_MAIN = ["ivy", "xenon", "conner", "cherry", "joe"]
-
-    def account_of(avatar: str) -> str:
-        return avatar.split("_")[0].lower()
-
-    read_index, seq = {}, 0
-    # 账号线程顺序：三主角在前，其余主角次之，"其他"最后；同一主角的帖子连续，内部按等级需求升序
     # 账号线程 = 角色（不是 avatar 前缀）：免费 → 付费 → 支线 → 剧情
     T0 = {"paff001", "neko001", "robo001"}
     TIER_ORDER = [
@@ -257,6 +159,108 @@ def main():
                 return cand
         return {"paff": "paff001", "neko": "neko001", "robo": "robo001", "cherry": "cherry001"}.get(base.lower(), "")
 
+
+    packs = sorted({x["SongPackId"] for e in locks.values() for x in e["LevelLocks"]})
+    level = {p: 0 for p in packs}
+    read, stories_done = set(), set(DONE_BY_DEFAULT)
+    stages = []
+
+    def caps():
+        cap = {p: 10_000 for p in packs}
+        for tid, e in locks.items():
+            for x in e["LevelLocks"]:
+                if not x.get("IsLevelLocked"):
+                    continue
+                others = {y["SongPackId"]: y["Level"] for y in e["LevelLocks"] if y["SongPackId"] != x["SongPackId"]}
+                if all(level[o] >= lv for o, lv in others.items()):
+                    continue
+                cap[x["SongPackId"]] = min(cap[x["SongPackId"]], x["Level"])
+        return cap
+
+    for stage in range(1, 200):
+        before = (dict(level), len(read), len(stories_done))
+        for p, c in caps().items():
+            level[p] = max(level[p], min(c, 99))
+        for sid, (pack, need) in LEVEL_STORY.items():
+            if level.get(pack, 0) >= need:
+                stories_done.add(sid)
+        stories_done |= ALWAYS
+        for sid, entry_id in OS_STORY_NEEDS.items():
+            if sid not in stories_done and os_ready(entry_id):
+                stories_done.add(sid)
+        # 剧情链：前置完成后，后续剧情视为可完成（ending03 的触发是 gallery/OS，不是 iM）
+        changed = True
+        while changed:
+            changed = False
+            for sid, needs in STORY_AFTER.items():
+                if sid not in stories_done and needs <= stories_done:
+                    stories_done.add(sid)
+                    changed = True
+        newly = []
+        changed = True
+        while changed:
+            changed = False
+            for tid, e in locks.items():
+                if tid in read:
+                    continue
+                if e["StoryLockId"] and e["StoryLockId"] not in stories_done:
+                    continue
+                if e["TopicLockId"] and e["TopicLockId"] not in read:
+                    continue
+                if any(level[x["SongPackId"]] < x["Level"] for x in e["LevelLocks"]):
+                    continue
+                # 支线 / DLC 角色：主线通关（ending02 之后）才开刷，避免支线内容插到主线前面
+                if LANE_OF.get(resolve_identity(tid), PLOT_LANE) >= 200 and "story_ending02" not in stories_done:
+                    continue
+                read.add(tid)
+                newly.append(tid)
+                if tid in triggers:
+                    stories_done.add(triggers[tid])
+                changed = True
+        if not newly and (dict(level), len(read), len(stories_done)) == before:
+            break
+        cap_now = caps()
+        stages.append({
+            "stage": stage,
+            # 阶段门槛：三主角（PAFF/NEKO/ROBO）在这一段达到的等级，对应游戏里的 LOCK 点
+            "lockLevel": max([level.get(p, 0) for p in ("paff001", "neko001", "robo001")] or [0]),
+            "capped": {p: c for p, c in cap_now.items() if c < 10_000},
+            "levels": {p: level[p] for p in packs if level[p]},
+            "posts": newly,
+            "stories": sorted(stories_done),
+        })
+
+    blocked = [t for t in locks if t not in read]
+    out = {
+        "packs": packs,
+        "stages": stages,
+        "blocked": blocked,
+        "order": {tid: i + 1 for i, s in enumerate(stages) for tid in s["posts"]},
+        "triggers": triggers,
+        "osStories": OS_STORIES,
+        "expTables": {p: len(exp.get(p, [])) for p in packs},
+    }
+    # ---- 同阶段内的交错顺序：触发帖 → 本阶段活跃账号 → 三主角 → 其余主角 → 其他 ----
+    triggers_by_stage = {}
+    for i, st in enumerate(stages):
+        for tid in st["posts"]:
+            if tid in triggers:
+                triggers_by_stage.setdefault(i, []).append(tid)
+
+    # 剧情 → 主要账号（用于把「本阶段剧情所属账号」排前）
+    STORY_ACCOUNT = {
+        "story01_new": "paff", "story03": "paff", "story02": "robo",
+        "story_neko02": "neko", "story05": "robo", "story_ending02": "xenon",
+        "story04": "neko", "story_cherry02": "cherry",
+    }
+    MAIN = ["paff", "neko", "robo"]
+    OTHER_MAIN = ["ivy", "xenon", "conner", "cherry", "joe"]
+
+    def account_of(avatar: str) -> str:
+        return avatar.split("_")[0].lower()
+
+    read_index, seq = {}, 0
+    # 账号线程顺序：三主角在前，其余主角次之，"其他"最后；同一主角的帖子连续，内部按等级需求升序
     need = {tid: max([x["Level"] for x in e["LevelLocks"]] or [0]) for tid, e in locks.items()}
     topic_seq = {tid: i for i, tid in enumerate(topics)}   # im_topic_data 的数组顺序
 

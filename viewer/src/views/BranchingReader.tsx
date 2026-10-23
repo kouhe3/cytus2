@@ -1,5 +1,7 @@
 import type { ExtraContent, IndexData, Lang } from "../types";
-import { dispLevel } from "../data";
+import { dispLevel, loadSongs, useAsync } from "../data";
+import { chartsForRef } from "../songs";
+import { SongLinks } from "../components/SongLinks";
 import { Script } from "../components/Script";
 import { Chip, Facts, Skeleton } from "../components/ui";
 import { BranchMap } from "../components/BranchMap";
@@ -21,6 +23,9 @@ export function BranchingReader({
 }) {
   const node = index.branching.find((n) => n.id === nodeId);
   if (!node) return <p className="state">未找到备份数据库节点 {nodeId}。</p>;
+  const songsAsync = useAsync(loadSongs, []);
+  const catalog = songsAsync.state === "ready" ? songsAsync.data : undefined;
+  const songCharts = chartsForRef(catalog, nodeId);
   const content = extra?.backup[nodeId];
   const byId = new Map(index.branching.map((n) => [n.id, n]));
   const incoming = index.branching.filter((n) => n.next.includes(nodeId));
@@ -62,6 +67,14 @@ export function BranchingReader({
           等级解锁 · tairitsu001 →
         </button>
       </div>
+
+      {songCharts.length > 0 ? (
+        <>
+          <h3>本节点解锁的谱面</h3>
+          <p className="lede">节点读完写回分支状态，同时解锁这些难度；点进去看该曲的全部获取方式。</p>
+          <SongLinks charts={songCharts} catalog={catalog} onNavigate={onNavigate} />
+        </>
+      ) : null}
       <div className="chips">
         {node.next.map((id) => (
           <button

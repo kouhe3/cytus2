@@ -1,10 +1,12 @@
 import type { ArchiveFilters } from "../rows";
 import type { IndexData, Lang, OsMeta, OsText } from "../types";
-import { dispLevel, formatDate } from "../data";
+import { dispLevel, formatDate, loadSongs, useAsync } from "../data";
 import { Script } from "../components/Script";
 import { Video } from "../components/Media";
 import { findMovie, useManifest } from "../media";
 import { Chip, Facts, NavChip, Skeleton } from "../components/ui";
+import { chartsForOs } from "../songs";
+import { SongLinks } from "../components/SongLinks";
 
 export function OsReader({
   index,
@@ -27,6 +29,9 @@ export function OsReader({
   const at = siblings.findIndex((e) => e.id === meta.id);
   const prev = at > 0 ? siblings[at - 1] : undefined;
   const next = at >= 0 && at < siblings.length - 1 ? siblings[at + 1] : undefined;
+  const songsAsync = useAsync(loadSongs, []);
+  const catalog = songsAsync.state === "ready" ? songsAsync.data : undefined;
+  const songCharts = chartsForOs(catalog, meta.id);
   const sync = index.sync.filter((s) => s.os.includes(meta.id) && s.im.length > 0);
   const manifest = useManifest();
   const cutscene = meta.cutscene ? findMovie(manifest, meta.cutscene) : undefined;
@@ -92,6 +97,16 @@ export function OsReader({
           </Chip>
         ))}
       </div>
+
+      {songCharts.length > 0 ? (
+        <>
+          <h3>本档案解锁的谱面</h3>
+          <p className="lede">
+            来自档案自身的 <span className="mono">UnlockCharts</span>：读完这封信（并满足等级锁）后这些难度才出现在曲包里。
+          </p>
+          <SongLinks charts={songCharts} catalog={catalog} onNavigate={onNavigate} />
+        </>
+      ) : null}
 
       {loading ? <Skeleton rows={6} /> : text ? <Script blocks={text.blocks} lang={lang} /> : <p className="state">缺少该语言文本。</p>}
 

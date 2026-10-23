@@ -1,5 +1,5 @@
 import type { ExtraContent, IndexData, Lang } from "../types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MEDIA_BASE, findMovie, findVideoWithSong, useManifest } from "../media";
 import type { SongCatalog } from "../types";
 import {
@@ -424,13 +424,31 @@ const DIFF_LABEL = ["简单", "困难", "混沌", "Glitch", "Crash", "Dream", "D
 function SongSection({
   index,
   lang,
+  focus,
   onNavigate,
 }: {
   index: import("../types").IndexData;
   lang: import("../types").Lang;
+  /** 反向引用落点：songId 高亮该曲并展开曲包；packId 展开该曲包 */
+  focus?: string;
   onNavigate: (view: string, id?: string) => void;
 }) {
   const songs = useAsync(loadSongs, []);
+  const loaded: SongCatalog | undefined = songs.state === "ready" ? songs.data : undefined;
+  const focusPack = focus && loaded
+    ? loaded.packs.find((p) => p.id === focus || p.songs.some((s) => s.id === focus))
+    : undefined;
+  // 从别处跳进来：先展开目标曲包，再把目标行滚到视口中间（隐藏的 details 里滚不动）
+  useEffect(() => {
+    if (!focus) return;
+    if (focusPack) {
+      const el = document.querySelector<HTMLDetailsElement>(`details[data-pack="${CSS.escape(focusPack.id)}"]`);
+      if (el) el.open = true;
+    }
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-song="${CSS.escape(focus)}"]`)?.scrollIntoView({ block: "center" });
+    });
+  }, [focus, focusPack?.id]);
   if (songs.state === "loading") return <Skeleton rows={8} />;
   if (songs.state === "error") return <p className="state">歌曲目录加载失败。</p>;
   const catalog: SongCatalog = songs.data;
@@ -468,7 +486,13 @@ function SongSection({
         exp 表长度 99 → 上限 Lv99）。
       </p>
       {catalog.packs.map((pack) => (
-        <details key={pack.id} style={{ marginBottom: 10 }}>
+        <details
+          key={pack.id}
+          data-pack={pack.id}
+          open={pack.id === focusPack?.id || undefined}
+          className={pack.id === focusPack?.id ? "song-pack-focus" : undefined}
+          style={{ marginBottom: 10 }}
+        >
           <summary className="mono">
             {pack.name}（{pack.id}）· {pack.songs.length} 首
             {pack.iap ? ` · 付费 ${pack.price ?? ""}` : " · 免费"}
@@ -477,7 +501,7 @@ function SongSection({
           <table className="grid" style={{ marginTop: 6 }}>
             <tbody>
               {pack.songs.map((song) => (
-                <tr key={song.id}>
+                <tr key={song.id} data-song={song.id} className={song.id === focus ? "song-hit" : undefined}>
                   <td style={{ width: 240 }}>
                     <b>{song.name}</b>
                     <div className="mono" style={{ color: "var(--muted)" }}>
@@ -539,7 +563,7 @@ function SongSection({
                           ) : oaHit ? (
                             <>
                               OA 分析记录{" "}
-                              <button type="button" className="chip chip-btn" onClick={() => onNavigate("oa", oaHit.character)}>
+                              <button type="button" className="chip chip-btn" onClick={() => onNavigate("oa", `${oaHit.character}|${oaHit.ref}`)}>
                                 {oaHit.names?.[lang] || oaHit.names?.["zh-Hans"] || oaHit.ref}
                               </button>
                               {oaHit.locks.length ? (
@@ -621,7 +645,7 @@ function SongSection({
           <table className="grid" style={{ marginTop: 6 }}>
             <tbody>
               {pack.songs.map((song) => (
-                <tr key={song.id}>
+                <tr key={song.id} data-song={song.id} className={song.id === focus ? "song-hit" : undefined}>
                   <td style={{ width: 240 }}>
                     <b>{song.name}</b>
                     <div className="mono" style={{ color: "var(--muted)" }}>
@@ -764,7 +788,7 @@ export function ExtrasReader({
     return <DialogueSection lang={lang} onNavigate={onNavigate} />;
   }
   if (section === "songs") {
-    return <SongSection index={index} lang={lang} onNavigate={onNavigate} />;
+    return <SongSection index={index} lang={lang} focus={focus} onNavigate={onNavigate} />;
   }
   if (section === "cutscenes") {
     // key=命中词组：从搜索结果跳到别的字幕组时强制重建，避免沿用旧的搜索词

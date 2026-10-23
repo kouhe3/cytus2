@@ -25,6 +25,14 @@ export function PackReader({
           等级解锁
         </button>{" "}
         <Chip>同步点 {pack.syncCount}</Chip>
+        <button
+          type="button"
+          className="chip chip-btn"
+          onClick={() => onNavigate("extras", `songs|${pack.id}`)}
+          title="该曲包全部歌曲的难度与获取方式"
+        >
+          歌曲与获取方式 →
+        </button>
         {index.oa.some((c) => c.character === pack.id) ? (
           <button
             type="button"

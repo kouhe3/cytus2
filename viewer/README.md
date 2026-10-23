@@ -709,6 +709,29 @@ VanessaAudio / NoExitAudio / OutroAudio），行数与内容都吻合：
 实测统计（1402 个谱面）：iM 帖 145、**OS 档案 555**、通关剧情 8、默认解锁 472、CAPSO 商店 67、
 CAPSO! 抽奖 103、付费包购买 25、OA 分析记录 68（补上了 Who Am I? 的 Glitch）、无本地记录 3（1 首：vanessa001_023 Cocytus，`HideWhenLocked: true`）。
 
+### 双向引用
+
+「歌曲与获取方式」与各类来源互相跳转，两边都由同一份 `songs.json` 索引，不会出现单向死链
+（`viewer/src/songs.ts` 提供 `chartsForRef` / `chartsForOs` / `chartsForStory` / `chartsForOaObject` / `chartsForOaCharacter`，
+`SongLinks` 负责渲染）：
+
+| 起点 | 终点 | 路由 |
+|:--|:--|:--|
+| 曲目 · iM 帖 | 帖子详情 | `#/im/<帖>` |
+| 曲目 · 分支节点 | 分支节点详情 | `#/branching/<节点>` |
+| 曲目 · OS 档案 | 档案详情 | `#/timeline/<档案>` |
+| 曲目 · OA 分析记录 | 角色页，且停在对应物件页签 | `#/oa/<角色>\|<物件>` |
+| 曲目 · 通关剧情 | 剧情事件详情 | `#/gates/<剧情>` |
+| iM 帖 → 曲目 | 曲包自动展开 + 该行高亮 | `#/extras/songs\|<songId>` |
+| OS 档案 → 曲目 | 同上（档案自身的 `UnlockCharts`） | `#/extras/songs\|<songId>` |
+| OA 物件 → 曲目 | 同上（物件的 `Rewards`，角色页另有全角色汇总） | `#/extras/songs\|<songId>` |
+| 剧情事件 → 曲目 | 同上（`storychartunlock`） | `#/extras/songs\|<songId>` |
+| 分支节点 → 曲目 | 同上（`UnlockedCharts`） | `#/extras/songs\|<songId>` |
+| 曲包（等级解锁）→ 曲目 | 展开该曲包 | `#/extras/songs\|<packId>` |
+
+落点用 `data-pack` / `data-song` 定位：先展开 `<details>` 再把目标行滚到视口中间并加 `song-hit` 背景，
+所以隐式打开的曲包也能直接定位（深链冷启动同样有效）。
+
 本地数据完全没有触发点、但游戏里确实能解锁的谱面，写进 **`cytus2_work/song_notes.json`**（入仓库的
 手工资料，不是派生数据），导出时并入 `songs.json.notes`，页面标「外部资料」。现有条目（均由代码验证）：
 

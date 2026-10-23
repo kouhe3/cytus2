@@ -1,7 +1,9 @@
 import type { IndexData, Lang } from "../types";
 import { Chip } from "../components/ui";
 import { findMovie, useManifest } from "../media";
-import { sourceOf } from "../data";
+import { loadSongs, sourceOf, useAsync } from "../data";
+import { chartsForStory } from "../songs";
+import { SongLinks } from "../components/SongLinks";
 import { Video } from "../components/Media";
 
 /** 剧情事件详情：字段来自 dump.cs 的 Story 类 + 其 Action 类常量 */
@@ -20,6 +22,9 @@ export function GateReader({
   const event = index.storyEvents?.find((e) => e.id === gateId);
   if (!gate && !event) return <p className="state">未找到剧情事件 {gateId}。</p>;
 
+  const songsAsync = useAsync(loadSongs, []);
+  const catalog = songsAsync.state === "ready" ? songsAsync.data : undefined;
+  const songCharts = chartsForStory(catalog, gateId);
   const byId = new Map(index.im.map((t) => [t.id, t]));
   const isEnding = gateId.startsWith("story_ending");
   const manifest = useManifest();
@@ -122,6 +127,17 @@ export function GateReader({
       ) : null}
 
       {clip ? <Video entry={clip} id={movie!.replace(/\.mp4$/, "")} lang={lang} /> : null}
+
+      {songCharts.length > 0 ? (
+        <>
+          <h3>通关本剧情解锁的谱面</h3>
+          <p className="lede">
+            来自 <span className="mono">storychartunlock.ab</span>（数据里只有{" "}
+            <span className="mono">story_ending04_main</span> 一段用到）：完成这段剧情后这些难度直接写入存档。
+          </p>
+          <SongLinks charts={songCharts} catalog={catalog} onNavigate={onNavigate} />
+        </>
+      ) : null}
 
       {event?.steps?.length ? (
         <>

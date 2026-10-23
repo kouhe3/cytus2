@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ExtraContent, IndexData, OaItem } from "../types";
-import { characterName, loadSceneStages, tierLabel, useAsync } from "../data";
+import { characterName, loadSceneStages, loadSongs, tierLabel, useAsync } from "../data";
+import { chartsForOaCharacter, chartsForOaObject } from "../songs";
+import { SongLinks } from "../components/SongLinks";
 import { Script } from "../components/Script";
 import { Video } from "../components/Media";
 import { MEDIA_BASE, useManifest } from "../media";
@@ -66,7 +68,7 @@ function Document({ id, item, lang }: { id: string; item: OaItem; lang?: string 
 export function OaReader({
   index,
   lang,
-  character,
+  character: characterProp,
   extra,
   loading,
   onNavigate,
@@ -78,7 +80,12 @@ export function OaReader({
   loading: boolean;
   onNavigate: (view: string, id?: string) => void;
 }) {
+  // 反向引用形如 `paff001|paff001_obj001`：前半是角色，后半要停在哪个物件页签
+  const [character, focusObject = ""] = characterProp.split("|");
   const chars = index.oa.find((c) => c.character === character);
+  const songsAsync = useAsync(loadSongs, []);
+  const catalog = songsAsync.state === "ready" ? songsAsync.data : undefined;
+  const charCharts = chartsForOaCharacter(catalog, character);
   const manifest = useManifest();
   const sceneClips = Object.entries(manifest?.videos ?? {})
     .filter(([k]) => k.endsWith("_oa_system"))
@@ -89,9 +96,10 @@ export function OaReader({
   /** 二级页签：描述里选点位，物件里选文件；空串 = 全部 */
   const [sub, setSub] = useState("");
   useEffect(() => {
-    setTab(DESCRIPTIONS_TAB);
+    setTab(focusObject && chars?.objects.includes(focusObject) ? focusObject : DESCRIPTIONS_TAB);
     setSub("");
-  }, [character]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [characterProp]);
   if (!chars) return <p className="state">未找到 OA 角色 {character}。</p>;
   const item = (id: string) => extra?.oa[id];
 
@@ -207,6 +215,17 @@ export function OaReader({
         角色 <span className="mono">{character}</span> · 探索式档案：物件 → 文件，另有场景热点「描述」。联动章节用它替代
         OS 档案层。
       </p>
+      {charCharts.length > 0 ? (
+        <>
+          <h3>分析记录奖励的谱面</h3>
+          <p className="lede">
+            完成物件上的全部任务（<span className="mono">oa_system_data</span> 的 <span className="mono">Rewards</span>）后直接发放；
+            点谱面看该曲全部难度与前置，切到对应物件页签能看到是哪一个物件给的。
+          </p>
+          <SongLinks charts={charCharts} catalog={catalog} onNavigate={onNavigate} />
+        </>
+      ) : null}
+
       {loading ? <Skeleton rows={8} /> : null}
 
       <div className="lang" role="group" aria-label="OA 子分类">
@@ -311,6 +330,15 @@ export function OaReader({
                 {o?.name || activeObject} <span className="mono">{activeObject}</span>
               </h3>
               {o?.details ? <p className="nar">{o.details}</p> : null}
+              {(() => {
+                const charts = activeObject ? chartsForOaObject(catalog, activeObject) : [];
+                return charts.length ? (
+                  <>
+                    <p className="lede">本物件的分析奖励：</p>
+                    <SongLinks charts={charts} catalog={catalog} onNavigate={onNavigate} />
+                  </>
+                ) : null;
+              })()}
               <div className="oa-art">
                 {(() => {
                   const idx = activeObject.split("obj")[1] ?? "";

@@ -1,5 +1,7 @@
 import type { ImMeta, ImText, IndexData, Lang, ReplyNode } from "../types";
-import { dispLevel } from "../data";
+import { dispLevel, loadSongs, useAsync } from "../data";
+import { chartsForRef, type ChartRef } from "../songs";
+import { SongLinks } from "../components/SongLinks";
 import { Chip, Facts, NavChip, Skeleton } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { InlineImage } from "../components/Media";
@@ -26,31 +28,6 @@ function Replies({ nodes, onNavigate }: { nodes: ReplyNode[]; onNavigate: (view:
   );
 }
 
-/** 同一帖解锁的歌可能有多档难度：按 SongId 聚合成一行 */
-// Difficulties 枚举（dump.cs）：0 Easy / 1 Hard / 2 Chaos / 3 Glitch / 4 Crash / 5 Dream / 6 Drop
-const DIFFICULTY_LABEL: Record<number, string> = {
-  0: "简单",
-  1: "困难",
-  2: "混沌",
-  3: "Glitch",
-  4: "Crash",
-  5: "Dream",
-  6: "Drop",
-};
-
-function groupCharts(charts: { SongId?: string; Difficulty?: number }[]) {
-  const bySong = new Map<string, number[]>();
-  for (const c of charts) {
-    const id = c.SongId ?? "chart";
-    if (!bySong.has(id)) bySong.set(id, []);
-    bySong.get(id)!.push(c.Difficulty ?? -1);
-  }
-  return [...bySong.entries()].map(([song, diffs]) => ({
-    song,
-    diffs: [...new Set(diffs)].sort((a, b) => a - b),
-  }));
-}
-
 export function ImReader({
   index,
   lang,
@@ -66,11 +43,21 @@ export function ImReader({
   loading: boolean;
   onNavigate: (view: string, id?: string) => void;
 }) {
+  const songsAsync = useAsync(loadSongs, []);
+  const catalog = songsAsync.state === "ready" ? songsAsync.data : undefined;
   const sync = index.sync.filter((s) => s.im.includes(meta.id) && s.os.length > 0);
   const gate = index.gates.find((g) => g.id === meta.gate);
   const prev = index.im[meta.order - 2];
   const next = index.im[meta.order];
   const manifest = useManifest();
+  // 优先用歌曲目录里的 UnlockCharts（带曲名），目录还没到就退回 iM 元数据里的谱面 id
+  const catalogCharts = chartsForRef(catalog, meta.id);
+  const songCharts: ChartRef[] =
+    catalogCharts.length > 0
+      ? catalogCharts
+      : meta.charts
+          .map((c) => ({ song: c.SongId ?? "", d: c.Difficulty ?? -1 }))
+          .filter((c) => c.song);
   const attachments = meta.attachments
     .map((id) => ({ id, entry: findImage(manifest, id, "im") }))
     .filter((a) => a.entry !== undefined);
@@ -127,12 +114,17 @@ export function ImReader({
         {meta.attachments.map((a) => (
           <Chip key={a}>附件 {a}</Chip>
         ))}
-        {groupCharts(meta.charts).map(({ song, diffs }) => (
-          <Chip key={song}>
-            {song} · {diffs.map((d) => DIFFICULTY_LABEL[d] ?? `难度 ${d}`).join(" / ")}
-          </Chip>
-        ))}
       </div>
+
+      {songCharts.length > 0 ? (
+        <>
+          <h3>本贴解锁的谱面</h3>
+          <p className="lede">
+            点谱面跳到「歌曲与获取方式」，那里能看到这首曲子的全部难度、等级与前置；从曲目再点回来就是本帖。
+          </p>
+          <SongLinks charts={songCharts} catalog={catalog} onNavigate={onNavigate} />
+        </>
+      ) : null}
 
       {loading ? (
         <Skeleton rows={5} />

@@ -178,6 +178,18 @@ export function formatClock(seconds: number): string {
   return `${m}:${rest.toFixed(1).padStart(4, "0")}`;
 }
 
+/** 触发 id 的归属：iM 帖 / OS 档案 / gallery 条目（游戏的 TRIGGER_TOPIC_ID 有时指向 OS 文件，如 hos027） */
+export function sourceOf(
+  index: { im?: { id: string }[]; os?: { id: string }[]; gallery?: { items: { location: string }[] } },
+  id: string,
+): "im" | "os" | "gallery" | "" {
+  if (!id) return "";
+  if (index.im?.some((t) => t.id === id)) return "im";
+  if (index.os?.some((e) => e.id === id)) return "os";
+  if (index.gallery?.items.some((g) => g.location === id)) return "gallery";
+  return "";
+}
+
 /** 角色分级标签（免费 / 付费 / 支线 / 剧情） */
 export function tierLabel(index: { characterTiers?: Record<string, string> }, id: string): string {
   const tier = index.characterTiers?.[id];

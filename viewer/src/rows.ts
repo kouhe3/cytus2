@@ -1,5 +1,5 @@
-import type { IndexData, Lang } from "./types";
-import { characterName, formatDate, tierLabel } from "./data";
+import type { IndexData, Lang, StoryEvent } from "./types";
+import { characterName, formatDate, sourceOf, tierLabel } from "./data";
 
 export interface Row {
   key: string;
@@ -270,7 +270,7 @@ export function rowsFor(
     case "gates": {
       // 全部剧情事件（dump.cs 的 Story 类），并附上「锁定多少 iM 帖」这个剧情闸信息
       const gated = new Map(index.gates.map((g) => [g.id, g.topics]));
-      const events = index.storyEvents ?? index.gates.map((g) => ({ id: g.id, cls: "" }));
+      const events: StoryEvent[] = index.storyEvents ?? index.gates.map((g) => ({ id: g.id, cls: "" }));
       const category = (id: string) =>
         id.startsWith("story_ending")
           ? "结局"
@@ -281,9 +281,11 @@ export function rowsFor(
               : "角色线";
       return events.map((e) => {
         const topics = gated.get(e.id) ?? [];
+        const topicId = e.trigger_topic_id ?? "";
+        const topicSrc = topicId ? sourceOf(index, topicId) : "";
         const bits = [
-          "trigger_topic_id" in e && e.trigger_topic_id ? `帖 ${e.trigger_topic_id}` : "",
-          "trigger_os_id" in e && e.trigger_os_id ? `OS ${e.trigger_os_id}` : "",
+          topicId ? `${topicSrc === "os" ? "OS" : "帖"} ${topicId}` : "",
+          e.trigger_os_id ? `曲包 ${e.trigger_os_id}` : "",
           "boss_stage_id" in e && e.boss_stage_id ? `BOSS ${e.boss_stage_id}` : "",
           topics.length ? `锁 ${topics.length} 帖` : "",
         ].filter(Boolean);
@@ -293,7 +295,7 @@ export function rowsFor(
           id: e.id,
           title: e.id,
           sub: bits.join(" · ") || "—",
-          badge: "cls" in e ? e.cls : undefined,
+          badge: e.cls || undefined,
           group: category(e.id),
         };
       });

@@ -1,6 +1,7 @@
 import type { IndexData, Lang } from "../types";
 import { Chip } from "../components/ui";
 import { findMovie, useManifest } from "../media";
+import { sourceOf } from "../data";
 import { Video } from "../components/Media";
 
 /** 剧情事件详情：字段来自 dump.cs 的 Story 类 + 其 Action 类常量 */
@@ -25,12 +26,17 @@ export function GateReader({
   const movie = event?.movie_file ?? event?.cutscene_movie_file;
   const clip = movie ? findMovie(manifest, movie.replace(/\.mp4$/, "")) : undefined;
 
+  // TRIGGER_TOPIC_ID 有时指向 OS 档案（如 hos027），按真实归属判断标签
+  const topicId = event?.trigger_topic_id ?? event?.start_topic_id ?? "";
+  const topicSrc = topicId ? sourceOf(index, topicId) : "";
+  const topicLabel = topicSrc === "os" ? "触发 OS 档案" : topicSrc === "gallery" ? "触发 gallery" : "触发 iM 帖";
+
   const rows: [string, string][] = event
     ? ([
         ["类名", event.cls],
         ["Action 类", (event.actions ?? []).join("、") || "—"],
-        ["触发 iM 帖", event.trigger_topic_id ?? event.start_topic_id ?? "—"],
-        ["触发 OS", event.trigger_os_id ?? "—"],
+        [topicLabel, topicId || "—"],
+        ["角色曲包", event.trigger_os_id ?? "—"],
         ["触发 gallery", event.trigger_gallery_file_location ?? "—"],
         ["BOSS 关卡", event.boss_stage_id ?? "—"],
         ["影片", movie ?? "—"],

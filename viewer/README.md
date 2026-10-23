@@ -536,3 +536,20 @@ iM 列表用 `row.group` 输出 `阶段 N（≤LvX）` 作为分组标题（`Lis
 - 折叠状态保存在组件状态里（`Set<group>`），切换视图仍保留；
 - 折叠只影响列表渲染，不影响搜索与行内跳转；
 - 分组标题样式统一为 `.group-title--btn`（caret 旋转 + 计数右对齐）。
+
+### 触发源要按真实归属标注
+
+游戏的 `TRIGGER_TOPIC_ID` 命名并不严格：`StoryHans01Action` 里是 `TRIGGER_TOPIC_ID = "hos027"`，
+但 `hos027` 其实是 **OS 档案**（hans001 的第 27 个档案），不是 iM 帖。`StoryVanessa02Action` 的 `vos054`、`vos061` 同理。
+
+所以页面在展示前会用 `sourceOf()` 判定 id 属于 iM 帖 / OS 档案 / gallery 条目，再决定标签：
+
+| 字段 | 标签 |
+|:--|:--|
+| `TRIGGER_TOPIC_ID` 命中 `index.os` | 触发 OS 档案 |
+| 命中 `index.im` | 触发 iM 帖 |
+| `TRIGGER_OS_ID` | 角色曲包（`hans001`、`vanessa001` 这类曲包 id，不是文件名） |
+| `TRIGGER_GALLERY_FILE_LOCATION` | 触发 gallery（`ending03` 等） |
+
+例：`story_hans01` 现在显示 `触发 OS 档案 hos027` / `角色曲包 hans001` / `BOSS hos027_bossstage`，
+列表行是 `OS hos027 · 曲包 hans001 · BOSS hos027_bossstage`。

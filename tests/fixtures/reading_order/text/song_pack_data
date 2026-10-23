@@ -1,0 +1,157 @@
+{
+  "offline_song_pack_list": [
+    {
+      "song_pack_id": "alpha001",
+      "song_pack_name": "Alpha",
+      "theme_color": "#112233",
+      "is_iap_pack": false,
+      "hasIM": true,
+      "price": "",
+      "Category": "Main",
+      "Descriptions": {"en": "Alpha pack"},
+      "song_info_list": [
+        {
+          "song_id": "alpha001_000",
+          "song_name": "First",
+          "artist": "Artist A",
+          "charts": {
+            "Easy": {"Level": "1", "MusicID": "", "NeedUnlock": false},
+            "Hard": {"Level": "5", "MusicID": "", "NeedUnlock": false},
+            "Chaos": {"Level": "9", "MusicID": "", "NeedUnlock": true},
+            "Glitch": {"Level": "10", "MusicID": "", "NeedUnlock": true}
+          },
+          "is_hidden": false,
+          "IsDownloadOnly": false,
+          "Category": "",
+          "HideWhenLocked": false,
+          "AlternativeSearchTerms": []
+        },
+        {
+          "song_id": "alpha001_001",
+          "song_name": "Second",
+          "artist": "Artist A",
+          "charts": {
+            "Easy": {"Level": "2", "MusicID": "", "NeedUnlock": false},
+            "Hard": {"Level": "6", "MusicID": "", "NeedUnlock": true},
+            "Chaos": {"Level": "11", "MusicID": "", "NeedUnlock": true},
+            "Crash": {"Level": "12", "MusicID": "", "NeedUnlock": true}
+          },
+          "is_hidden": false,
+          "IsDownloadOnly": false,
+          "Category": "",
+          "HideWhenLocked": false,
+          "AlternativeSearchTerms": []
+        }
+      ]
+    },
+    {
+      "song_pack_id": "beta001",
+      "song_pack_name": "Beta",
+      "theme_color": "#445566",
+      "is_iap_pack": true,
+      "hasIM": true,
+      "price": "USD 1.99",
+      "Category": "Main",
+      "Descriptions": {"en": "Beta pack"},
+      "song_info_list": [
+        {
+          "song_id": "beta001_000",
+          "song_name": "Third",
+          "artist": "Artist B",
+          "charts": {
+            "Easy": {"Level": "3", "MusicID": "", "NeedUnlock": false}
+          },
+          "is_hidden": false,
+          "IsDownloadOnly": false,
+          "Category": "",
+          "HideWhenLocked": false,
+          "AlternativeSearchTerms": []
+        }
+      ]
+    },
+    {
+      "song_pack_id": "side001",
+      "song_pack_name": "Side",
+      "theme_color": "#778899",
+      "is_iap_pack": true,
+      "hasIM": true,
+      "price": "USD 9.99",
+      "Category": "Extra",
+      "Descriptions": {"en": "Side pack"},
+      "song_info_list": [
+        {
+          "song_id": "side001_000",
+          "song_name": "Side Song",
+          "artist": "Artist C",
+          "charts": {
+            "Easy": {"Level": "2", "MusicID": "", "NeedUnlock": false}
+          },
+          "is_hidden": false,
+          "IsDownloadOnly": false,
+          "Category": "",
+          "HideWhenLocked": false,
+          "AlternativeSearchTerms": []
+        }
+      ]
+    },
+    {
+      "song_pack_id": "ivy001",
+      "song_pack_name": "Ivy",
+      "theme_color": "#aa3355",
+      "is_iap_pack": false,
+      "hasIM": true,
+      "price": "",
+      "Category": "Main",
+      "Descriptions": {"en": "Ivy pack"},
+      "song_info_list": [
+        {
+          "song_id": "ivy001_000",
+          "song_name": "Ivy Song",
+          "artist": "Artist D",
+          "charts": {
+            "Easy": {"Level": "2", "MusicID": "", "NeedUnlock": false}
+          },
+          "is_hidden": false,
+          "IsDownloadOnly": false,
+          "Category": "",
+          "HideWhenLocked": false,
+          "AlternativeSearchTerms": []
+        }
+      ]
+    },
+    {
+      "song_pack_id": "paff001",
+      "song_pack_name": "PAFF",
+      "theme_color": "#111111",
+      "is_iap_pack": false,
+      "hasIM": false,
+      "price": "",
+      "Category": "Main",
+      "Descriptions": {},
+      "song_info_list": []
+    },
+    {
+      "song_pack_id": "neko001",
+      "song_pack_name": "NEKO",
+      "theme_color": "#222222",
+      "is_iap_pack": false,
+      "hasIM": false,
+      "price": "",
+      "Category": "Main",
+      "Descriptions": {},
+      "song_info_list": []
+    },
+    {
+      "song_pack_id": "robo001",
+      "song_pack_name": "ROBO_Head",
+      "theme_color": "#333333",
+      "is_iap_pack": false,
+      "hasIM": false,
+      "price": "",
+      "Category": "Main",
+      "Descriptions": {},
+      "song_info_list": []
+    }
+  ],
+  "other_song_info_list": []
+}

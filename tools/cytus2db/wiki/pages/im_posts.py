@@ -384,7 +384,7 @@ def _one_line(value: Any) -> str:
 
 def _rich_text(raw: str) -> str:
     """Translate the game's rich text to the wikitext the site already uses."""
-    text = raw.strip()
+    text = raw.replace("\r\n", "\n").replace("\r", "\n").strip()
 
     def hyperlink(match: re.Match[str]) -> str:
         try:

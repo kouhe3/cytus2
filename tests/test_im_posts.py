@@ -271,3 +271,5 @@ def test_rich_text_maps_game_markup_to_wikitext(
         == "[https://example.com 官网]"
     )
     assert im_posts._rich_text("<color=red>红</color><Size=20>大</Size>") == "红大"
+    # Carriage returns appear in a few post files; markers must still match.
+    assert im_posts._rich_text(">>\r\nquoted\r\n<<\r\nhere") == "{{引用段落|quoted}}<br>here"

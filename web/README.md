@@ -17,6 +17,11 @@ missing it first runs `python -m cytus2db build --out build/` from the repositor
 root; that step needs the Python input tree (`CYTUS2_WORK`) and UnityPy. The Vite
 plugin then serves the projection and text store under `/db/*`.
 
+Prefer building first with
+`uv run python -m cytus2db build --out build/ --input cytus2_work` from the
+repository root when the default `python` does not have UnityPy;
+`CYTUS2_BUILD_DIR` points the dev server at an existing build directory.
+
 ## Routes
 
 | Route | Content |
@@ -74,4 +79,9 @@ Screenshots land in `web/.shots/` (git-ignored).
 The SPA is the only reader of the canonical projection: the shell, the
 `/timeline` home, OA, Backup Database, story nodes, CAPSO/gacha/bundles,
 chart/entity details, full-text search and the five-language switch all read
-the same `build/spa/data.json` + text stores. The old `viewer/` stays frozen.
+the same `build/spa/data.json` + text stores.
+
+`web/` is self-contained: it imports nothing from `viewer/` and reads only
+`build/` artifacts. The old `viewer/` is frozen — it is not part of the build,
+and its `viewer/public/data/` exports are neither produced by the canonical
+pipeline nor consumed here.

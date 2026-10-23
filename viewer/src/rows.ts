@@ -155,6 +155,7 @@ export function rowsFor(
   lang: Lang,
   filters: ArchiveFilters = EMPTY_FILTERS,
   mode: TimelineMode = "chapter",
+  imFilter: string = "",
 ): Row[] {
   switch (view) {
     case "timeline": {
@@ -239,9 +240,19 @@ export function rowsFor(
         sub: `iM ${p.imCount} · OS ${p.osCount} · 同步 ${p.syncCount}`,
         badge: p.id,
       }));
-    case "im":
+    case "im": {
+      // 账户过滤器：filter item 的 avatar id 作为 key；"other" 表示不属于任何主角账号
+      const flt = index.imFilters;
+      const covered = new Set((flt?.items ?? []).flatMap((it) => it.avatars));
+      const match = (avatar: string) => {
+        if (!imFilter) return true;
+        if (imFilter === "other") return !covered.has(avatar);
+        const item = flt?.items.find((it) => it.avatar === imFilter);
+        return item ? item.avatars.includes(avatar) : true;
+      };
       // 按阅读阶段排序（阶段由脚本推导：角色等级硬上限 + 剧情触发 + 帖子依赖）
       return [...index.im]
+        .filter((t) => match(t.avatar))
         .sort((a, b) => (a.stage ?? 99) - (b.stage ?? 99))
         .map((t) => ({
           key: t.id,
@@ -252,6 +263,7 @@ export function rowsFor(
           badge: t.id,
           avatar: t.avatar,
         }));
+    }
     case "gates":
       return index.gates.map((g) => ({
         key: g.id,

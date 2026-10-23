@@ -41,6 +41,8 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ArchiveFilters>(EMPTY_FILTERS);
   const [timelineMode, setTimelineMode] = useState<TimelineMode>("chapter");
+  /** iM 账户过滤：空 = 全部，item.avatar = 某账户，other = 其他 */
+  const [imFilter, setImFilter] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const readerRef = useRef<HTMLDivElement>(null);
   const q = query.trim();
@@ -106,8 +108,15 @@ export default function App() {
   const rows = useMemo<Row[]>(() => {
     if (!index) return [];
     if (q.length >= 2) return searchRows(index, lang, im ?? null, os ?? null, extra ?? null, q);
-    return rowsFor(index, view, lang, view === "timeline" ? activeFilters : filters, timelineMode);
-  }, [index, view, lang, q, im, os, extra, filters, activeFilters, timelineMode]);
+    return rowsFor(
+      index,
+      view,
+      lang,
+      view === "timeline" ? activeFilters : filters,
+      timelineMode,
+      view === "im" ? imFilter : "",
+    );
+  }, [index, view, lang, q, im, os, extra, filters, activeFilters, timelineMode, imFilter]);
 
   const viewMeta = VIEWS.find((v) => v.id === view);
 
@@ -156,6 +165,7 @@ export default function App() {
         lang={lang}
         onView={(v) => {
           setQuery("");
+          setImFilter("");
           navigate(v);
         }}
         onLang={setLang}
@@ -171,6 +181,32 @@ export default function App() {
                 ? `${rows.length} 章`
                 : `${rows.length} 条`}
           </span>
+          {view === "im" && index?.imFilters ? (
+            <div className="lang" role="group" aria-label="iM 账户过滤">
+              <button type="button" aria-pressed={imFilter === ""} onClick={() => setImFilter("")}>
+                全部
+              </button>
+              {(index.imFilters.items ?? []).map((it) => (
+                <button
+                  key={it.avatar}
+                  type="button"
+                  aria-pressed={imFilter === it.avatar}
+                  onClick={() => setImFilter(imFilter === it.avatar ? "" : it.avatar)}
+                  title={it.avatars.join(" / ")}
+                >
+                  {it.name}
+                </button>
+              ))}
+              <button
+                type="button"
+                aria-pressed={imFilter === "other"}
+                onClick={() => setImFilter(imFilter === "other" ? "" : "other")}
+                title="不属于上述账号的帖子（粉丝 / 官方 / 杂项）"
+              >
+                其他
+              </button>
+            </div>
+          ) : null}
           {view === "timeline" ? (
             <>
               <div className="lang" role="group" aria-label="时间线视图">

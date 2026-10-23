@@ -271,3 +271,22 @@ OA「场景」页签在每段视频上方标出「初始（默认场景）/ 变�
 `im_topic_data.UnlockCharts` 是「同一首歌 × 难度」的列表，同一首常有 2–3 档；页面按 `SongId` 聚合成一个 chip：
 `paff001_004 · 简单 / 困难`。难度枚举取自 `dump.cs` 的 `Difficulties`：
 0 Easy / 1 Hard / 2 Chaos / 3 Glitch / 4 Crash / 5 Dream / 6 Drop。
+
+### iM 账户过滤器
+
+数据来自 `imdata/im_filter_data`，和游戏里一致：一个过滤器图标可以覆盖**多个账号**，其余归「其他」。
+
+| 过滤器 | 覆盖的 avatar | 帖子数 |
+|:--|:--|--:|
+| PAFF | `paff_01` + `paff_02` | 29 |
+| NEKO#ΦωΦ | `neko_01` | 34 |
+| ROBO_Head | `robo_01` | 44 |
+| Xenon | `xenon_01` | 19 |
+| ConneR | `conner_01` | 24 |
+| Cherry | `cherry_01` + `cherry_02` | 9 |
+| JOE | `joe_01` + `joe_02`（图标 `joe_03`） | 12 |
+| 其他 | 不在以上任一组（`default_*` / `team_*` / `misc_*` / 粉丝） | 152 |
+
+`index.json` 里导出为 `imFilters: { items: [{avatar, avatars, name}], otherAvatar, likeAvatar }`；
+iM 视图顶部渲染成按钮组（选中即过滤，再点取消），列表仍按阅读阶段排序。
+`likeAvatar`（点赞）需要玩家存档状态，暂不提供。

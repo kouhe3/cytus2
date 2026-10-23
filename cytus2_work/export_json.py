@@ -414,6 +414,21 @@ def main():
     sync = [{"pack": p["id"], "level": lv["level"], "im": lv["im"], "os": lv["os"]}
             for p in pack_list for lv in p["levels"] if lv["im"] and lv["os"]]
 
+    # iM 账户过滤器（游戏里按「账户」筛：7 个主角 + 其他）
+    im_filters = load(os.path.join(T, "imdata", "im_filter_data"))
+
+    def avatar_name(av):
+        """头像 id → 角色显示名：paff_01 → paff001 → PAFF；cherry_02 → cherry002 → Crystal PuNK"""
+        base, _, num = av.partition("_")
+        # 头像编号 2 位（paff_01），曲包 id 3 位（paff001）
+        pack = f"{base}{int(num):03d}" if num.isdigit() else base
+        if pack in characters:
+            return characters[pack]
+        for pid, name in characters.items():
+            if pid.startswith(base):
+                return name
+        return av
+
     im_meta = []
     for i, tid in enumerate(order):
         t = by_id[tid]
@@ -516,6 +531,18 @@ def main():
         "folders": folder_list,
         "packs": pack_list,
         "im": im_meta,
+        "imFilters": {
+            "items": [
+                {
+                    "avatar": it["DisplayAvatarId"],
+                    "avatars": it["FilterAvatarIds"],
+                    "name": avatar_name(it["DisplayAvatarId"]),
+                }
+                for it in im_filters.get("Items") or []
+            ],
+            "otherAvatar": im_filters.get("OtherItemDisplayAvatarId") or "default_01",
+            "likeAvatar": im_filters.get("LikeItemDisplayAvatarId") or None,
+        },
         "os": [{k: v for k, v in e.items() if k != "raw"} for e in os_entries],
         "gates": [{"id": g, "topics": ts} for g, ts in sorted(gates.items())],
         "sync": sync,

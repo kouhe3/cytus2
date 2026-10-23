@@ -142,12 +142,26 @@ export interface IllustrationMeta {
   available: boolean;
 }
 
+/** iM 账户过滤器（im_filter_data）：一个图标可覆盖多个账号，例如 PAFF = paff_01 + paff_02 */
+export interface ImFilterItem {
+  avatar: string;
+  avatars: string[];
+  name: string;
+}
+
+export interface ImFilters {
+  items: ImFilterItem[];
+  otherAvatar: string;
+  likeAvatar?: string | null;
+}
+
 export interface IndexData {
   meta: Meta;
   chapters: Chapter[];
   folders: Folder[];
   packs: Pack[];
   im: ImMeta[];
+  imFilters?: ImFilters;
   os: OsMeta[];
   gates: Gate[];
   sync: SyncPoint[];

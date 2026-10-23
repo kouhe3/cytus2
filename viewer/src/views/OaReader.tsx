@@ -184,6 +184,16 @@ export function OaReader({
         <Chip>
           {chars.objects.length} 物件 · {chars.descriptions.length} 描述 · {chars.documents.length} 文件
         </Chip>
+        {index.packs.some((p) => p.id === character) ? (
+          <button
+            type="button"
+            className="chip chip-btn"
+            onClick={() => onNavigate("packs", character)}
+            title="该角色对应的等级阶梯"
+          >
+            角色 →
+          </button>
+        ) : null}
       </div>
       <h2>
         {characterName(index, character)}

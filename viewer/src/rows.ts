@@ -137,7 +137,7 @@ export const VIEWS = [
   { id: "im", label: "iM 社群", countKey: "imTopics" },
   { id: "backup", label: "备份数据库", countKey: "galleryItems" },
   { id: "gates", label: "结局闸", countKey: "gates" },
-  { id: "oa", label: "OA 系统", countKey: "oaObjects" },
+  { id: "oa", label: "OA 系统", countKey: "oaCharacters" },
   { id: "branching", label: "分支剧情", countKey: "backupNodes" },
   { id: "extras", label: "附录", countKey: "" },
 ] as const;

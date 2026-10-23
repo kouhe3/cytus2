@@ -25,6 +25,16 @@ export function PackReader({
           角色
         </button>{" "}
         <Chip>同步点 {pack.syncCount}</Chip>
+        {index.oa.some((c) => c.character === pack.id) ? (
+          <button
+            type="button"
+            className="chip chip-btn"
+            onClick={() => onNavigate("oa", pack.id)}
+            title="该角色也有 OA 探索档案"
+          >
+            OA 系统 →
+          </button>
+        ) : null}
       </div>
       <h2>
         {characterName(index, pack.id)}

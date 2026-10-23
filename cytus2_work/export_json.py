@@ -536,6 +536,7 @@ def main():
                 "packs": len(pack_list),
                 "syncPoints": len(sync),
                 "gates": len(gates),
+                "oaCharacters": len(oa_chars),
                 "oaObjects": len(oa.get("Objects", [])),
                 "oaDocuments": len(oa.get("Documents", [])),
                 "backupNodes": len(backup_nodes),

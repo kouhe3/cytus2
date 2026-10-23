@@ -164,6 +164,8 @@ export function entityTypeLabel(type: string): string {
     boss_stage: "Boss stage",
     spoiler_alert: "Spoiler alert",
     subtitle_line: "Subtitle line",
+    assistant_dialogue: "iM assistant dialogue",
+    title_screen: "Title screen",
     reading_order: "Reading order",
   };
   return labels[type] ?? type;
@@ -511,6 +513,10 @@ export function entityHome(entity: BaseEntity): { href: string; label: string } 
     case "gacha_reward":
     case "shop_bundle":
       return { href: "/shop", label: "Shop" };
+    case "assistant_dialogue":
+      return { href: "/extras/assistants", label: "Extras" };
+    case "title_screen":
+      return { href: "/extras/titles", label: "Extras" };
     default:
       return null;
   }

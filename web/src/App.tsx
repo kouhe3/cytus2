@@ -15,6 +15,11 @@ import type { Database } from "./types";
 import { BackupFolderView, BackupIndexView } from "./views/BackupView";
 import { ChartView } from "./views/ChartView";
 import { EntityView } from "./views/EntityView";
+import {
+  AssistantsView,
+  ExtrasIndexView,
+  TitlesView,
+} from "./views/ExtrasView";
 import { NotFound } from "./views/NotFound";
 import { OaCharacterView, OaIndexView } from "./views/OaView";
 import { SearchView } from "./views/SearchView";
@@ -29,6 +34,9 @@ const PAGE_TITLES: Record<string, string> = {
   "/backup": "Backup Database",
   "/story": "Story",
   "/shop": "Shop",
+  "/extras": "Extras",
+  "/extras/assistants": "iM assistant dialogues",
+  "/extras/titles": "Title screens",
 };
 
 function ScrollToTop() {
@@ -159,6 +167,9 @@ cd web && pnpm dev`}</pre>
           />
           <Route path="/story" element={<StoryIndexView db={db} />} />
           <Route path="/shop" element={<ShopIndexView db={db} />} />
+          <Route path="/extras" element={<ExtrasIndexView db={db} />} />
+          <Route path="/extras/assistants" element={<AssistantsView db={db} />} />
+          <Route path="/extras/titles" element={<TitlesView db={db} />} />
           <Route path="*" element={<EntityRoute db={db} />} />
         </Routes>
       </div>

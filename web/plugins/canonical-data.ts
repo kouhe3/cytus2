@@ -51,7 +51,22 @@ const SEARCH_GROUPS: readonly { type: string; label: string }[] = [
   { type: "subtitle_line", label: "Subtitle lines" },
 ];
 
-const TEXT_FILES = ["im_os.jsonl", "oa.jsonl", "story.jsonl"] as const;
+const TEXT_FILES = ["im_os.jsonl", "oa.jsonl", "story.jsonl", "extras.jsonl"] as const;
+
+const MEDIA_PREFIX = "/media/";
+
+const MEDIA_TYPES: Record<string, string> = {
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".mp3": "audio/mpeg",
+  ".ogg": "audio/ogg",
+  ".wav": "audio/wav",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".json": "application/json; charset=utf-8",
+};
 
 interface TextBlock {
   kind: string;
@@ -692,6 +707,79 @@ async function sendFile(res: ServerResponse, file: string): Promise<void> {
   }
 }
 
+async function sendMedia(
+  req: IncomingMessage,
+  res: ServerResponse,
+  root: string,
+  relative: string,
+): Promise<void> {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(relative);
+  } catch {
+    sendJson(res, 400, { error: "malformed media path" });
+    return;
+  }
+  const target = path.resolve(root, decoded);
+  const prefix = root.endsWith(path.sep) ? root : `${root}${path.sep}`;
+  if (target !== root && !target.startsWith(prefix)) {
+    sendJson(res, 403, { error: "media path escapes the media directory" });
+    return;
+  }
+  let stat;
+  try {
+    stat = await fs.promises.stat(target);
+  } catch {
+    sendJson(res, 404, {
+      error: `missing media: ${decoded}`,
+      hint: "export the media or point CYTUS2_MEDIA_DIR at an existing export",
+    });
+    return;
+  }
+  if (!stat.isFile()) {
+    sendJson(res, 404, { error: `not a media file: ${decoded}` });
+    return;
+  }
+
+  const contentType =
+    MEDIA_TYPES[path.extname(target).toLowerCase()] ?? "application/octet-stream";
+  res.setHeader("Content-Type", contentType);
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Accept-Ranges", "bytes");
+
+  const range = req.headers.range;
+  if (range) {
+    const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+    if (match) {
+      const suffix = match[1] === "" ? Number(match[2]) : null;
+      let start =
+        suffix === null
+          ? Number(match[1] || 0)
+          : Math.max(0, stat.size - suffix);
+      let end =
+        suffix === null && match[2] !== ""
+          ? Math.min(Number(match[2]), stat.size - 1)
+          : stat.size - 1;
+      if (start >= stat.size || start > end) {
+        res.statusCode = 416;
+        res.setHeader("Content-Range", `bytes */${stat.size}`);
+        res.end();
+        return;
+      }
+      end = Math.min(end, stat.size - 1);
+      res.statusCode = 206;
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${stat.size}`);
+      res.setHeader("Content-Length", String(end - start + 1));
+      fs.createReadStream(target, { start, end }).pipe(res);
+      return;
+    }
+  }
+
+  res.statusCode = 200;
+  res.setHeader("Content-Length", String(stat.size));
+  fs.createReadStream(target).pipe(res);
+}
+
 function parseLang(value: string | null): Lang {
   return value && isLang(value) ? value : "zh-Hans";
 }
@@ -773,6 +861,7 @@ function attach(
   buildDir: string,
   store: TextStore,
   projection: ProjectionStore,
+  mediaDir: string,
 ): void {
   server.middlewares.use((req: IncomingMessage, res: ServerResponse, next) => {
     const rawUrl = req.url ?? "/";
@@ -841,18 +930,34 @@ function attach(
         });
       return;
     }
+    if (url.pathname.startsWith(MEDIA_PREFIX)) {
+      void sendMedia(
+        req,
+        res,
+        mediaDir,
+        url.pathname.slice(MEDIA_PREFIX.length),
+      );
+      return;
+    }
     next();
   });
 }
 
 export interface CanonicalDataOptions {
   buildDir?: string;
+  mediaDir?: string;
 }
 
 export function canonicalData(options: CanonicalDataOptions = {}): Plugin {
   const defaultDir = fileURLToPath(new URL("../../build", import.meta.url));
   const buildDir = path.resolve(
     options.buildDir ?? process.env["CYTUS2_BUILD_DIR"] ?? defaultDir,
+  );
+  const defaultMediaDir = fileURLToPath(
+    new URL("../../viewer/public/media", import.meta.url),
+  );
+  const mediaDir = path.resolve(
+    options.mediaDir ?? process.env["CYTUS2_MEDIA_DIR"] ?? defaultMediaDir,
   );
   const store = new TextStore(path.join(buildDir, "text"));
   const projection = new ProjectionStore(
@@ -861,10 +966,10 @@ export function canonicalData(options: CanonicalDataOptions = {}): Plugin {
   return {
     name: "cytus2-canonical-data",
     configureServer(server) {
-      attach(server, buildDir, store, projection);
+      attach(server, buildDir, store, projection, mediaDir);
     },
     configurePreviewServer(server) {
-      attach(server, buildDir, store, projection);
+      attach(server, buildDir, store, projection, mediaDir);
     },
   };
 }

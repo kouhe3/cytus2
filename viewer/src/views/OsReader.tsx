@@ -71,6 +71,16 @@ export function OsReader({
       />
 
       <div className="chips">
+        {(() => {
+          const story = index.storyEvents?.find((e) =>
+            [e.trigger_topic_id, e.start_topic_id, e.end_topic_id].includes(meta.id),
+          );
+          return story ? (
+            <NavChip tone="warn" onClick={() => onNavigate("gates", story.id)} title="这条档案会触发剧情">
+              ⚑ 触发剧情 · {story.id}
+            </NavChip>
+          ) : null;
+        })()}
         {meta.packs.map(([pack, level]) => (
           <NavChip key={`${pack}:${level}`} onClick={() => onNavigate("packs", pack)} title="打开曲包阶梯">
             {pack} · Lv{level}

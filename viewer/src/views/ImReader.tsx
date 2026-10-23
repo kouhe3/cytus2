@@ -115,9 +115,13 @@ export function ImReader({
           </NavChip>
         ) : null}
         {meta.storyTrigger ? (
-          <Chip tone="warn" title="该帖是剧情触发点：触发后可能从 iM 列表移除">
+          <NavChip
+            tone="warn"
+            title="该帖是剧情触发点：触发后可能从 iM 列表移除"
+            onClick={() => onNavigate("gates", meta.storyTrigger!.story)}
+          >
             ⚑ 剧情触发帖 · {meta.storyTrigger.story}
-          </Chip>
+          </NavChip>
         ) : null}
         {meta.attachments.map((a) => (
           <Chip key={a}>附件 {a}</Chip>
@@ -152,7 +156,7 @@ export function ImReader({
           <div className="chips">
             {sync.map((s) =>
               s.os.map((id) => (
-                <NavChip key={`${s.pack}-${s.level}-${id}`} onClick={() => onNavigate("timeline", id)} title={`${s.pack} Lv${s.level}`}>
+                <NavChip key={`${s.pack}-${s.level}-${id}`} onClick={() => onNavigate("os", id)} title={`${s.pack} Lv${s.level}`}>
                   {id}
                 </NavChip>
               )),

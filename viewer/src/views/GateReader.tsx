@@ -23,25 +23,38 @@ export function GateReader({
   const byId = new Map(index.im.map((t) => [t.id, t]));
   const isEnding = gateId.startsWith("story_ending");
   const manifest = useManifest();
-  const movie = event?.movie_file ?? event?.cutscene_movie_file;
-  const clip = movie ? findMovie(manifest, movie.replace(/\.mp4$/, "")) : undefined;
 
-  // TRIGGER_TOPIC_ID 有时指向 OS 档案（如 hos027），按真实归属判断标签
+  // TRIGGER_TOPIC_ID 有时指向 OS 档案（如 hos027），按真实归属决定标签与跳转目标
   const topicId = event?.trigger_topic_id ?? event?.start_topic_id ?? "";
   const topicSrc = topicId ? sourceOf(index, topicId) : "";
   const topicLabel = topicSrc === "os" ? "触发 OS 档案" : topicSrc === "gallery" ? "触发 gallery" : "触发 iM 帖";
+  const jumpFor = (id: string) => {
+    switch (sourceOf(index, id)) {
+      case "os":
+        return () => onNavigate("os", id);
+      case "im":
+        return () => onNavigate("im", id);
+      case "gallery": {
+        const it = index.gallery.items.find((g) => g.location === id);
+        return it ? () => onNavigate("backup", it.folder) : undefined;
+      }
+      default:
+        return undefined;
+    }
+  };
+  const linkFor = (id: string, label?: string) => {
+    const jump = id ? jumpFor(id) : undefined;
+    return jump ? (
+      <button type="button" className="chip chip-btn mono" onClick={jump}>
+        {label ?? id}
+      </button>
+    ) : (
+      <span className="mono">{label ?? id ?? "—"}</span>
+    );
+  };
 
-  const rows: [string, string][] = event
-    ? ([
-        ["类名", event.cls],
-        ["Action 类", (event.actions ?? []).join("、") || "—"],
-        [topicLabel, topicId || "—"],
-        ["角色曲包", event.trigger_os_id ?? "—"],
-        ["触发 gallery", event.trigger_gallery_file_location ?? "—"],
-        ["BOSS 关卡", event.boss_stage_id ?? "—"],
-        ["影片", movie ?? "—"],
-      ] as [string, string][])
-    : [];
+  const movie = event?.movie_file ?? event?.cutscene_movie_file;
+  const clip = movie ? findMovie(manifest, movie.replace(/\.mp4$/, "")) : undefined;
 
   return (
     <div className="reader-inner">
@@ -56,14 +69,50 @@ export function GateReader({
       {event ? (
         <table className="grid" style={{ marginBottom: 14 }}>
           <tbody>
-            {rows.map(([k, v]) => (
-              <tr key={k}>
-                <td className="mono" style={{ width: 130, color: "var(--muted)" }}>
-                  {k}
-                </td>
-                <td className="mono">{v}</td>
-              </tr>
-            ))}
+            <tr>
+              <td className="mono" style={{ width: 130, color: "var(--muted)" }}>类名</td>
+              <td className="mono">{event.cls}</td>
+            </tr>
+            <tr>
+              <td className="mono" style={{ width: 130, color: "var(--muted)" }}>Action 类</td>
+              <td className="mono">{(event.actions ?? []).join("、") || "—"}</td>
+            </tr>
+            <tr>
+              <td className="mono" style={{ width: 130, color: "var(--muted)" }}>{topicLabel}</td>
+              <td>{topicId ? linkFor(topicId) : <span className="mono">—</span>}</td>
+            </tr>
+            <tr>
+              <td className="mono" style={{ width: 130, color: "var(--muted)" }}>角色曲包</td>
+              <td>
+                {event.trigger_os_id ? (
+                  <button
+                    type="button"
+                    className="chip chip-btn mono"
+                    onClick={() => onNavigate("packs", event.trigger_os_id!)}
+                  >
+                    {event.trigger_os_id}
+                  </button>
+                ) : (
+                  <span className="mono">—</span>
+                )}
+              </td>
+            </tr>
+            <tr>
+              <td className="mono" style={{ width: 130, color: "var(--muted)" }}>触发 gallery</td>
+              <td>
+                {event.trigger_gallery_file_location
+                  ? linkFor(event.trigger_gallery_file_location)
+                  : <span className="mono">—</span>}
+              </td>
+            </tr>
+            <tr>
+              <td className="mono" style={{ width: 130, color: "var(--muted)" }}>BOSS 关卡</td>
+              <td className="mono">{event.boss_stage_id ?? "—"}</td>
+            </tr>
+            <tr>
+              <td className="mono" style={{ width: 130, color: "var(--muted)" }}>影片</td>
+              <td className="mono">{movie ?? "—"}</td>
+            </tr>
           </tbody>
         </table>
       ) : null}

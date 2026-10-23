@@ -1,0 +1,10 @@
+[
+  {
+    "Id": "bos001",
+    "Type": 3,
+    "Names": ["Beta file", "Beta file", "Beta file", "Beta file", "Beta file", "Beta file"],
+    "TimelineChapter": {"Folder": "N/A", "Chapter": "Side Stories", "Index": 1},
+    "OSLockCondition": {},
+    "Contents": ["##sound=Beep,Again"]
+  }
+]

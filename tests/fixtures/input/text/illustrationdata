@@ -1,0 +1,12 @@
+[
+  {
+    "CharacterId": "alpha001",
+    "IsAvailable": true,
+    "Meta": {"Id": "alpha001", "Name": "Default", "Description": "default art"}
+  },
+  {
+    "CharacterId": "alpha001",
+    "IsAvailable": false,
+    "Meta": {"Id": "alpha001_s001", "Name": "Kimono", "Description": ""}
+  }
+]

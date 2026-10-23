@@ -351,6 +351,13 @@ def main():
                 "story": "",
             })
 
+    # 本地数据里没有触发点的谱面：读手工整理的 song_notes.json（入仓库，不属于派生数据）
+    notes_path = os.path.join(HERE, "song_notes.json")
+    notes = {}
+    if os.path.exists(notes_path):
+        raw = json.load(open(notes_path, encoding="utf-8"))
+        notes = {k: v for k, v in raw.items() if not k.startswith("_")}
+
     data = {
         "packs": packs,
         "other": other,
@@ -361,6 +368,7 @@ def main():
         "gacha": read_gacha(),
         "osCharts": read_os_chart_unlocks(),
         "oaCharts": read_oa_rewards(),
+        "notes": notes,
     }
     json.dump(data, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     songs = sum(len(p["songs"]) for p in packs) + len(other)

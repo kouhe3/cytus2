@@ -639,7 +639,11 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 `iM 帖` / `分支节点` / `通关剧情` / `默认解锁（NeedUnlock=false）` / `需解锁 · 本地无记录`。
 
 实测统计（1402 个谱面）：iM 帖 145、**OS 档案 555**、通关剧情 8、默认解锁 472、CAPSO 商店 67、
-CAPSO! 抽奖 103、付费包购买 25、OA 分析记录 68（补上了 Who Am I? 的 Glitch）、无本地记录 6（2 首：ivy001_049 Heroic Age、vanessa001_023 Cocytus，均 `HideWhenLocked: true`）。
+CAPSO! 抽奖 103、付费包购买 25、OA 分析记录 68（补上了 Who Am I? 的 Glitch）、无本地记录 3（1 首：vanessa001_023 Cocytus，`HideWhenLocked: true`）。
+
+本地数据完全没有触发点、但游戏里确实能解锁的谱面，写进 **`cytus2_work/song_notes.json`**（入仓库的
+手工资料，不是派生数据），导出时并入 `songs.json.notes`，页面标「外部资料」。现有条目：
+`ivy001_049` Heroic Age ← Ivy Lv88 + 打通 A 结局（`story_ending02`）。
 各来源两两重叠为 0，可以按优先级判定。
 
 等级 +1 已用 Fandom 交叉验证：Aroma（`paff002`）7 首的 15 个解锁等级全部吻合

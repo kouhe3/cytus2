@@ -414,6 +414,7 @@ function SongSection({
                         .join("、");
                       const osHit = (catalog.osCharts[song.id] ?? []).find((x) => x.d === d);
                       const oaHit = (catalog.oaCharts[song.id] ?? []).find((x) => x.d === d);
+                      const note = (catalog.notes[song.id] ?? []).find((x) => x.d.includes(d));
                       const story = (catalog.storyCharts[song.id] ?? []).find((x) => x.d === d);
                       const capso = capsoIndex.get(song.id);
                       const gacha = (gachaIndex[song.id] ?? []).find((x) => x.d === d);
@@ -487,9 +488,25 @@ function SongSection({
                             </span>
                           ) : pack.iap ? (
                             <span style={{ color: "var(--muted)" }}>购买曲包后解锁</span>
-                          ) : (
+                          ) : note ? null : (
                             <span style={{ color: "var(--muted)" }}>需解锁 · 本地无记录</span>
                           )}
+                          {note ? (
+                            <span style={{ color: "var(--muted)" }}>
+                              {hit || osHit || oaHit || story || gacha ? " · " : ""}
+                              {hit || osHit || oaHit || story || gacha ? "" : "外部资料："}
+                              {note.text}
+                              {note.story ? (
+                                <>
+                                  {" "}
+                                  <button type="button" className="chip chip-btn" onClick={() => onNavigate("gates", note.story!)}>
+                                    {note.story}
+                                  </button>
+                                </>
+                              ) : null}
+                              {note.source ? `（${note.source}）` : ""}
+                            </span>
+                          ) : null}
                         </div>
                       );
                     })}

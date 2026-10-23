@@ -35,6 +35,8 @@ cytus2_work/text_manifest.json
 cytus2_work/rva_map.json
 # 脚本现场生成的索引 / 比对结果一律不入库
 cytus2_work/*.json
+# 例外：手工整理的解锁资料（源码级输入，必须入库存档）
+!cytus2_work/song_notes.json
 cytus2_work/il2cpp_str.txt
 cytus2_work/il2cppdumper_release.json
 

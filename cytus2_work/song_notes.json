@@ -1,0 +1,11 @@
+{
+  "_comment": "本地数据里查不到触发点的谱面，用手工整理的资料补上。d = Difficulty 索引（0 Easy / 1 Hard / 2 Chaos / 3 Glitch / 4 Crash / 5 Dream）；story 可选，会链到结局闸。",
+  "ivy001_049": [
+    {
+      "d": [0, 1, 2],
+      "text": "Ivy 等级达到 Lv88 后打通「A 结局」",
+      "story": "story_ending02",
+      "source": "游戏内实测/社区资料"
+    }
+  ]
+}

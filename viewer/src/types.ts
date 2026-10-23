@@ -282,6 +282,13 @@ export interface GachaData {
   others: { id: string; type: number; machineName: string; weight?: number; secret: boolean }[];
 }
 
+export interface SongNote {
+  d: number[];
+  text: string;
+  story?: string;
+  source?: string;
+}
+
 export interface SongCatalog {
   packs: SongPack[];
   other: SongInfo[];
@@ -292,6 +299,8 @@ export interface SongCatalog {
   osCharts: Record<string, SongUnlock[]>;
   /** OA 系统分析记录的谱面奖励：songId → 奖励项 */
   oaCharts: Record<string, OaChartUnlock[]>;
+  /** 本地数据查不到触发点、由手工资料补充的条目（cytus2_work/song_notes.json） */
+  notes: Record<string, SongNote[]>;
   expansion: ExpansionPack[];
   capso: CapsoPack[];
   gacha: GachaData;

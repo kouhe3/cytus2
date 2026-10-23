@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from dataclasses import dataclass
 from typing import Any, Iterable
 
 from ..keys import DIFFICULTIES
@@ -31,12 +30,6 @@ _SOURCE_VERBS = {
     "capso_shop_item": "在 CAPSO 商店购买",
     "gacha_reward": "通过抽奖获得",
 }
-
-
-@dataclass(frozen=True)
-class _UnlockLine:
-    difficulty: str
-    text: Text
 
 
 def build_song_pages(db: Database) -> list[PageModel]:
@@ -105,7 +98,7 @@ def build_song_pages(db: Database) -> list[PageModel]:
 
         charts_with_unlock = [chart for chart in charts if chart.get("need_unlock")]
         unlock = _unlock_method(
-            song, charts_with_unlock, db, oa_names=oa_names, conflicts=conflicts
+            charts_with_unlock, db, oa_names=oa_names, conflicts=conflicts
         )
         if unlock is not None:
             fields.append(Field("unlock_method", unlock))
@@ -246,7 +239,7 @@ def _source_entry(
     db: Database,
     oa_names: dict[str, str],
     conflicts: list[Conflict],
-) -> Text | None:
+) -> Text:
     kind = source.get("type")
     if kind == "im_post":
         title = _localized(source.get("titles")) or _text(source.get("game_id"))
@@ -297,7 +290,6 @@ def _source_entry(
 
 
 def _unlock_method(
-    song: dict[str, Any],
     charts: list[dict[str, Any]],
     db: Database,
     *,
@@ -309,8 +301,6 @@ def _unlock_method(
         for edge in db.incoming("unlocks_chart", chart["id"]):
             source = db.require(edge.source)
             entry = _source_entry(source, db, oa_names, conflicts)
-            if entry is None:
-                continue
             groups[entry].append(chart["difficulty"])
 
     if not groups:

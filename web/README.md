@@ -9,7 +9,7 @@ matching text store; it does not define a second entity model.
 ```bash
 cd web
 pnpm install   # once
-pnpm dev       # http://localhost:5190
+pnpm dev       # http://127.0.0.1:5190
 ```
 
 `pnpm dev` is the one command to start the app. If `build/spa/data.json` is

@@ -4,6 +4,6 @@ import { canonicalData } from "./plugins/canonical-data.ts";
 
 export default defineConfig({
   plugins: [react(), canonicalData()],
-  server: { port: 5190, strictPort: true },
-  preview: { port: 5191, strictPort: true },
+  server: { host: "127.0.0.1", port: 5190, strictPort: true },
+  preview: { host: "127.0.0.1", port: 5191, strictPort: true },
 });

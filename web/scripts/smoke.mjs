@@ -17,7 +17,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const appBase = (process.argv[2] ?? "http://localhost:5190").replace(/\/+$/, "");
+const appBase = (process.argv[2] ?? "http://127.0.0.1:5190").replace(/\/+$/, "");
 const cdpBase = (process.env.CDP_ENDPOINT ?? "http://127.0.0.1:9333").replace(
   /\/+$/,
   "",

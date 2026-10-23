@@ -48,7 +48,7 @@ const { createServer } = await import("vite");
 const server = await createServer({
   root: webDir,
   configFile: path.join(webDir, "vite.config.ts"),
-  server: { port: 5190, strictPort: true },
+  server: { host: "127.0.0.1", port: 5190, strictPort: true },
 });
 await server.listen();
 server.printUrls();

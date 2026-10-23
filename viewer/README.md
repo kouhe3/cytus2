@@ -602,6 +602,27 @@ Tairitsu 的 Branching OS 在游戏里是一张二维图，不是列表：横轴
 
 分支剧情每个节点页顶部都有这张图（可横向滚动），点方块直接跳转；当前节点用 accent 描边。
 
+### OA 对白（audio_subtitle）
+
+`text/audiosubtitledata/audio_subtitle` 是 OA 空间的语音台词（57 条 / 8 组 CE02–CE09），
+语音本体是 `sharedassets31.assets` + `sharedassets31.resource` 里的 AudioClip（`Resources.Load("CE0503")`），
+`export_oa_dialogues.py` 解出两条数据并导出成 `media/audio/oa/<AudioId>.ogg` + `data/oa-dialogues.json`，
+附录「OA 对白」可按组播放、按语言看文本。
+
+分组对应 OA 场景脚本 `SceneCustomizer` 的 8 个语音列表（IntroAudio / Object1~3Audio / PuffAudio /
+VanessaAudio / NoExitAudio / OutroAudio），行数与内容都吻合：
+
+| 组 | 场景段落 | 首句 |
+|:--|:--|:--|
+| CE02（11） | Intro（= `story_ending04_main` 的 `0_ENDING_SCENE` 开场） | 「OA」……对吧？我记得，你是这么称呼这个空间的。 |
+| CE03（7） | Object1 | 从 A.R.C. 的终焉病毒研究逆向追踪…… |
+| CE04（8） | Object2 | 你曾在纪录里看过类似形状的物体…… |
+| CE05（8） | Object3 | Violette……已经无法再下达任何指令了。 |
+| CE06（6） | Puff | 还记得吗？「那个时候」…… |
+| CE07（6） | Vanessa | 别那样看我。我们并没有实际接触过…… |
+| CE08（3） | NoExit | 你所获得的真相并不完整。 |
+| CE09（8） | Outro | 这就是你所知道，关于新世代人类的一切…… |
+
 ### 全局搜索覆盖字幕
 
 顶栏搜索（`/`）此前只查 iM / OS / 分支 / 备份库，台词文本搜不到；现在 `searchRows` 会遍历

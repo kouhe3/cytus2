@@ -339,6 +339,7 @@ export function rowsFor(
         { key: "audio", view: "extras", id: "audio", title: "语音字幕", sub: "57 条角色语音" },
         { key: "assistants", view: "extras", id: "assistants", title: "iM 助手对话", sub: "19 组" },
         { key: "songs", view: "extras", id: "songs", title: "歌曲与获取方式", sub: "27 个曲包 · 461 首" },
+        { key: "dialogues", view: "extras", id: "dialogues", title: "OA 对白", sub: "57 条 · 8 组（含语音）" },
         { key: "cutscenes", view: "extras", id: "cutscenes", title: "过场影片与字幕", sub: "55 组字幕 ↔ 影片" },
         { key: "titles", view: "extras", id: "titles", title: "标题画面演进", sub: "title_info" },
         { key: "illustrations", view: "extras", id: "illustrations", title: "角色立绘", sub: "69 张造型 + 14 张全灭结局" },

@@ -2,7 +2,16 @@ import type { ExtraContent, IndexData, Lang } from "../types";
 import { useState } from "react";
 import { MEDIA_BASE, findMovie, findVideoWithSong, useManifest } from "../media";
 import type { SongCatalog } from "../types";
-import { characterName, dispLevel, loadEndplayMap, loadSongs, loadSubsIndex, useAsync, formatClock } from "../data";
+import {
+  characterName,
+  dispLevel,
+  loadEndplayMap,
+  loadOaDialogues,
+  loadSongs,
+  loadSubsIndex,
+  useAsync,
+  formatClock,
+} from "../data";
 import { Video } from "../components/Media";
 import { Skeleton } from "../components/ui";
 
@@ -358,6 +367,56 @@ function CutsceneSection({
 }
 
 // Difficulties 枚举顺序（dump.cs）：0 Easy / 1 Hard / 2 Chaos / 3 Glitch / 4 Crash / 5 Dream / 6 Drop
+/** OA 空间对话（audio_subtitle + sharedassets31 的语音） */
+function DialogueSection({ lang, onNavigate }: { lang: Lang; onNavigate: (view: string, id?: string) => void }) {
+  const data = useAsync(loadOaDialogues, []);
+  if (data.state === "loading") return <Skeleton rows={8} />;
+  if (data.state === "error") return <p className="state">OA 对白加载失败。</p>;
+  return (
+    <div className="reader-inner">
+      <div className="crumbs">
+        <button type="button" className="chip chip-btn" onClick={() => onNavigate("extras")}>
+          附录
+        </button>
+      </div>
+      <h2>OA 对白</h2>
+      <p className="lede">
+        {data.data.lines.length} 条带语音的对白（<span className="mono">audio_subtitle</span> +
+        <span className="mono"> sharedassets31</span> 的 AudioClip）。这是 OA 空间里 PAFF / Vanessa 与「你」的对话，
+        不是 OA 物件说明；<span className="mono">CE02</span> 组即 4.0 结局（
+        <span className="mono">story_ending04_main · 0_ENDING_SCENE</span>）在{" "}
+        <span className="mono">vos7501</span> 与 <span className="mono">vos075_bossstage</span> 之间的那段。
+      </p>
+      {data.data.groups.map((g) => (
+        <details key={g.id} style={{ marginBottom: 10 }}>
+          <summary className="mono">
+            {g.id} · {g.lines.length} 条{g.note ? ` · ${g.note}` : ""}
+          </summary>
+          <table className="grid" style={{ marginTop: 6 }}>
+            <tbody>
+              {g.lines.map((line) => (
+                <tr key={line.id}>
+                  <td style={{ width: 110 }} className="mono">
+                    {line.character || "—"}
+                  </td>
+                  <td>
+                    {(line.text[lang] || line.text["zh-Hans"] || "").split("\n").map((t, i) => (
+                      <div key={i}>{t}</div>
+                    ))}
+                  </td>
+                  <td style={{ width: 210 }}>
+                    <audio controls preload="none" src={MEDIA_BASE + encodeURI(line.file)} style={{ width: 200 }} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      ))}
+    </div>
+  );
+}
+
 const DIFF_KEYS = ["Easy", "Hard", "Chaos", "Glitch", "Crash", "Dream", "Drop"] as const;
 const DIFF_LABEL = ["简单", "困难", "混沌", "Glitch", "Crash", "Dream", "Drop"] as const;
 
@@ -700,6 +759,9 @@ export function ExtrasReader({
   }
   if (section === "logos") {
     return <LogoSection onNavigate={onNavigate} />;
+  }
+  if (section === "dialogues") {
+    return <DialogueSection lang={lang} onNavigate={onNavigate} />;
   }
   if (section === "songs") {
     return <SongSection index={index} lang={lang} onNavigate={onNavigate} />;

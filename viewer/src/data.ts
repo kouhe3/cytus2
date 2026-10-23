@@ -49,6 +49,10 @@ export function dispLevel(level: number | undefined | null) {
   return typeof level === "number" ? level + 1 : undefined;
 }
 
+export function loadOaDialogues(): Promise<import("./types").OaDialogues> {
+  return loadJson<import("./types").OaDialogues>("oa-dialogues.json");
+}
+
 export function loadSongs(): Promise<import("./types").SongCatalog> {
   return loadJson<import("./types").SongCatalog>("songs.json");
 }

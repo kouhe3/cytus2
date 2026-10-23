@@ -257,6 +257,26 @@ export interface ExpansionPack {
   songs: ExpansionSong[];
 }
 
+export interface OaDialogue {
+  id: string;
+  group: string;
+  character: string;
+  seconds: number;
+  file: string;
+  text: Record<string, string>;
+}
+
+export interface OaDialogueGroup {
+  id: string;
+  note: string;
+  lines: OaDialogue[];
+}
+
+export interface OaDialogues {
+  groups: OaDialogueGroup[];
+  lines: OaDialogue[];
+}
+
 export interface OaChartUnlock {
   d: number;
   src: "oa";

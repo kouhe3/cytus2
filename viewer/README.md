@@ -413,3 +413,23 @@ v5 的归属解析顺序：
 - `stage 99`：兜底值（`out["order"].get(id, 99)`），表示「模型既没排到、也没归类」，正常数据下应为 0 条。
 
 想彻底消掉 98，需要把 OS 侧的事件也纳入图：`cpos033` 是 Cherry 的档案过场，可在 OS 阅读进度里判定。
+
+### v6：假设「OS 一解锁就去读」
+
+模型里原本唯一的缺口是 `story_cherry02`（`Q3101–Q3501`），它的条件在 OS 侧。
+按「玩家总是在 OS 解锁后立刻阅读」这个前提，把 OS 并进同一套不动点：
+
+```python
+OS_STORY_NEEDS = {"story_cherry02": "cpos033"}
+
+def os_ready(entry_id):
+    e = os_index[entry_id]                      # index.os 里的 OS 条目
+    return all(level[pack] >= lv for pack, lv in e["packs"])        and (not e["fileLock"] or e["fileLock"] in stories_done)
+```
+
+每轮在等级提升后判定：OS 条目的等级/前置满足 → 视为已读 → 它触发的剧情进入「已通」。
+
+效果：**323/323 帖全部进入 16 个阶段**，`stage 98 / 99` 归零；`Q3101`（paff 74 + story_cherry02）落在阶段 14，
+`Q3601–Q3901` 等落在阶段 15。列表尾部现在是 `#320 阶段 15`、`#321–#323 阶段 16`。
+
+前提变化时（比如读者会跳过 OS）只需要把 `os_ready` 改成依赖“已读进度”，不动其它逻辑。

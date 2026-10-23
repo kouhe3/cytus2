@@ -48,6 +48,9 @@ STORY_AFTER = {
     "story_ending03_good_ending2": {"story_ending03_main"},
     "story_ending04_main": {"story_ending03_main"},
 }
+# 假设玩家「OS 一解锁就去读」：这些剧情由 OS 档案里的过场触发，读到对应 OS 即视为可用
+#   story_cherry02 ← OS cpos033（StoryCherry02._ConditionCheck 0x21D8AC0 查 CUTSCENE_PLAYED_cpos033）
+OS_STORY_NEEDS = {"story_cherry02": "cpos033"}
 EXTERNAL_STORIES = {
     "story_cherry02": "需 OS 过场 cpos033（Cherry 线）",
     "story_ending03_good_ending1": "结局 03 善终 1",
@@ -88,6 +91,20 @@ def main():
     locks = {e["TopicId"]: e for e in load("imdata/im_lock_condition_data")}
     topics = {t["Id"]: t for t in load("imdata/im_topic_data")}
     flt = load("imdata/im_filter_data")
+    idx_path = os.path.join(HERE, "..", "viewer", "public", "data", "index.json")
+    os_index = {}
+    if os.path.exists(idx_path):
+        os_index = {e["id"]: e for e in json.load(open(idx_path, encoding="utf-8")).get("os", [])}
+
+    def os_ready(entry_id: str) -> bool:
+        """OS 一解锁就读：等级满足、且前置剧情已通"""
+        e = os_index.get(entry_id)
+        if not e:
+            return False
+        if any(level.get(pack, 0) < lv for pack, lv in e.get("packs") or []):
+            return False
+        lock = e.get("fileLock") or ""
+        return not lock or lock in stories_done
     triggers = derive_triggers()
     exp = {e["song_pack_id"]: e["table"] for e in load("exptable/exp_data")["exp_table_list"]}
 
@@ -116,6 +133,9 @@ def main():
             if level.get(pack, 0) >= need:
                 stories_done.add(sid)
         stories_done |= ALWAYS
+        for sid, entry_id in OS_STORY_NEEDS.items():
+            if sid not in stories_done and os_ready(entry_id):
+                stories_done.add(sid)
         # 剧情链：前置完成后，后续剧情视为可完成（ending03 的触发是 gallery/OS，不是 iM）
         changed = True
         while changed:

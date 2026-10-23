@@ -1,0 +1,105 @@
+{
+  "categories": {
+    "os": "分类:Os剧情目录"
+  },
+  "templates": {
+    "Os/文件": {
+      "template": "Os/文件",
+      "param_order": [
+        "ver",
+        "文件名",
+        "文件类型",
+        "剧情排序",
+        "所属角色",
+        "解锁谱面",
+        "解锁曲目",
+        "指令码",
+        "文件ID",
+        "时间",
+        "内容"
+      ],
+      "params": {
+        "ver": {
+          "required": false,
+          "conditional": false,
+          "default": "|"
+        },
+        "文件名": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "文件类型": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "剧情排序": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "所属角色": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "解锁谱面": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "解锁曲目": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "指令码": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "文件ID": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "时间": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        },
+        "内容": {
+          "required": false,
+          "conditional": false,
+          "default": ""
+        }
+      },
+      "fields": {
+        "filename": "文件名",
+        "file_type": "文件类型",
+        "sort_key": "剧情排序",
+        "character": "所属角色",
+        "unlock_chart": "解锁谱面",
+        "unlock_song": "解锁曲目",
+        "command_code": "指令码",
+        "file_id": "文件ID",
+        "time": "时间",
+        "content": "内容",
+        "ver": "ver"
+      }
+    }
+  },
+  "pages": {
+    "os_log": {
+      "template": "Os/文件",
+      "title": {
+        "field": "title",
+        "fallback": "none",
+        "disambiguator": "（{game_id}）"
+      },
+      "preserve_unknown_params": true,
+      "observed_unknown_params": []
+    }
+  }
+}

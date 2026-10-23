@@ -1,0 +1,50 @@
+[
+  {
+    "Id": "P0101",
+    "AvatarId": "alpha_01",
+    "CharacterName": "Alpha-Official",
+    "Titles": ["First Post", "最初の投稿", "第一篇貼文", "첫 게시물", "", "第一篇贴文"],
+    "LikeCount": 42,
+    "FirstAttachmentId": "attach01",
+    "UnlockCharts": [
+      {"Difficulty": 0, "SongId": "alpha001_000"},
+      {"Difficulty": 2, "SongId": "alpha001_000"}
+    ],
+    "Replies": [
+      {"ReplyId": "P0102", "LikeCount": 1},
+      {"ReplyId": "P0103", "LikeCount": 0},
+      {"ReplyId": "P0104", "LikeCount": 2},
+      {"ReplyId": "P0105", "LikeCount": 3}
+    ]
+  },
+  {
+    "Id": "P0201",
+    "AvatarId": "alpha_02",
+    "CharacterName": "Alpha Side",
+    "Titles": ["Attachment Only", "添付のみ", "僅附件", "첨부만", "", "仅附件"],
+    "LikeCount": 7,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": [{"ReplyId": "P0202", "LikeCount": 0}]
+  },
+  {
+    "Id": "P0301",
+    "AvatarId": "beta_01",
+    "CharacterName": "Beta",
+    "Titles": ["Duplicate title", "重複標題", "重複標題", "중복 제목", "", "重复标题"],
+    "LikeCount": 3,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "P0401",
+    "AvatarId": "gamma_01",
+    "CharacterName": "Gamma",
+    "Titles": ["Duplicate title", "重複標題", "重複標題", "중복 제목", "", "重复标题"],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  }
+]

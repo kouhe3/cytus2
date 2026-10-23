@@ -1,0 +1,44 @@
+{
+  "Id": "P0101",
+  "CharacterName": "Alpha-Official",
+  "AvatarId": "alpha_01",
+  "Contents": [
+    "First post",
+    "",
+    "第一篇貼文",
+    "",
+    "",
+    "第一行: 你好;世界\n>>\n引用一段\n<<\n>>hyperlink\n{\"Content\":\"<color=#fff2ccff><b>官网</b></color>\",\"Urls\":{\"Editor\":\"https://example.com\",\"iOS\":\"https://example.com\",\"Android\":\"https://example.com\"}}\n<<hyperlink"
+  ],
+  "Attachments": ["attach01"],
+  "Replies": [
+    {
+      "Id": "P0102",
+      "CharacterName": "Fan;One",
+      "AvatarId": "misc_01",
+      "Contents": ["", "", "", "", "", "好耶:试玩;真棒"],
+      "Replies": null
+    },
+    {
+      "Id": "P0103",
+      "CharacterName": "Empty Fan",
+      "AvatarId": "misc_02",
+      "Contents": ["", "", "", "", "", ""],
+      "Replies": null
+    },
+    {
+      "Id": "P0104",
+      "CharacterName": "Pipe|Fan",
+      "AvatarId": "misc_03",
+      "Contents": ["", "", "", "", "", "A|B"],
+      "Replies": null
+    },
+    {
+      "Id": "P0105",
+      "CharacterName": "Line Fan",
+      "AvatarId": "misc_04",
+      "Contents": ["", "", "", "", "", "第一行\n第二行"],
+      "Replies": null
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "Id": "alpha001_000_3",
+    "Type": 0,
+    "Gacha Machine ID": "capso",
+    "Weight": 5,
+    "CreateOrder": 1,
+    "IsSecret": true,
+    "RewardLocks": {"IMTopicId": "", "OSFileId": "", "StoryLockId": ""}
+  },
+  {
+    "Id": "alpha001_001_0,1",
+    "Type": 0,
+    "Gacha Machine ID": "capso",
+    "Weight": 20,
+    "CreateOrder": 2,
+    "IsSecret": false,
+    "RewardLocks": {"IMTopicId": "im001", "OSFileId": "", "StoryLockId": ""}
+  },
+  {
+    "Id": "alpha001_s001",
+    "Type": 1,
+    "Gacha Machine ID": "capso",
+    "Weight": 5,
+    "CreateOrder": 3,
+    "IsSecret": false,
+    "RewardLocks": {"IMTopicId": "", "OSFileId": "", "StoryLockId": ""}
+  },
+  {
+    "Id": "tapfx_001_bell",
+    "Type": 2,
+    "Gacha Machine ID": "capso",
+    "Weight": 15,
+    "CreateOrder": 4,
+    "IsSecret": false,
+    "RewardLocks": {"IMTopicId": "", "OSFileId": "", "StoryLockId": ""}
+  },
+  {
+    "Id": "alpha001_001",
+    "Type": 3,
+    "Gacha Machine ID": "capso",
+    "Weight": 15,
+    "CreateOrder": 5,
+    "IsSecret": false,
+    "RewardLocks": {"IMTopicId": "", "OSFileId": "", "StoryLockId": ""}
+  }
+]

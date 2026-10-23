@@ -1,0 +1,67 @@
+{
+  "Bundles": [
+    {
+      "BundleKey": "VOL1",
+      "MilestoneKey": "bundle_sale_milestone",
+      "TriggerFreeCharacterLevel": 9,
+      "BlackMarketTrigger": false,
+      "PurchasedMessageId": "BUNDLE_PURCHASED_MESSAGE",
+      "PurchasedPreorderMessageId": "BUNDLE_PURCHASED_WITH_UNAVAILABLE_CHARACTERS_MESSAGE",
+      "PanelDescriptionId": "BUNDLE_SALE_PANEL_DESCRIPTION",
+      "PanelWarningId": "BUNDLE_SALE_PANEL_WARNING",
+      "TabTitleId": "BUNDLE_TAB_TITLE",
+      "Items": [
+        {
+          "ProductId": "alpha001",
+          "ItemType": "Character",
+          "Weight": 1,
+          "ReferencePriceIapId": "specialpack01",
+          "IsPreorder": false
+        },
+        {
+          "ProductId": "beta001",
+          "ItemType": "Character",
+          "Weight": 1,
+          "ReferencePriceIapId": "specialpack01",
+          "IsPreorder": true
+        }
+      ],
+      "Tiers": [
+        {"RemainWeight": 2, "IapId": "bundle002"},
+        {"RemainWeight": 1, "IapId": "bundle001"}
+      ]
+    },
+    {
+      "BundleKey": "VOL2",
+      "MilestoneKey": "bundle2_sale_milestone",
+      "TriggerFreeCharacterLevel": 24,
+      "BlackMarketTrigger": true,
+      "PurchasedMessageId": "BUNDLE2_PURCHASED_MESSAGE",
+      "PurchasedPreorderMessageId": "BUNDLE2_PURCHASED_WITH_UNAVAILABLE_CHARACTERS_MESSAGE",
+      "PanelDescriptionId": "BUNDLE2_SALE_PANEL_DESCRIPTION",
+      "PanelWarningId": "BUNDLE2_SALE_PANEL_WARNING",
+      "TabTitleId": "BUNDLE2_TAB_TITLE",
+      "Items": [
+        {
+          "ProductId": "alpha001",
+          "ItemType": "Character",
+          "Weight": 2,
+          "ReferencePriceIapId": "specialpack01",
+          "IsPreorder": false
+        },
+        {
+          "ProductId": "expack026",
+          "ItemType": "ExpansionPack",
+          "Weight": 1,
+          "ReferencePriceIapId": "specialpack02",
+          "IsPreorder": false
+        }
+      ],
+      "Tiers": [
+        {"RemainWeight": 3, "IapId": "bundle_2_03"},
+        {"RemainWeight": 2, "IapId": "bundle_2_02"},
+        {"RemainWeight": 1, "IapId": "bundle_2_01"}
+      ]
+    }
+  ]
+}

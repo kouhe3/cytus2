@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../data/language";
+import { useFullTextSearch } from "../data/search";
 import {
   chartLabel,
   entityHref,
@@ -10,11 +12,16 @@ import {
 import type { Database } from "../types";
 
 interface PaletteItem {
-  readonly id: string;
+  readonly key: string;
   readonly label: string;
   readonly hint: string;
   readonly href: string;
 }
+
+type PaletteRow =
+  | { readonly kind: "group"; readonly key: string; readonly label: string }
+  | { readonly kind: "item"; readonly key: string; readonly item: PaletteItem }
+  | { readonly kind: "note"; readonly key: string; readonly text: string };
 
 export function CommandPalette({
   db,
@@ -26,14 +33,15 @@ export function CommandPalette({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const { lang } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
 
-  const items = useMemo(() => {
+  const navigationItems = useMemo(() => {
     const next: PaletteItem[] = [
       {
-        id: "command:timeline",
+        key: "command:timeline",
         label: "Timeline",
         hint: "iM + OS reading feed",
         href: "/timeline",
@@ -45,8 +53,8 @@ export function CommandPalette({
         continue;
       }
       next.push({
-        id: `entity:${entity.id}`,
-        label: entityTitle(entity),
+        key: `entity:${entity.id}`,
+        label: entityTitle(db, entity, lang),
         hint: `${entityTypeLabel(entity.type)} · Lv ${row.level_gate + 1} · #${row.order}`,
         href: entityHref(entity.id),
       });
@@ -54,7 +62,7 @@ export function CommandPalette({
     for (const charts of db.chartsBySong.values()) {
       for (const chart of charts) {
         next.push({
-          id: `chart:${chart.id}`,
+          key: `chart:${chart.id}`,
           label: chartLabel(db, chart),
           hint: `Chart · NeedUnlock ${chart.need_unlock ? "yes" : "no"}`,
           href: entityHref(chart.id),
@@ -62,18 +70,28 @@ export function CommandPalette({
       }
     }
     return next;
-  }, [db]);
+  }, [db, lang]);
 
   const needle = query.trim().toLowerCase();
-  const results = useMemo(() => {
+  const search = useFullTextSearch(query, lang, open);
+  const searchHits = useMemo(
+    () => search.response?.groups.flatMap((group) => group.hits) ?? [],
+    [search.response],
+  );
+
+  const navMatches = useMemo(() => {
     if (!needle) {
-      return items.slice(0, 12);
+      return navigationItems.slice(0, 12);
     }
+    const hitHrefs = new Set(searchHits.map((hit) => `/${encodeURI(hit.id)}`));
     const scored: { item: PaletteItem; score: number }[] = [];
-    for (const item of items) {
+    for (const item of navigationItems) {
+      if (hitHrefs.has(item.href)) {
+        continue;
+      }
       const label = item.label.toLowerCase();
       const hint = item.hint.toLowerCase();
-      const id = item.id.toLowerCase();
+      const id = item.key.toLowerCase();
       let score = -1;
       if (label.startsWith(needle)) {
         score = 0;
@@ -93,12 +111,88 @@ export function CommandPalette({
         left.score - right.score ||
         left.item.label.localeCompare(right.item.label),
     );
-    return scored.slice(0, 20).map((entry) => entry.item);
-  }, [items, needle]);
+    return scored.slice(0, 8).map((entry) => entry.item);
+  }, [navigationItems, needle, searchHits]);
+
+  const rows = useMemo<PaletteRow[]>(() => {
+    const next: PaletteRow[] = [];
+    if (needle) {
+      next.push({
+        kind: "item",
+        key: "action:search",
+        item: {
+          key: "action:search",
+          label: `Open full search for “${query.trim()}”`,
+          hint: "Grouped results with keyboard navigation",
+          href: `/search?q=${encodeURIComponent(query.trim())}`,
+        },
+      });
+      if (search.status === "loading") {
+        next.push({ kind: "note", key: "note:loading", text: "Searching…" });
+      }
+      if (search.status === "error") {
+        next.push({
+          kind: "note",
+          key: "note:error",
+          text: `Search failed: ${search.error?.message ?? "unknown error"}`,
+        });
+      }
+      for (const group of search.response?.groups ?? []) {
+        if (group.hits.length === 0) {
+          continue;
+        }
+        next.push({
+          kind: "group",
+          key: `group:${group.type}`,
+          label: `${group.label} (${group.hits.length})`,
+        });
+        for (const hit of group.hits) {
+          next.push({
+            kind: "item",
+            key: `hit:${hit.type}:${hit.id}`,
+            item: {
+              key: `hit:${hit.type}:${hit.id}`,
+              label: hit.title,
+              hint: `${entityTypeLabel(hit.type)} · ${hit.snippet}${
+                hit.fallback ? " · fallback text" : ""
+              }`,
+              href: `/${encodeURI(hit.id)}`,
+            },
+          });
+        }
+      }
+      if (navMatches.length > 0) {
+        next.push({
+          kind: "group",
+          key: "group:navigation",
+          label: "Navigation",
+        });
+        for (const item of navMatches) {
+          next.push({ kind: "item", key: item.key, item });
+        }
+      }
+    } else {
+      for (const item of navMatches) {
+        next.push({ kind: "item", key: item.key, item });
+      }
+    }
+    return next;
+  }, [needle, navMatches, query, search]);
+
+  const results = useMemo(
+    () =>
+      rows
+        .filter(
+          (row): row is Extract<PaletteRow, { kind: "item" }> =>
+            row.kind === "item",
+        )
+        .map((row) => row.item),
+    [rows],
+  );
 
   useEffect(() => {
     setSelected(0);
-  }, [needle]);
+  }, [needle, search.response]);
 
   useEffect(() => {
     if (!open) {
@@ -138,6 +232,8 @@ export function CommandPalette({
     }
   };
 
+  let itemIndex = -1;
+
   return (
     <div
       className="palette-backdrop"
@@ -161,33 +257,58 @@ export function CommandPalette({
           data-testid="palette-input"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Jump to an iM post, OS log, or chart…"
-          aria-label="Search entities"
+          placeholder="Search posts, logs, OA files, subtitles, charts…"
+          aria-label="Search the canonical DB"
           aria-controls="palette-results"
           aria-activedescendant={
             results[selected] ? `palette-option-${selected}` : undefined
           }
         />
         <ul className="palette-results" id="palette-results" role="listbox">
-          {results.map((item, index) => (
-            <li
-              key={item.id}
-              id={`palette-option-${index}`}
-              role="option"
-              aria-selected={index === selected}
-            >
-              <button
-                type="button"
-                className={index === selected ? "palette-item active" : "palette-item"}
-                data-testid="palette-item"
-                onMouseEnter={() => setSelected(index)}
-                onClick={() => choose(item)}
+          {rows.map((row) => {
+            if (row.kind === "group") {
+              return (
+                <li
+                  key={row.key}
+                  className="palette-group"
+                  role="presentation"
+                  data-testid="palette-group"
+                >
+                  {row.label}
+                </li>
+              );
+            }
+            if (row.kind === "note") {
+              return (
+                <li key={row.key} className="palette-empty" role="presentation">
+                  {row.text}
+                </li>
+              );
+            }
+            itemIndex += 1;
+            const index = itemIndex;
+            return (
+              <li
+                key={row.key}
+                id={`palette-option-${index}`}
+                role="option"
+                aria-selected={index === selected}
               >
-                <span className="palette-label">{item.label}</span>
-                <span className="palette-hint">{item.hint}</span>
-              </button>
-            </li>
-          ))}
+                <button
+                  type="button"
+                  className={
+                    index === selected ? "palette-item active" : "palette-item"
+                  }
+                  data-testid="palette-item"
+                  onMouseEnter={() => setSelected(index)}
+                  onClick={() => choose(row.item)}
+                >
+                  <span className="palette-label">{row.item.label}</span>
+                  <span className="palette-hint">{row.item.hint}</span>
+                </button>
+              </li>
+            );
+          })}
           {results.length === 0 ? (
             <li className="palette-empty">No navigation target matches.</li>
           ) : null}

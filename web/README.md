@@ -23,20 +23,34 @@ plugin then serves the projection and text store under `/db/*`.
 |:--|:--|
 | `/` | redirects to `/timeline` |
 | `/timeline` | iM posts + OS logs ordered by `reading_order.order`; level slider, type and tier filters |
-| `/im/<gameId>`, `/os/<gameId>`, `/<type>/<gameId>` | entity detail with body text, chart links, backlinks |
+| `/oa` | OA archive index: one card per character with object/document/description counts |
+| `/oa/<gameId>` | OA workspace: object tabs, each object's text and documents, all hotspot descriptions |
+| `/backup` | Backup Database folder index with per-folder media counts |
+| `/backup/<gameId>` | folder items grouped as a media retrospective; kind filter, conditions, boss-stage links |
+| `/story` | story nodes ordered by reading order; level/version/chapter sort, event/Branching OS filter |
+| `/shop` | CAPSO packs, gacha machine and shop bundles; Black Market badge |
+| `/search?q=<text>` | full-text search over iM posts, OS logs, OA documents and subtitle lines, grouped by type |
+| `/im/<gameId>`, `/os/<gameId>`, `/<type>/<gameId>` | entity detail with body text, type-specific facts, charts, and inbound/outbound edges |
 | `/song/<songId>@<Difficulty>` | chart detail: level, NeedUnlock, unlock sources from `unlocks_chart` edges, backlinks, sibling difficulties |
 
 History routing is used, so every URL can be opened or refreshed directly, and
 the browser back/forward buttons work. `Ctrl+K` (or `Cmd+K`) opens the command
-palette; it is a shell navigation entry, not a search view.
+palette, which searches the same full-text index and groups hits by entity type;
+`/search` is the keyboard-navigable full page for the same query.
+
+The sidebar language switch covers `en`, `ja`, `zh-Hant`, `ko` and `zh-Hans`
+and persists to `localStorage`. Text records come from the canonical store in
+the selected language; when it has no body the server returns an explicit
+fallback (or a 404) and the page shows which language is being displayed.
 
 ## Served artifacts
 
 | Endpoint | Source |
 |:--|:--|
 | `GET /db/data.json` | `build/spa/data.json` verbatim |
-| `GET /db/text.json` | snippet index derived from `build/text/im_os.jsonl` |
-| `GET /db/text?ref=…&lang=…` | one full iM post / OS log text record |
+| `GET /db/text.json` | snippet and name index derived from `build/text/{im_os,oa,story}.jsonl` |
+| `GET /db/text?ref=…&lang=…` | one full text record with `requested_lang` / `fallback` fields |
+| `GET /db/search?q=…&lang=…&limit=…` | full-text match groups for posts, logs, OA documents and subtitle lines |
 
 ## Checks
 
@@ -48,11 +62,16 @@ pnpm smoke     # app must be running; Edge CDP at 127.0.0.1:9333
 
 `pnpm smoke` drives a real Edge tab over the DevTools protocol and asserts the
 home feed order, slider/filter behaviour, the Ctrl+K palette, a chart opened
-from an entity link, an unlock-source jump, direct chart deep links, and the
-return to the timeline. Screenshots land in `web/.shots/` (git-ignored).
+from an entity link, an unlock-source jump, direct chart deep links, the return
+to the timeline, the chart → post → chart round trip, the OA archive and
+document views, a backup gallery item, a Branching OS node, a CAPSO pack and
+the Black Market bundle, grouped search hits opened with the keyboard, and the
+five-language switch including the explicit missing-language fallback.
+Screenshots land in `web/.shots/` (git-ignored).
 
 ## Scope
 
-This ticket covers the shell, the `/timeline` home and chart/entity details.
-OA, CAPSO, Backup Database and full-text search views are ticket #15; the old
-`viewer/` stays frozen.
+The SPA is the only reader of the canonical projection: the shell, the
+`/timeline` home, OA, Backup Database, story nodes, CAPSO/gacha/bundles,
+chart/entity details, full-text search and the five-language switch all read
+the same `build/spa/data.json` + text stores. The old `viewer/` stays frozen.

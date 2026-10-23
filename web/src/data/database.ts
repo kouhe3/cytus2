@@ -1,23 +1,35 @@
+import { localizedValue } from "./language";
 import type {
   BaseEntity,
+  BossStageEntity,
+  CapsoShopItemEntity,
+  CapsoShopPackEntity,
   ChartEntity,
   CharacterEntity,
   Database,
   Difficulty,
   Edge,
+  GachaMachineEntity,
+  GachaRewardEntity,
+  GalleryFolderEntity,
+  GalleryItemEntity,
   ImPostEntity,
+  IllustrationEntity,
   Lang,
+  OaCharacterEntity,
+  OaDescriptionEntity,
+  OaDocumentEntity,
+  OaObjectEntity,
   OsLogEntity,
   Projection,
   ReadingOrderRow,
+  ShopBundleEntity,
   SongEntity,
   SpoilerAlertEntity,
+  StoryNodeEntity,
+  SubtitleLineEntity,
   TextSummary,
 } from "../types";
-
-export const DISPLAY_LANG: Lang = "zh-Hans";
-
-const FALLBACK_LANGS: Lang[] = ["en", "zh-Hant", "ja", "ko"];
 
 type Json = Record<string, unknown>;
 
@@ -58,6 +70,66 @@ export function isCharacter(entity: BaseEntity): entity is CharacterEntity {
 
 export function isSpoilerAlert(entity: BaseEntity): entity is SpoilerAlertEntity {
   return entity.type === "spoiler_alert";
+}
+
+export function isOaCharacter(entity: BaseEntity): entity is OaCharacterEntity {
+  return entity.type === "oa_character";
+}
+
+export function isOaObject(entity: BaseEntity): entity is OaObjectEntity {
+  return entity.type === "oa_object";
+}
+
+export function isOaDocument(entity: BaseEntity): entity is OaDocumentEntity {
+  return entity.type === "oa_document";
+}
+
+export function isOaDescription(entity: BaseEntity): entity is OaDescriptionEntity {
+  return entity.type === "oa_description";
+}
+
+export function isGalleryFolder(entity: BaseEntity): entity is GalleryFolderEntity {
+  return entity.type === "gallery_folder";
+}
+
+export function isGalleryItem(entity: BaseEntity): entity is GalleryItemEntity {
+  return entity.type === "gallery_item";
+}
+
+export function isIllustration(entity: BaseEntity): entity is IllustrationEntity {
+  return entity.type === "illustration";
+}
+
+export function isStoryNode(entity: BaseEntity): entity is StoryNodeEntity {
+  return entity.type === "story_node";
+}
+
+export function isBossStage(entity: BaseEntity): entity is BossStageEntity {
+  return entity.type === "boss_stage";
+}
+
+export function isCapsoShopPack(entity: BaseEntity): entity is CapsoShopPackEntity {
+  return entity.type === "capso_shop_pack";
+}
+
+export function isCapsoShopItem(entity: BaseEntity): entity is CapsoShopItemEntity {
+  return entity.type === "capso_shop_item";
+}
+
+export function isGachaMachine(entity: BaseEntity): entity is GachaMachineEntity {
+  return entity.type === "gacha_machine";
+}
+
+export function isGachaReward(entity: BaseEntity): entity is GachaRewardEntity {
+  return entity.type === "gacha_reward";
+}
+
+export function isShopBundle(entity: BaseEntity): entity is ShopBundleEntity {
+  return entity.type === "shop_bundle";
+}
+
+export function isSubtitleLine(entity: BaseEntity): entity is SubtitleLineEntity {
+  return entity.type === "subtitle_line";
 }
 
 export function isReadingOrder(entity: BaseEntity): entity is ReadingOrderRow {
@@ -201,6 +273,7 @@ export function buildDatabase(
     timelineOrders,
     readingOrderByEntity,
     textRefs: text.refs,
+    textNames: text.names ?? {},
     characterById,
     spoilerById,
     chartsBySong,
@@ -249,6 +322,7 @@ export async function loadDatabase(signal?: AbortSignal): Promise<Database> {
 export function textSnippet(
   db: Database,
   textRef: string | null | undefined,
+  lang: Lang,
 ): string {
   if (!textRef) {
     return "";
@@ -257,15 +331,5 @@ export function textSnippet(
   if (!byLang) {
     return "";
   }
-  const preferred = byLang[DISPLAY_LANG];
-  if (preferred) {
-    return preferred;
-  }
-  for (const lang of FALLBACK_LANGS) {
-    const value = byLang[lang];
-    if (value) {
-      return value;
-    }
-  }
-  return "";
+  return localizedValue(byLang as Record<Lang, string | null>, lang);
 }

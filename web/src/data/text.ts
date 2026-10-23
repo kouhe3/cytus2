@@ -1,15 +1,21 @@
-import { DISPLAY_LANG } from "./database";
-import type { TextRecord } from "../types";
+import type { Lang, TextRecord } from "../types";
 
 const cache = new Map<string, Promise<TextRecord | null>>();
 
-export function loadTextRecord(ref: string): Promise<TextRecord | null> {
-  const cached = cache.get(ref);
+export interface TextLoad {
+  readonly record: TextRecord | null;
+  /** True when the server had no record for any language. */
+  readonly missing: boolean;
+}
+
+export function loadTextRecord(ref: string, lang: Lang): Promise<TextRecord | null> {
+  const key = `${lang}\u0000${ref}`;
+  const cached = cache.get(key);
   if (cached) {
     return cached;
   }
   const request = fetch(
-    `/db/text?ref=${encodeURIComponent(ref)}&lang=${DISPLAY_LANG}`,
+    `/db/text?ref=${encodeURIComponent(ref)}&lang=${encodeURIComponent(lang)}`,
   )
     .then(async (response) => {
       if (response.status === 404) {
@@ -21,9 +27,9 @@ export function loadTextRecord(ref: string): Promise<TextRecord | null> {
       return (await response.json()) as TextRecord;
     })
     .catch((error: unknown) => {
-      cache.delete(ref);
+      cache.delete(key);
       throw error;
     });
-  cache.set(ref, request);
+  cache.set(key, request);
   return request;
 }

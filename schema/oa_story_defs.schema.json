@@ -25,11 +25,13 @@
       "properties": {
         "character": {
           "type": "string",
-          "pattern": "^character/[^\\s]+$"
+          "pattern": "^character/[^\\s]+$",
+          "description": "Character id from the raw character level lock."
         },
         "level": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "0-based level; the game UI displays level + 1."
         }
       }
     },

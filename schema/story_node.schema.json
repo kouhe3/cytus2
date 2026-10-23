@@ -45,7 +45,8 @@
     },
     "level": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "description": "Raw branching unlock level (0-based); see level_locks for its character."
     },
     "level_locks": {
       "type": "array",

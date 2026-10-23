@@ -290,3 +290,25 @@ OA「场景」页签在每段视频上方标出「初始（默认场景）/ 变�
 `index.json` 里导出为 `imFilters: { items: [{avatar, avatars, name}], otherAvatar, likeAvatar }`；
 iM 视图顶部渲染成按钮组（选中即过滤，再点取消），列表仍按阅读阶段排序。
 `likeAvatar`（点赞）需要玩家存档状态，暂不提供。
+
+### 游戏内 iM 列表的排序（反编译）
+
+`IMPresenter._GetUnlockedTopicList()` 用一个比较器排序：`IMPresenter.<_GetUnlockedTopicList>b__36_0`（0x2366578），
+反编译后就是：
+
+```csharp
+(t1, t2) => {
+    if (lockStatus(t1) == IMLockStatus.Locked) return 1;    // 锁着的沉底
+    if (lockStatus(t2) == IMLockStatus.Locked) return -1;
+    return record(t1).Order - record(t2).Order;             // 其余按 Order 升序
+}
+```
+
+- `IMLockStatus`：`Hidden=0`（不进列表）、`Locked=1`（显示但锁着，排在最后）、`Unlocked=2`。
+- `Order` 是**存档字段**（`IMTopicRecord.Order` @0x18），配一个全局 `IMTopicRecordSet.TopicOrderCounter`：
+  帖子首次可用时拿一个递增序号，所以列表实际是**按你解锁/首次看到的先后**排列。
+- 列表更新后 `IMView.SetTopicList(list, forceNewestTopic)` 会滚到顶部/最新一条；`TopicParam.IsFirstTime` 驱动新帖动画。
+- 没有按时间、点赞数、帖子 id 或数据表顺序排序的比较器（`im_topic_data` 本身也没有排序字段）。
+- 触发完某个剧情后帖子会被移除（`REMOVE_IM_TOPICS_BY_FINISHING_STORY` / `removeTopicIds`，例如 `N2601`）。
+
+因此本仓库的「阶段排序」是**模拟新档的可达顺序**（等级上限 + 剧情），并不等于某个存档的 `Order`；同一阶段内保持数据顺序。

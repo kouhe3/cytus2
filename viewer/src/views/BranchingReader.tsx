@@ -1,4 +1,5 @@
 import type { ExtraContent, IndexData, Lang } from "../types";
+import { dispLevel } from "../data";
 import { Script } from "../components/Script";
 import { Chip, Facts, Skeleton } from "../components/ui";
 import { BranchMap } from "../components/BranchMap";
@@ -49,7 +50,7 @@ export function BranchingReader({
 
       <Facts
         items={[
-          ["解锁等级", node.level ? `Lv${node.level}` : "—"],
+          ["解锁等级", node.level ? `Lv${dispLevel(node.level)}` : "—"],
           ["分支状态", node.stateId !== undefined ? `StateId ${node.stateId} = ${node.stateValue}` : "—"],
           ["关联谱面", (node.charts ?? []).join("、") || "—"],
           ["位置 / 顺序", `${node.position ?? "—"} / ${node.order ?? "—"}`],

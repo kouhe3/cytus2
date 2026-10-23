@@ -202,7 +202,7 @@ export interface StoryEvent {
 export interface SongUnlock {
   /** 0 Easy / 1 Hard / 2 Chaos */
   d: number;
-  src: "im" | "branch";
+  src: "im" | "branch" | "os";
   ref: string;
   names?: Record<string, string>;
   levels?: [string, number][];
@@ -278,6 +278,8 @@ export interface SongCatalog {
   unlocks: Record<string, SongUnlock[]>;
   /** 通关剧情解锁的谱面：songId → [{d, story}] */
   storyCharts: Record<string, { d: number; story: string }[]>;
+  /** OS 档案里的 UnlockCharts：songId → 档案件（同样带等级锁） */
+  osCharts: Record<string, SongUnlock[]>;
   expansion: ExpansionPack[];
   capso: CapsoPack[];
   gacha: GachaData;

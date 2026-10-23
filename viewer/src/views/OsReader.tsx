@@ -1,6 +1,6 @@
 import type { ArchiveFilters } from "../rows";
 import type { IndexData, Lang, OsMeta, OsText } from "../types";
-import { formatDate } from "../data";
+import { dispLevel, formatDate } from "../data";
 import { Script } from "../components/Script";
 import { Video } from "../components/Media";
 import { findMovie, useManifest } from "../media";
@@ -101,7 +101,7 @@ export function OsReader({
           <div className="chips">
             {sync.map((s) =>
               s.im.map((id) => (
-                <NavChip key={`${s.pack}-${s.level}-${id}`} onClick={() => onNavigate("im", id)} tone="accent" title={`${s.pack} Lv${s.level}`}>
+                <NavChip key={`${s.pack}-${s.level}-${id}`} onClick={() => onNavigate("im", id)} tone="accent" title={`${s.pack} Lv${dispLevel(s.level)}`}>
                   {id}
                 </NavChip>
               )),

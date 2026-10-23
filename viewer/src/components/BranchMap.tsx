@@ -1,4 +1,5 @@
 import type { BackupNode, Lang } from "../types";
+import { dispLevel } from "../data";
 
 /**
  * Tairitsu 的 Branching OS 分支图。
@@ -125,7 +126,7 @@ export function BranchMap({
               <text x={NODE_W / 2} y={NODE_H / 2 + 4} textAnchor="middle" className="branch-node-label">
                 {label}
               </text>
-              <title>{`${n.names?.[lang] || n.id} · ${n.id} · Lv${n.level ?? "?"} · 分支 ${n.branch || "收束"}`}</title>
+              <title>{`${n.names?.[lang] || n.id} · ${n.id} · Lv${dispLevel(n.level) ?? "?"} · 分支 ${n.branch || "收束"}`}</title>
             </g>
           );
         })}

@@ -2,7 +2,7 @@ import type { ExtraContent, IndexData, Lang } from "../types";
 import { useState } from "react";
 import { MEDIA_BASE, findMovie, findVideoWithSong, useManifest } from "../media";
 import type { SongCatalog } from "../types";
-import { characterName, loadEndplayMap, loadSongs, loadSubsIndex, useAsync, formatClock } from "../data";
+import { characterName, dispLevel, loadEndplayMap, loadSongs, loadSubsIndex, useAsync, formatClock } from "../data";
 import { Video } from "../components/Media";
 import { Skeleton } from "../components/ui";
 
@@ -375,11 +375,13 @@ function SongSection({
         <span className="mono">song_pack_data</span>，每个难度带 <span className="mono">NeedUnlock</span>
         ：false = 拥有曲包即解锁（「默认解锁」），true = 需要一次解锁事件。获取方式按优先级判定：
         <b>iM 帖</b>（<span className="mono">UnlockCharts</span>）→
+        <b>OS 档案</b>（<span className="mono">text/osdata/*</span> 的 <span className="mono">UnlockCharts</span>）→
         <b>分支节点</b>（<span className="mono">UnlockedCharts</span>）→
         <b>通关剧情</b>（<span className="mono">storychartunlock</span>）→
         <b>默认解锁</b> → <b>CAPSO 商店</b>（<span className="mono">capsoshoppacks</span>）→
         <b>CAPSO! 抽奖</b>（<span className="mono">gacharewarddata.ab</span>）→ <b>购买曲包</b>（IAP）。
-        都不匹配的写「需解锁 · 本地无记录」。
+        都不匹配的写「需解锁 · 本地无记录」。等级一律按游戏内显示（数据里的 Level 是 0 基，这里 +1，
+        exp 表长度 99 → 上限 Lv99）。
       </p>
       {catalog.packs.map((pack) => (
         <details key={pack.id} style={{ marginBottom: 10 }}>
@@ -407,8 +409,9 @@ function SongSection({
                       const hit = (catalog.unlocks[song.id] ?? []).find((u) => u.d === d);
                       const lvText = (hit?.levels ?? [])
                         .filter(([, lv]) => lv > 0)
-                        .map(([pack2, lv]) => `${characterName(index, pack2)} Lv${lv}`)
+                        .map(([pack2, lv]) => `${characterName(index, pack2)} Lv${dispLevel(lv)}`)
                         .join("、");
+                      const osHit = (catalog.osCharts[song.id] ?? []).find((x) => x.d === d);
                       const story = (catalog.storyCharts[song.id] ?? []).find((x) => x.d === d);
                       const capso = capsoIndex.get(song.id);
                       const gacha = (gachaIndex[song.id] ?? []).find((x) => x.d === d);
@@ -426,6 +429,16 @@ function SongSection({
                                 onClick={() => onNavigate(hit.src === "im" ? "im" : "branching", hit.ref)}
                               >
                                 {hit.names?.[lang] || hit.names?.["zh-Hans"] || hit.ref}
+                              </button>
+                            </>
+                          ) : osHit ? (
+                            <>
+                              {(osHit.levels ?? []).filter(([, lv]) => lv >= 0).map(([pack2, lv], i) => (
+                                <span key={i}>{i ? "、" : ""}{characterName(index, pack2)} Lv{dispLevel(lv)} 后</span>
+                              ))}
+                              阅读 OS 档案{" "}
+                              <button type="button" className="chip chip-btn" onClick={() => onNavigate("os", osHit.ref)}>
+                                {osHit.names?.[lang] || osHit.names?.["zh-Hans"] || osHit.ref}
                               </button>
                             </>
                           ) : story ? (

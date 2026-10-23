@@ -1,4 +1,5 @@
 import type { ImMeta, ImText, IndexData, Lang, ReplyNode } from "../types";
+import { dispLevel } from "../data";
 import { Chip, Facts, NavChip, Skeleton } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { InlineImage } from "../components/Media";
@@ -156,7 +157,7 @@ export function ImReader({
           <div className="chips">
             {sync.map((s) =>
               s.os.map((id) => (
-                <NavChip key={`${s.pack}-${s.level}-${id}`} onClick={() => onNavigate("os", id)} title={`${s.pack} Lv${s.level}`}>
+                <NavChip key={`${s.pack}-${s.level}-${id}`} onClick={() => onNavigate("os", id)} title={`${s.pack} Lv${dispLevel(s.level)}`}>
                   {id}
                 </NavChip>
               )),

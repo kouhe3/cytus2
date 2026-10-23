@@ -262,7 +262,7 @@ export function rowsFor(
           sub: `${t.storyTrigger ? "⚑ 触发帖 · " : ""}#${t.readIndex ?? "?"}${t.cost ? ` · 解锁成本 ${t.cost}` : ""}${
             t.external ? ` · 外部：${t.external}` : ""
           }${t.branch ? ` · 分支：${t.branch}` : ""} · ${t.author} · ${t.replies} 回复`,
-          group: `阶段 ${t.stage ?? "?"}${t.lockLevel ? `（≤Lv${t.lockLevel}）` : ""}`,
+          group: `阶段 ${t.stage ?? "?"}${t.lockLevel ? `（≤Lv${t.lockLevel + 1}）` : ""}`,
           badge: t.id,
           avatar: t.avatar,
         }));

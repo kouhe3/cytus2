@@ -110,6 +110,47 @@ def read_capso() -> list:
     return out
 
 
+def names_by_lang(arr):
+    # Titles/Names 的 6 槽位 → 语言码（与 LANGS 一致：0 en / 1 ja / 2 zh-Hant / 3 ko / 5 zh-Hans）
+    return {code: (arr or [""] * 6)[i] for code, i in
+            {"en": 0, "ja": 1, "zh-Hant": 2, "ko": 3, "zh-Hans": 5}.items()}
+
+
+def read_os_chart_unlocks() -> dict:
+    """OS 档案的 UnlockCharts（text/osdata/<packId>，一条谱面级的解锁来源）
+
+    同一个 `Level` 语义与 im_lock_condition_data 一致：0 基，显示时要 +1。
+    """
+    base = os.path.join(T, "osdata")
+    out = {}
+    for fname in sorted(os.listdir(base)):
+        path = os.path.join(base, fname)
+        if not os.path.isfile(path):
+            continue
+        try:
+            files = json.load(open(path, encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        if not isinstance(files, list):
+            continue
+        for f in files:
+            charts = f.get("UnlockCharts") or []
+            if not charts:
+                continue
+            cond = f.get("OSLockCondition") or {}
+            for c in charts:
+                out.setdefault(c["SongId"], []).append({
+                    "d": c.get("Difficulty"),
+                    "src": "os",
+                    "ref": f["Id"],
+                    "pack": fname,
+                    "names": names_by_lang(f.get("Names")),
+                    "levels": [[x["SongPackId"], x["Level"]] for x in cond.get("LevelLocks") or []],
+                    "story": cond.get("StoryLockId") or "",
+                })
+    return out
+
+
 def read_gacha() -> dict:
     """gacharewarddata.ab（split_assets_pack_1）→ CAPSO! 抽奖机奖励
 
@@ -230,12 +271,6 @@ def main():
         for s in catalog.get("other_song_info_list") or []
     ]
 
-    # Titles/Names 的 6 槽位 → 语言码（与 LANGS 一致：0 en / 1 ja / 2 zh-Hant / 3 ko / 5 zh-Hans）
-    SLOT = {"en": 0, "ja": 1, "zh-Hant": 2, "ko": 3, "zh-Hans": 5}
-
-    def names_by_lang(arr):
-        return {code: (arr or [""] * 6)[i] for code, i in SLOT.items()}
-
     # ---- 获取方式：iM 帖 / 分支节点 ----
     unlocks = {}
     topics = json.load(open(os.path.join(T, "imdata", "im_topic_data"), encoding="utf-8"))
@@ -278,6 +313,7 @@ def main():
         "expansion": read_expansion(),
         "capso": read_capso(),
         "gacha": read_gacha(),
+        "osCharts": read_os_chart_unlocks(),
     }
     json.dump(data, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     songs = sum(len(p["songs"]) for p in packs) + len(other)
@@ -288,7 +324,8 @@ def main():
     print(
         f"{len(packs)} 个曲包 / {songs} 首歌（另有 DLC {len(data['expansion'])} 包 {n_dlc} 首、"
         f"CAPSO {len(data['capso'])} 包 {n_capso} 首）/ {len(unlocks)} 首有帖子或节点获取方式 / "
-        f"{n_story} 首有通关解锁 / CAPSO! 抽奖 {n_gacha} 个谱面 → {os.path.relpath(OUT, HERE)}"
+        f"{n_story} 首有通关解锁 / CAPSO! 抽奖 {n_gacha} 个谱面 / "
+        f"OS 档案解锁 {len(data['osCharts'])} 首 → {os.path.relpath(OUT, HERE)}"
     )
 
 

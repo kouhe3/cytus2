@@ -44,6 +44,11 @@ export function loadExtra(lang: Lang): Promise<ExtraContent> {
 /** 字幕正文索引：{ 字幕 key: { lang: [start, end, text][] } } */
 export type SubsIndex = Record<string, Record<string, [number, number, string][]>>;
 
+/** 数据里的 Level 是 0 基（exp 表长度 99 → 上限 Lv99），显示要 +1 */
+export function dispLevel(level: number | undefined | null) {
+  return typeof level === "number" ? level + 1 : undefined;
+}
+
 export function loadSongs(): Promise<import("./types").SongCatalog> {
   return loadJson<import("./types").SongCatalog>("songs.json");
 }

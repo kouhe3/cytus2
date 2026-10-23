@@ -48,6 +48,26 @@ export function loadSubsIndex(): Promise<SubsIndex> {
   return loadJson<SubsIndex>("subs-index.json");
 }
 
+/** OA 场景阶段：`<角色>_s001` 这类前缀 → 触发它的剧情 action（dump.cs 的 CHANGED_OA_BG_MOVIE_PREFIX） */
+export type SceneStages = Record<
+  string,
+  {
+    action?: string;
+    pack?: string;
+    level?: string;
+    os?: string;
+    topic?: string;
+    boss?: string;
+    movie?: string;
+    /** 切换条件（ObjectAnalysisRecord.GetIdByStory 反编译） */
+    when?: string;
+  }
+>;
+
+export function loadSceneStages(): Promise<SceneStages> {
+  return loadJson<SceneStages>("scenes.json");
+}
+
 /** 结场演出：视频 ← 游戏内配乐（dump.cs 里 IEndPlayEvent 的 SONG_ID / VIDEO_ID 常量） */
 export type EndplayEvent = {
   class: string;

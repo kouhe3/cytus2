@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ExtraContent, IndexData, OaItem } from "../types";
-import { characterName } from "../data";
+import { characterName, loadSceneStages, useAsync } from "../data";
 import { Script } from "../components/Script";
 import { Video } from "../components/Media";
 import { MEDIA_BASE, useManifest } from "../media";
@@ -123,6 +123,17 @@ export function OaReader({
     return key ? table[key] : undefined;
   };
 
+  const sceneStages = useAsync(loadSceneStages, []);
+  const sceneStage = (key: string) => {
+    const stem = key.replace(/_oa_system$/, "");
+    const hit = sceneStages.state === "ready" ? sceneStages.data[stem] : undefined;
+    if (!hit) return { label: stem === character ? "初始（默认场景）" : stem, detail: "" };
+    const bits = [hit.topic ? `OS ${hit.topic}` : "", hit.boss ? `Boss ${hit.boss}` : ""]
+      .filter(Boolean)
+      .join(" → ");
+    return { label: `变体 · ${hit.when ?? hit.action ?? stem}`, detail: bits };
+  };
+
   const charScenes = sceneClips.filter(
     (c) => c.char === character || c.char.startsWith(`${character}_s`),
   );
@@ -228,13 +239,15 @@ export function OaReader({
             const costume = costumeId
               ? index.illustrations.find((i) => i.id === costumeId)?.costume
               : "";
+            const stage = sceneStage(key);
             return (
-              <Video
-                key={key}
-                entry={entry}
-                id={costume ? `${key} · ${costume}` : key}
-                lang={lang}
-              />
+              <div key={key}>
+                <p className="mono" style={{ margin: "10px 0 0", color: "var(--accent)" }}>
+                  {stage.label}
+                  {stage.detail ? <span style={{ color: "var(--muted)" }}> · {stage.detail}</span> : null}
+                </p>
+                <Video entry={entry} id={costume ? `${key} · ${costume}` : key} lang={lang} />
+              </div>
             );
           })}
         </>

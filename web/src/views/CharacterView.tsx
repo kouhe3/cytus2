@@ -16,6 +16,18 @@ import type { CharacterOsEntry } from "../data/selectors";
 import type { I18n } from "../data/messages";
 import type { CharacterEntity, Database, Lang } from "../types";
 
+/**
+ * The game's character page exposes an iM entry only for the three
+ * protagonists. This is navigation structure, not a data derivation: the feed's
+ * account filter (`imFilters`) also contains Xenon, ConneR, Cherry and JOE, and
+ * those characters still have no character-page iM tab.
+ */
+const IM_TAB_CHARACTERS: Readonly<Record<string, true>> = {
+  paff001: true,
+  neko001: true,
+  robo001: true,
+};
+
 function PackFact({
   db,
   character,
@@ -76,7 +88,9 @@ export function CharacterView({
     return [...grouped.entries()];
   }, [entries]);
 
-  const imAccount = characterImAccount(db, character);
+  const imAccount = IM_TAB_CHARACTERS[character.game_id]
+    ? characterImAccount(db, character)
+    : null;
   const timelineOs = entries.filter(
     (entry) => entry.row.timeline_scope === "timeline",
   ).length;

@@ -114,8 +114,8 @@ _Avoid_: 把原因当成实体；与 `unlock_condition`（实体自身字段）�
 _Avoid_: 与 `story_node.kind=branch`（Branching OS 节点）混用；不要把显示文本写进 DB
 
 **Timeline scope** (`reading_order.timeline_scope`):
-一条阅读顺序记录属于哪里：`timeline` = 全局解锁时间线（全部 iM 帖 + 主线 7 人的 OS），`character` = 只在角色页按版本阅读的 OS，`none` = OA 文档与故事节点。角色页的 iM 页签由 `imFilters` 中是否存在该角色的账户条目决定；没有条目就不渲染页签。
-_Avoid_: 把 `character` 当成「角色实体」；它描述的是阅读入口
+一条阅读顺序记录属于哪里：`timeline` = 全局解锁时间线（全部 iM 帖 + 主线 7 人的 OS），`character` = 只在角色页按版本阅读的 OS，`none` = OA 文档与故事节点。角色页的 iM 页签只对 PAFF / NEKO / ROBO 开放；这是游戏的角色页导航结构，不由 `imFilters`（iM feed 的账号过滤维度）推导。PΛFF 没有 iM 账号入口。
+_Avoid_: 把 `character` 当成「角色实体」；把 `imFilters` 的账户当成角色页 iM 页签的依据
 
 ## Wiki 导出
 

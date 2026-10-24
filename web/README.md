@@ -28,7 +28,7 @@ repository root when the default `python` does not have UnityPy;
 |:--|:--|
 | `/` | redirects to `/timeline` |
 | `/timeline` | global unlock timeline: all 323 iM posts + the 501 main-seven OS logs (`timeline_scope=timeline`) ordered by `reading_order.order`; level slider, type, tier and iM account filters |
-| `/character/<gameId>` | character page: every OS log of that character via `OS → SORT BY VERSION`; a character with an `imFilters` account gets an IM tab linking to the account-filtered feed |
+| `/character/<gameId>` | character page: every OS log of that character via `OS → SORT BY VERSION`; PAFF / NEKO / ROBO add an IM tab linking to the account-filtered feed |
 | `/oa` | OA archive index: one card per character with object/document/description counts |
 | `/oa/<gameId>` | OA workspace: object tabs, each object's text and documents, all hotspot descriptions |
 | `/backup` | Backup Database folder index with per-folder media counts |
@@ -65,9 +65,10 @@ active locale. Entity titles and bodies are not translated by this dictionary.
 logs (`timeline_scope=character`) stay out of the feed and appear only on
 their character page, sorted by the numeric `version_order`. The account
 filter uses the seven icons from `im_filter_data` (exported as `imFilters` in
-`data.json`) plus `other/NPC`. A character page renders the IM tab only when
-that character belongs to one of those accounts; PΛFF has none, and its four
-epilogue posts remain in the global feed.
+`data.json`) plus `other/NPC`. That filter is a feed dimension, not the
+character-page navigation: only PAFF / NEKO / ROBO have an IM tab, so Xenon,
+ConneR, Cherry and JOE do not, and PΛFF has none either. PΛFF's four epilogue
+posts remain in the global feed.
 
 ## Served artifacts
 
@@ -105,7 +106,7 @@ Node 24 strips the types, so no test runner or build step is involved.
 
 `pnpm smoke` drives a real Edge tab over the DevTools protocol and asserts the
 824-entry home feed and its account filter, the character OS version order and
-the IM tab derived from `imFilters` accounts, the PΛFF note, the slider/filter
+the IM tab limited to PAFF / NEKO / ROBO, the PΛFF note, the slider/filter
 behaviour, the Ctrl+K palette, a chart opened from an entity link, an
 unlock-source jump, direct chart deep links, the return to the timeline, the
 chart → post → chart round trip, the OA archive and document views, a backup

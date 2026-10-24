@@ -36,6 +36,7 @@ import {
   isGalleryItem,
   isIllustration,
   isImPost,
+  isImReply,
   isOaCharacter,
   isOaDescription,
   isOaDocument,
@@ -319,6 +320,19 @@ export function EntityView({
               <div className="fallback-note" data-testid="language-fallback">
                 {fallbackNotice(i18n, lang, picked.actual)}
               </div>
+            ) : null}
+            {isImReply(entity) ? (
+              <p className="byline">
+                {entity.author} ·{" "}
+                <Link to={entityHref(entity.post_id)} className="inline-link">
+                  {(() => {
+                    const parent = db.entityById.get(entity.post_id);
+                    return parent
+                      ? entityTitle(db, parent, lang, i18n)
+                      : entity.post_id;
+                  })()}
+                </Link>
+              </p>
             ) : null}
             {isImPost(entity) ? (
               <p className="byline">

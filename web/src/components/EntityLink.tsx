@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { useI18n } from "../data/i18n";
 import { TypeBadge } from "./ui";
+import { MediaImage } from "./Media";
+import { isImReply } from "../data/database";
 import { entityHref, entityTitle } from "../data/selectors";
 import type { BaseEntity, Database, Lang } from "../types";
 
@@ -18,19 +20,35 @@ export function EntityLink({
   meta?: string;
 }) {
   const i18n = useI18n();
+  const reply = isImReply(entity);
   return (
     <Link
       to={entityHref(entity.id)}
-      className="entity-link"
+      className={`entity-link${reply ? " entity-link--reply" : ""}`}
       data-testid={testId}
       data-entity-id={entity.id}
       data-entity-type={entity.type}
     >
-      <span className="entity-link-title">{entityTitle(db, entity, lang, i18n)}</span>
-      <span className="entity-link-meta">
-        <TypeBadge type={entity.type} />
-        <code>{entity.id}</code>
-        {meta ? <span>{meta}</span> : null}
+      {reply ? (
+        <MediaImage
+          id={entity.avatar}
+          kind="avatar"
+          alt={entity.author}
+          className="entity-link-avatar"
+        />
+      ) : null}
+      <span className="entity-link-body">
+        <span className="entity-link-title">
+          {entityTitle(db, entity, lang, i18n)}
+        </span>
+        {reply ? (
+          <span className="entity-link-author">{entity.author}</span>
+        ) : null}
+        <span className="entity-link-meta">
+          <TypeBadge type={entity.type} />
+          <code>{entity.id}</code>
+          {meta ? <span>{meta}</span> : null}
+        </span>
       </span>
     </Link>
   );

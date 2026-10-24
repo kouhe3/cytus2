@@ -15,6 +15,7 @@ import type {
   GalleryFolderEntity,
   GalleryItemEntity,
   ImPostEntity,
+  ImReplyEntity,
   ImFilters,
   IllustrationEntity,
   Lang,
@@ -53,6 +54,10 @@ export function recordOf(entity: BaseEntity): Json {
 
 export function isImPost(entity: BaseEntity): entity is ImPostEntity {
   return entity.type === "im_post";
+}
+
+export function isImReply(entity: BaseEntity): entity is ImReplyEntity {
+  return entity.type === "im_reply";
 }
 
 export function isOsLog(entity: BaseEntity): entity is OsLogEntity {

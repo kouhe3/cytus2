@@ -1860,3 +1860,31 @@ kbd {
   height: auto;
   max-width: 100%;
 }
+
+.entity-link--reply {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.entity-link-avatar {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: #05070a;
+  object-fit: cover;
+}
+
+.entity-link-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.entity-link-author {
+  color: var(--accent-dim);
+  font-size: 12px;
+}

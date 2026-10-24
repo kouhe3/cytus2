@@ -2,6 +2,7 @@ import { MediaImage } from "./Media";
 import {
   isGalleryItem,
   isIllustration,
+  isImReply,
   isImPost,
   isSong,
   recordOf,
@@ -18,6 +19,18 @@ export function EntityMedia({ entity }: { readonly entity: BaseEntity }) {
           kind="illustration"
           alt={entity.game_id}
           className="entity-illustration"
+        />
+      </div>
+    );
+  }
+  if (isImReply(entity)) {
+    return (
+      <div className="entity-media post-media">
+        <MediaImage
+          id={entity.avatar}
+          kind="avatar"
+          alt={entity.author}
+          className="post-avatar"
         />
       </div>
     );

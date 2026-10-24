@@ -70,6 +70,18 @@ export interface ImPostEntity extends BaseEntity {
   readonly provenance: ProvenanceEntry[];
 }
 
+export interface ImReplyEntity extends BaseEntity {
+  readonly type: "im_reply";
+  readonly game_id: string;
+  readonly author: string;
+  readonly avatar: string;
+  readonly order: number;
+  readonly post_id: string;
+  readonly text_ref: string;
+  readonly missing_languages: Lang[];
+  readonly provenance: ProvenanceEntry[];
+}
+
 export interface OsLogEntity extends BaseEntity {
   readonly type: "os_log";
   readonly game_id: string;

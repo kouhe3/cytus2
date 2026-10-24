@@ -300,7 +300,7 @@ export interface CharacterOsEntry {
   readonly entity: OsLogEntity;
 }
 
-function compareOsVersions(
+export function compareOsVersions(
   left: CharacterOsEntry,
   right: CharacterOsEntry,
 ): number {

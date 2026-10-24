@@ -125,6 +125,12 @@ export function CharacterView({
           <div className="entity-media character-media">
             <MediaImage
               id={character.game_id}
+              kind="logo"
+              alt={character.name}
+              className="character-logo"
+            />
+            <MediaImage
+              id={character.game_id}
               kind="illustration"
               alt={character.name}
               className="character-illustration"

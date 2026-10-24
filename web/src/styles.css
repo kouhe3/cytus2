@@ -1943,3 +1943,61 @@ kbd {
 .os-character-group > .os-version-group {
   margin: 0 14px 12px;
 }
+
+.os-mode-switch {
+  display: inline-flex;
+  gap: 0;
+  margin: 8px 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.os-mode-switch button {
+  padding: 7px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.os-mode-switch button.active {
+  background: var(--accent-dim);
+  color: var(--text-strong);
+}
+
+.os-summary-name,
+.os-character-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.os-character-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: #05070a;
+}
+
+.os-character-heading .os-character-logo {
+  width: 28px;
+  height: 28px;
+}
+
+.os-version-label {
+  font-family: var(--mono);
+}
+
+.character-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #05070a;
+}

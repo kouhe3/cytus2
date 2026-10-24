@@ -3,7 +3,7 @@ import { loadMediaManifest, mediaUrl, pickAudio, pickImage, pickVideo, type Medi
 
 type MediaProps = {
   readonly id: string;
-  readonly kind?: "auto" | "image" | "viewer" | "avatar" | "illustration";
+  readonly kind?: "auto" | "image" | "viewer" | "avatar" | "illustration" | "logo";
   readonly alt?: string;
   readonly className?: string;
 };
@@ -39,7 +39,7 @@ export function MediaImage({ id, kind = "auto", alt, className }: MediaProps) {
   if (!asset) {
     return null;
   }
-  const stretch = kind !== "avatar" && asset.w && asset.h;
+  const stretch = kind !== "avatar" && kind !== "logo" && asset.w && asset.h;
   const aspect = stretch ? INLINE_BASE_RATIO * (asset.w! / asset.h!) : null;
   return (
     <img

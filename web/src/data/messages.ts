@@ -55,6 +55,9 @@ export const ZH_HANS = {
 
   "nav.timeline": "时间线",
   "nav.os": "OS 日志",
+  "osIndex.modeAria": "OS 分组方式",
+  "osIndex.byCharacter": "角色 → 版本",
+  "osIndex.byVersion": "版本 → 角色",
   "nav.search": "搜索",
   "nav.oa": "OA",
   "nav.backup": "备份数据库",
@@ -613,6 +616,9 @@ const EN: Messages = {
 
   "nav.timeline": "Timeline",
   "nav.os": "OS logs",
+  "osIndex.modeAria": "OS grouping",
+  "osIndex.byCharacter": "Character → version",
+  "osIndex.byVersion": "Version → character",
   "nav.search": "Search",
   "nav.oa": "OA",
   "nav.backup": "Backup Database",
@@ -1168,6 +1174,9 @@ const JA: Messages = {
 
   "nav.timeline": "タイムライン",
   "nav.os": "OS ログ",
+  "osIndex.modeAria": "OS のグループ化",
+  "osIndex.byCharacter": "キャラクター → バージョン",
+  "osIndex.byVersion": "バージョン → キャラクター",
   "nav.search": "検索",
   "nav.oa": "OA",
   "nav.backup": "バックアップDB",
@@ -1723,6 +1732,9 @@ const ZH_HANT: Messages = {
 
   "nav.timeline": "時間軸",
   "nav.os": "OS 日誌",
+  "osIndex.modeAria": "OS 分組方式",
+  "osIndex.byCharacter": "角色 → 版本",
+  "osIndex.byVersion": "版本 → 角色",
   "nav.search": "搜尋",
   "nav.oa": "OA",
   "nav.backup": "備份資料庫",
@@ -2278,6 +2290,9 @@ const KO: Messages = {
 
   "nav.timeline": "타임라인",
   "nav.os": "OS 로그",
+  "osIndex.modeAria": "OS 그룹화",
+  "osIndex.byCharacter": "캐릭터 → 버전",
+  "osIndex.byVersion": "버전 → 캐릭터",
   "nav.search": "검색",
   "nav.oa": "OA",
   "nav.backup": "백업 데이터베이스",

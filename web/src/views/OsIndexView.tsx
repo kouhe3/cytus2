@@ -1,13 +1,23 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { EntityLink } from "../components/EntityLink";
+import { MediaImage } from "../components/Media";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
-import { characterOsEntries, entityHref } from "../data/selectors";
+import {
+  characterOsEntries,
+  compareOsVersions,
+  entityHref,
+} from "../data/selectors";
 import type { CharacterOsEntry } from "../data/selectors";
 import { isCharacter } from "../data/database";
-import type { Database } from "../types";
+import type { CharacterEntity, Database } from "../types";
 
+type Mode = "character" | "version";
+type CharacterGroup = {
+  readonly character: CharacterEntity;
+  readonly entries: CharacterOsEntry[];
+};
 function versionGroups(entries: CharacterOsEntry[]): [string, CharacterOsEntry[]][] {
   const grouped = new Map<string, CharacterOsEntry[]>();
   for (const entry of entries) {
@@ -23,6 +33,7 @@ function versionGroups(entries: CharacterOsEntry[]): [string, CharacterOsEntry[]
 }
 
 const OPEN_STORAGE = "os-index-open";
+const MODE_STORAGE = "os-index-mode";
 
 function initialOpen(): Set<string> {
   try {
@@ -36,10 +47,18 @@ function initialOpen(): Set<string> {
   return new Set();
 }
 
+function initialMode(): Mode {
+  return sessionStorage.getItem(MODE_STORAGE) === "version"
+    ? "version"
+    : "character";
+}
+
 export function OsIndexView({ db }: { readonly db: Database }) {
   const { lang } = useLanguage();
   const i18n = useI18n();
-  const [openCharacters, setOpenCharacters] = useState(initialOpen);
+  const [mode, setMode] = useState(initialMode);
+  const [openGroups, setOpenGroups] = useState(initialOpen);
+
   const characters = useMemo(
     () =>
       (db.entitiesByType.get("character") ?? [])
@@ -52,6 +71,62 @@ export function OsIndexView({ db }: { readonly db: Database }) {
         .sort((a, b) => a.character.name.localeCompare(b.character.name)),
     [db],
   );
+
+  const versions = useMemo(() => {
+    const byVersion = new Map<string, CharacterOsEntry[]>();
+    for (const { entries } of characters) {
+      for (const entry of entries) {
+        const version = entry.row.version ?? "";
+        const bucket = byVersion.get(version);
+        if (bucket) {
+          bucket.push(entry);
+        } else {
+          byVersion.set(version, [entry]);
+        }
+      }
+    }
+    return [...byVersion.entries()]
+      .map(([version, entries]) => {
+        const grouped = new Map<string, CharacterGroup>();
+        for (const entry of [...entries].sort(compareOsVersions)) {
+          const character = db.characterById.get(entry.row.thread ?? "");
+          if (!character) {
+            continue;
+          }
+          const existing = grouped.get(character.id);
+          if (existing) {
+            existing.entries.push(entry);
+          } else {
+            grouped.set(character.id, { character, entries: [entry] });
+          }
+        }
+        return {
+          version,
+          entries,
+          characters: [...grouped.values()],
+          first: [...entries].sort(compareOsVersions)[0]!,
+        };
+      })
+      .sort((a, b) => compareOsVersions(a.first, b.first));
+  }, [characters, db]);
+
+  const toggle = (key: string, open: boolean) => {
+    setOpenGroups((current) => {
+      const next = new Set(current);
+      if (open) {
+        next.add(key);
+      } else {
+        next.delete(key);
+      }
+      sessionStorage.setItem(OPEN_STORAGE, JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const chooseMode = (next: Mode) => {
+    setMode(next);
+    sessionStorage.setItem(MODE_STORAGE, next);
+  };
 
   return (
     <>
@@ -70,72 +145,162 @@ export function OsIndexView({ db }: { readonly db: Database }) {
             <p className="byline">{i18n.t("character.osLede")}</p>
           </header>
 
-          {characters.map(({ character, entries }, index) => (
-            <details
-              key={character.id}
-              className="os-character-group"
-              open={
-                openCharacters.size > 0
-                  ? openCharacters.has(character.id)
-                  : index === 0
-              }
-              onToggle={(event) => {
-                const isOpen = event.currentTarget.open;
-                setOpenCharacters((current) => {
-                  const next = new Set(current);
-                  if (isOpen) {
-                    next.add(character.id);
-                  } else {
-                    next.delete(character.id);
-                  }
-                  sessionStorage.setItem(
-                    OPEN_STORAGE,
-                    JSON.stringify([...next]),
-                  );
-                  return next;
-                });
-              }}
-              data-testid="os-character-group"
-              data-character-id={character.id}
+          <div
+            className="os-mode-switch"
+            role="group"
+            aria-label={i18n.t("osIndex.modeAria")}
+            data-testid="os-mode-switch"
+          >
+            <button
+              type="button"
+              className={mode === "character" ? "active" : ""}
+              aria-pressed={mode === "character"}
+              onClick={() => chooseMode("character")}
             >
-              <summary>
-                <Link to={entityHref(character.id)} className="inline-link">
-                  {character.name || character.game_id}
-                </Link>
-                <span className="muted">
-                  {i18n.t("character.osCount", {
-                    count: i18n.formatNumber(entries.length),
-                  })}
-                </span>
-              </summary>
-              {versionGroups(entries).map(([version, group]) => (
-                <section
-                  key={version || "unknown"}
-                  className="os-version-group"
-                  data-testid="os-version-group"
-                  data-version={version}
-                >
-                  <h3>{version || "—"}</h3>
-                  <ul className="link-list">
-                    {group.map((entry) => (
-                      <li key={entry.entity.id}>
-                        <EntityLink
-                          db={db}
-                          entity={entry.entity}
-                          lang={lang}
-                          meta={
-                            entry.entity.date
-                              ? i18n.formatDate(entry.entity.date)
-                              : i18n.t("entity.noDate")
-                          }
+              {i18n.t("osIndex.byCharacter")}
+            </button>
+            <button
+              type="button"
+              className={mode === "version" ? "active" : ""}
+              aria-pressed={mode === "version"}
+              onClick={() => chooseMode("version")}
+            >
+              {i18n.t("osIndex.byVersion")}
+            </button>
+          </div>
+
+          {mode === "character"
+            ? characters.map(({ character, entries }, index) => {
+                const key = `c:${character.id}`;
+                const open =
+                  [...openGroups].some((item) => item.startsWith("c:"))
+                    ? openGroups.has(key)
+                    : index === 0;
+                return (
+                  <details
+                    key={character.id}
+                    className="os-character-group"
+                    open={open}
+                    onToggle={(event) =>
+                      toggle(key, event.currentTarget.open)
+                    }
+                    data-testid="os-character-group"
+                    data-character-id={character.id}
+                  >
+                    <summary>
+                      <span className="os-summary-name">
+                        <MediaImage
+                          id={character.game_id}
+                          kind="logo"
+                          alt={character.name}
+                          className="os-character-logo"
                         />
-                      </li>
+                        <Link to={entityHref(character.id)} className="inline-link">
+                          {character.name || character.game_id}
+                        </Link>
+                      </span>
+                      <span className="muted">
+                        {i18n.t("character.osCount", {
+                          count: i18n.formatNumber(entries.length),
+                        })}
+                      </span>
+                    </summary>
+                    {versionGroups(entries).map(([version, group]) => (
+                      <section
+                        key={version || "unknown"}
+                        className="os-version-group"
+                        data-testid="os-version-group"
+                        data-version={version}
+                      >
+                        <h3>{version || "—"}</h3>
+                        <ul className="link-list">
+                          {group.map((entry) => (
+                            <li key={entry.entity.id}>
+                              <EntityLink
+                                db={db}
+                                entity={entry.entity}
+                                lang={lang}
+                                meta={
+                                  entry.entity.date
+                                    ? i18n.formatDate(entry.entity.date)
+                                    : i18n.t("entity.noDate")
+                                }
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
                     ))}
-                  </ul>
-                </section>
-              ))}
-            </details>
-          ))}
+                  </details>
+                );
+              })
+            : versions.map(({ version, entries, characters: groups }, index) => {
+                const key = `v:${version}`;
+                const open =
+                  [...openGroups].some((item) => item.startsWith("v:"))
+                    ? openGroups.has(key)
+                    : index === 0;
+                return (
+                  <details
+                    key={version || "unknown"}
+                    className="os-character-group"
+                    open={open}
+                    onToggle={(event) => toggle(key, event.currentTarget.open)}
+                    data-testid="os-version-root"
+                    data-version={version}
+                  >
+                    <summary>
+                      <span className="os-summary-name">
+                        <span className="os-version-label">{version || "—"}</span>
+                      </span>
+                      <span className="muted">
+                        {i18n.t("character.osCount", {
+                          count: i18n.formatNumber(entries.length),
+                        })}
+                      </span>
+                    </summary>
+                    {groups.map(({ character, entries: characterEntries }) => (
+                      <section
+                        key={character.id}
+                        className="os-version-group"
+                        data-testid="os-version-character"
+                        data-character-id={character.id}
+                      >
+                        <h3 className="os-character-heading">
+                          <MediaImage
+                            id={character.game_id}
+                            kind="logo"
+                            alt={character.name}
+                            className="os-character-logo"
+                          />
+                          <Link
+                            to={entityHref(character.id)}
+                            className="inline-link"
+                          >
+                            {character.name || character.game_id}
+                          </Link>
+                        </h3>
+                        <ul className="link-list">
+                          {characterEntries.map((entry) => (
+                            <li key={entry.entity.id}>
+                              <EntityLink
+                                db={db}
+                                entity={entry.entity}
+                                lang={lang}
+                                meta={
+                                  entry.entity.date
+                                    ? i18n.formatDate(entry.entity.date)
+                                    : i18n.t("entity.noDate")
+                                }
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
+                  </details>
+                );
+              })}
         </article>
       </main>
     </>

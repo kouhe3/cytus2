@@ -13,6 +13,7 @@ interface MediaManifest {
   readonly oaAssets: Record<string, MediaAsset>;
   readonly videos: Record<string, MediaAsset>;
   readonly movies: Record<string, MediaAsset>;
+  readonly logos?: Record<string, MediaAsset>;
   readonly audio: {
     readonly sound?: Record<string, MediaAsset>;
     readonly bgm?: Record<string, MediaAsset>;
@@ -42,7 +43,7 @@ function stripExtension(value: string): string {
 export function pickImage(
   manifest: MediaManifest,
   id: string,
-  kind: "auto" | "image" | "viewer" | "avatar" | "illustration" = "auto",
+  kind: "auto" | "image" | "viewer" | "avatar" | "illustration" | "logo" = "auto",
 ): MediaAsset | null {
   const key = stripExtension(id.trim());
   if (!key) {
@@ -53,6 +54,9 @@ export function pickImage(
   }
   if (kind === "illustration") {
     return manifest.illustrations[`illustration_${key}`] ?? manifest.illustrations[key] ?? null;
+  }
+  if (kind === "logo") {
+    return manifest.logos?.[key] ?? manifest.galleryIcons[key] ?? null;
   }
   if (kind === "image") {
     // Gallery/OS images first.  Manifest illustrations also carry aliases

@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "kind": "pages",
+  "site": "https://wiki.biligame.com/cytus2",
+  "fetched_at": "2026-10-23T00:00:00+00:00",
+  "source_query": "fixture",
+  "templates": {
+    "角色": {
+      "title": "Template:角色",
+      "page_count": 1,
+      "pages": [
+        {
+          "title": "Alpha",
+          "params": {
+            "角色名": "Alpha",
+            "拥有系统": "im",
+            "角色分类": "人工分类",
+            "轶事": "人工轶事",
+            "站内备注": "人工补充"
+          }
+        }
+      ]
+    },
+    "歌曲": {
+      "title": "Template:歌曲",
+      "page_count": 1,
+      "pages": [
+        {
+          "title": "First",
+          "params": {
+            "曲名": "First",
+            "曲师": "Old Artist",
+            "原文": "人工填写的旧值",
+            "轶事": "人工轶事",
+            "歌词": "人工歌词"
+          }
+        }
+      ]
+    },
+    "Im/帖": {
+      "title": "Template:Im/帖",
+      "page_count": 1,
+      "pages": [
+        {
+          "title": "第一篇贴文",
+          "params": {
+            "标题": "第一篇贴文",
+            "iM_ID": "Alpha-Official",
+            "内容": "<poem>旧内容</poem>",
+            "评论": "{{im/评论|旧评论}}",
+            "全局排序": "1",
+            "剧情排序": "1"
+          }
+        }
+      ]
+    },
+    "Os/文件": {
+      "title": "Template:Os/文件",
+      "page_count": 1,
+      "pages": [
+        {
+          "title": "第一个OS（Alpha）",
+          "params": {
+            "文件名": "第一个OS",
+            "所属角色": "Alpha",
+            "文件ID": "gos001",
+            "ver": "1.0",
+            "文件类型": "cam",
+            "剧情排序": "1",
+            "内容": "{{os/对话|Alpha|旧对话}}"
+          }
+        }
+      ]
+    },
+    "Oa/文件": {
+      "title": "Template:Oa/文件",
+      "page_count": 1,
+      "pages": [
+        {
+          "title": "Alpha Doc（Alpha）",
+          "params": {
+            "文件名": "Alpha Doc",
+            "所属角色": "Alpha",
+            "所属物品": "阿尔法装置",
+            "描述": "旧描述",
+            "剧情排序": "1",
+            "内容": "<poem>旧文件。</poem>"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "titles",
+  "site": "https://wiki.biligame.com/cytus2",
+  "namespace": 0,
+  "fetched_at": "2026-10-23T00:00:00+00:00",
+  "counts": {
+    "articles": 10,
+    "redirects": 0,
+    "total": 10
+  },
+  "articles": [
+    "Alpha",
+    "Alpha Doc（Alpha）",
+    "Beta",
+    "Beta Doc（Beta）",
+    "First",
+    "Second",
+    "Third",
+    "第一篇贴文",
+    "第二个（Alpha）",
+    "第一个OS（Alpha）"
+  ],
+  "redirects": []
+}

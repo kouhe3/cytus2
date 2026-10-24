@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
+from ..branches import ENDING_BRANCH_LOCATOR, ending_branch
 from ..errors import BuildError, InputError
 from ..keys import entity_key
 from ..provenance import manual, rva, sort_record, text_asset
@@ -118,26 +119,6 @@ CHARACTER_TIERS: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
 )
-CHARACTER_TIER_LOCATOR = "cytus2_work/export_im_order.py:TIER_ORDER"
-
-# Manual tier corrections, applied on top of the pack table before the lane is
-# built.  The layer exists so a tier fix never leaks into the sorting logic.
-# Crystal PuNK (``cherry002``) and Bo Bo (``bobo001``) were briefly reported as
-# paid; the Fandom character list puts both under Free Characters and the APK's
-# ``is_iap_pack`` is false for both, so no override is applied.  Graff.J
-# (``graffj001``) is "Free" on Fandom but "Extra" in the pack table; that
-# remains an open question and is intentionally not overridden either.
-CHARACTER_TIER_OVERRIDES: dict[str, str] = {}
-
-# ``StoryLockId`` -> branch label, from the legacy viewer.  The three ending
-# branches are indistinguishable from the data alone (all three are plain story
-# locks), so the labels are manual.
-BRANCH_LABELS: dict[str, str] = {
-    "story_ending03_good_ending1": "善终1",
-    "story_ending03_good_ending2": "善终2",
-    "story_ending04_main": "结局04",
-}
-BRANCH_LOCATOR = "cytus2_work/export_im_order.py:branch"
 
 # Legacy iM fixpoint inputs.  The legacy script hard-coded these because they
 # are ``_ConditionCheck`` results, not TextAsset fields.
@@ -279,25 +260,25 @@ class _LaneEntry:
     tier: str
 
 
-def _lane_table(
-    packs: dict[str, _Pack],
-    overrides: dict[str, str] | None = None,
-) -> dict[str, _LaneEntry]:
+def _lane_table(packs: dict[str, _Pack]) -> dict[str, _LaneEntry]:
     """Map character -> lane rank (free 0.., paid 100.., side 200..).
 
-    The tier comes from the pack table (``Category`` + ``is_iap_pack``) with the
-    manual override layer on top.  Within a tier the legacy editorial order is
-    used first; characters the list does not know are appended sorted by id, so
-    two builds always agree.
+    The tier comes from the pack table (``Category`` + ``is_iap_pack``).  There
+    is deliberately no override layer: Crystal PuNK (``cherry002``) and Bo Bo
+    (``bobo001``) were once reported as paid, but Fandom lists both as free and
+    ``is_iap_pack`` is false.  Graff.J (``graffj001``) is "Extra" in the pack
+    table and "Free" on Fandom; that open question is left to the data rather
+    than patched here.  Within a tier the legacy editorial order is used first;
+    characters the list does not know are appended sorted by id, so two builds
+    always agree.
     """
-    corrections = CHARACTER_TIER_OVERRIDES if overrides is None else overrides
     editorial = {
         tier: {character: index for index, character in enumerate(characters)}
         for tier, characters in CHARACTER_TIERS
     }
     buckets: dict[str, list[str]] = {tier: [] for tier in TIER_ORDER}
     for character in packs:
-        tier = corrections.get(character, packs[character].tier)
+        tier = packs[character].tier
         if tier not in buckets:
             tier = "side"
         buckets[tier].append(character)
@@ -762,85 +743,104 @@ def _dump_path(source: InputSource) -> Path:
     return source.root / "il2cppdumper" / "dump.cs"
 
 
-def _topic_triggers(source: InputSource) -> dict[str, str]:
-    """``TOUCH_IM_POST_*`` constant -> story id, one class block at a time.
+@dataclass
+class _StoryClass:
+    """One ``public class`` block of ``il2cppdumper/dump.cs``.
 
-    This mirrors the legacy ``derive_triggers``: only a class that declares a
-    story ``ID`` contributes its touch constants.
+    Story definitions and the legacy iM trigger map are two projections of this
+    single parse, so the class-block boundaries, the ``public const`` field
+    rules and the ``TOUCH_IM_*`` extraction exist exactly once.
     """
-    path = _dump_path(source)
-    if not path.is_file():
-        return {}
-    triggers: dict[str, str] = {}
-    topics: set[str] = set()
+
+    name: str
     story_id: str | None = None
+    touch_topics: set[str] = field(default_factory=set)
+    trigger_topic: str | None = None
+    trigger_os: str | None = None
+    trigger_file: str | None = None
 
-    def flush() -> None:
-        nonlocal topics, story_id
-        if story_id:
-            for topic in topics:
-                triggers.setdefault(topic, story_id)
-        topics = set()
-        story_id = None
-
-    with path.open(encoding="utf-8", errors="replace") as handle:
-        for line in handle:
-            if _CLASS_RE.match(line):
-                flush()
-                continue
-            if story_id is None:
-                found = _ID_RE.search(line)
-                if found:
-                    story_id = found.group(1)
-            topics.update(topic.upper() for topic in _TOUCH_RE.findall(line))
-    flush()
-    return triggers
+    @property
+    def topics(self) -> set[str]:
+        topics = set(self.touch_topics)
+        if self.trigger_topic:
+            topics.add(self.trigger_topic.upper())
+        return topics
 
 
-def _story_definitions(source: InputSource) -> list[dict[str, Any]]:
+def _story_classes(source: InputSource) -> list[_StoryClass]:
     path = _dump_path(source)
     if not path.is_file():
         return []
-    definitions: list[dict[str, Any]] = []
-    by_name: dict[str, dict[str, Any]] = {}
-    current: dict[str, Any] | None = None
+    classes: list[_StoryClass] = []
+    current: _StoryClass | None = None
     with path.open(encoding="utf-8", errors="replace") as handle:
         for line in handle:
             match = _CLASS_RE.match(line)
             if match:
-                name = match.group(1).split(".")[-1]
-                current = by_name.get(name)
-                if current is None:
-                    current = {
-                        "name": name,
-                        "story_id": None,
-                        "topics": set(),
-                        "trigger_os": None,
-                        "trigger_file": None,
-                        "order": len(definitions),
-                    }
-                    by_name[name] = current
-                    definitions.append(current)
+                current = _StoryClass(match.group(1).split(".")[-1])
+                classes.append(current)
                 continue
             if current is None:
                 continue
             if line.strip().startswith("public const"):
                 found = _ID_RE.search(line)
                 if found:
-                    current["story_id"] = found.group(1)
+                    current.story_id = found.group(1)
                 found = _TRIGGER_OS_RE.search(line)
                 if found and found.group(1):
-                    current["trigger_os"] = found.group(1)
+                    current.trigger_os = found.group(1)
                 found = _TRIGGER_FILE_RE.search(line)
                 if found and found.group(1):
-                    current["trigger_file"] = found.group(1)
+                    current.trigger_file = found.group(1)
                 found = _TRIGGER_TOPIC_RE.search(line)
                 if found and found.group(1):
-                    current["topics"].add(found.group(1).upper())
+                    current.trigger_topic = found.group(1)
             for topic in _TOUCH_RE.findall(line):
-                current["topics"].add(topic.upper())
+                current.touch_topics.add(topic.upper())
             if line.startswith("}"):
                 current = None
+    return classes
+
+
+def _topic_triggers(source: InputSource) -> dict[str, str]:
+    """``TOUCH_IM_*`` topic -> story id, first declaring class wins.
+
+    Projection of the shared parse for the legacy iM fixpoint.  Only touch
+    constants count: ``TRIGGER_TOPIC_ID`` values are OS topics and belong to
+    the story definitions, not to the iM topic map.
+    """
+    triggers: dict[str, str] = {}
+    for story_class in _story_classes(source):
+        if story_class.story_id is None:
+            continue
+        for topic in story_class.touch_topics:
+            triggers.setdefault(topic, story_class.story_id)
+    return triggers
+
+
+def _story_definitions(source: InputSource) -> list[dict[str, Any]]:
+    definitions: list[dict[str, Any]] = []
+    by_name: dict[str, dict[str, Any]] = {}
+    for story_class in _story_classes(source):
+        current = by_name.get(story_class.name)
+        if current is None:
+            current = {
+                "name": story_class.name,
+                "story_id": None,
+                "topics": set(),
+                "trigger_os": None,
+                "trigger_file": None,
+                "order": len(definitions),
+            }
+            by_name[story_class.name] = current
+            definitions.append(current)
+        if story_class.story_id is not None:
+            current["story_id"] = story_class.story_id
+        current["topics"] |= story_class.topics
+        if story_class.trigger_os:
+            current["trigger_os"] = story_class.trigger_os
+        if story_class.trigger_file:
+            current["trigger_file"] = story_class.trigger_file
 
     stories: list[dict[str, Any]] = []
     for definition in definitions:
@@ -1172,11 +1172,6 @@ def _apply_lane(
     lanes: dict[str, _LaneEntry],
     families: dict[str, str | None],
 ) -> None:
-    overrides = {
-        character: tier
-        for character, tier in CHARACTER_TIER_OVERRIDES.items()
-        if character in lanes
-    }
     for row in rows:
         row.cost = sum(int(lock["level"]) for lock in row.level_locks)
         character = _lane_character(row, lanes, families)
@@ -1186,16 +1181,6 @@ def _apply_lane(
         else:
             row.lane = lanes[character].lane
             row.lane_character = _character_key(character)
-        touched = [character] + [lock["character"] for lock in row.level_locks]
-        for name in dict.fromkeys(touched):
-            if name in overrides:
-                row.provenance.append(
-                    manual(
-                        CHARACTER_TIER_LOCATOR,
-                        f"{name} tier {overrides[name]}",
-                    )
-                )
-                break
 
 
 def _apply_timeline_scope(rows: list[_Row]) -> None:
@@ -1750,10 +1735,12 @@ def build(source: InputSource) -> dict[str, list[dict[str, Any]]]:
         story = row.story_lock if row.entity_type == "im_post" else (
             game_id if row.entity_type == "story_node" else None
         )
-        if story in BRANCH_LABELS:
-            row.branch = BRANCH_LABELS[story]
+        branch = ending_branch(story or "")
+        if branch is not None:
+            code, reason = branch
+            row.branch = code
             row.provenance.append(
-                manual(BRANCH_LOCATOR, f"branch label for {story}")
+                manual(ENDING_BRANCH_LOCATOR, f"{story}: {reason}")
             )
 
     ordered = _final_order(rows, packs)

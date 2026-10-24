@@ -162,9 +162,9 @@
     "branch": {
       "anyOf": [
         {"type": "null"},
-        {"enum": ["善终1", "善终2", "结局04"]}
+        {"enum": ["good_ending1", "good_ending2", "ending04"]}
       ],
-      "description": "Ending branch label mapped from the story lock (manual provenance)."
+      "description": "Ending branch semantic code mapped from the story lock (manual provenance); the SPA localizes the display label."
     },
     "external": {
       "anyOf": [

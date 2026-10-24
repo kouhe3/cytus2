@@ -34,7 +34,7 @@ export function StoryIndexView({ db }: { db: Database }) {
   const [kind, setKind] = useState<StoryKindFilter>("all");
   const entries = useMemo(
     () => storyEntries(db, lang, sort, kind, i18n),
-    [db, lang, sort, kind],
+    [db, lang, sort, kind, i18n],
   );
   const metaCount = storySortMetaCount(db, sort);
   const nodeCount = db.entitiesByType.get("story_node")?.length ?? 0;

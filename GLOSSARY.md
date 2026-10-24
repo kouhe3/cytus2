@@ -40,10 +40,6 @@ _Avoid_: boss 曲、活动曲
 游戏角色 / 曲包身份。
 _Avoid_: 人物、hero
 
-**Timeline scope** (`reading_order.timeline_scope`):
-一条阅读顺序记录属于哪里：`timeline` = 全局解锁时间线（全部 iM 帖 + 主线 7 人的 OS），`character` = 只在角色页按版本阅读的 OS，`none` = OA 文档与故事节点。角色页的 iM 页签只对 PAFF / NEKO / ROBO 开放，PΛFF 没有 iM 账号入口。
-_Avoid_: 把 `character` 当成「角色实体」；它描述的是阅读入口
-
 ## 音乐
 
 **Song** (`song`):
@@ -86,6 +82,40 @@ _Avoid_: 黑市（作实体）
 
 **Derived artifact**:
 任何可由管线重建的产物：正文、边、索引、wiki 页面、SPA 数据。
+
+## 阅读顺序（`reading_order`）
+
+**Stage**:
+阅读轮次。iM 帖用 legacy 全局 fixpoint（1..N），其他实体用分档模拟轮次；`98` 是模型外（blocked）桶，`99` 是无法定位的行。
+_Avoid_: 与 `read_index`（legacy iM 序号）或 `order`（默认全序）混用
+
+**Cost** (`reading_order.cost`):
+一行的解锁成本：`level_locks` 所有等级之和；多角色锁按各角色等级相加。同一 `stage` 内先按成本排序。
+_Avoid_: 货币价格；与 `level_gate`（有效门槛）混用
+
+**Lane** (`reading_order.lane`):
+账户排序车道：free `0..`、paid `100..`、side `200..`、剧情/其他 `300`。同一 `stage` 内成本相同时按 `lane` 排序，表示读者跟随哪个账号，不代表解锁难度。
+_Avoid_: 路线、章节；与 `thread`（行所属角色线程）混用
+
+**Lock level** (`reading_order.lock_level`):
+该行阅读阶段到达时，PAFF / NEKO / ROBO 三人已达到的最高等级（0-based）。iM 帖沿用 legacy fixpoint 的轮次等级；其他实体用模拟轮次。
+_Avoid_: `level_gate`（含剧透延后后的有效门槛）、`original_level`（实体自身锁）
+
+**Read index** (`reading_order.read_index`):
+legacy iM 全序编号，仅 iM 帖有值且连续为 `1..N`；用于与冻结 viewer 的 `readIndex` 对齐。非 iM 行恒为 `null`。
+_Avoid_: `order`（默认 free → paid → side 的全局位置）、`stage`
+
+**External** (`reading_order.external`):
+被排除在模拟之外的行的原因：story 锁、topic 锁，或无法建模的等级/前置条件；blocked（`stage=98`）或无法定位的行才有值。
+_Avoid_: 把原因当成实体；与 `unlock_condition`（实体自身字段）混用
+
+**Branch** (`reading_order.branch`):
+由 `StoryLockId` 人工映射的结局分支语义码之一：`good_ending1`、`good_ending2`、`ending04`，附 manual provenance（locator + 理由）。DB 只存语义码，显示标签由 SPA 本地化。
+_Avoid_: 与 `story_node.kind=branch`（Branching OS 节点）混用；不要把显示文本写进 DB
+
+**Timeline scope** (`reading_order.timeline_scope`):
+一条阅读顺序记录属于哪里：`timeline` = 全局解锁时间线（全部 iM 帖 + 主线 7 人的 OS），`character` = 只在角色页按版本阅读的 OS，`none` = OA 文档与故事节点。角色页的 iM 页签由 `imFilters` 中是否存在该角色的账户条目决定；没有条目就不渲染页签。
+_Avoid_: 把 `character` 当成「角色实体」；它描述的是阅读入口
 
 ## Wiki 导出
 

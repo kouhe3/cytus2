@@ -22,6 +22,8 @@ export type ReadingEntityType = "im_post" | "os_log" | "oa_document" | "story_no
 
 export type TimelineScope = "timeline" | "character" | "none";
 
+export type ReadingBranch = "good_ending1" | "good_ending2" | "ending04";
+
 export interface ProvenanceEntry {
   kind: string;
   locator: string;
@@ -397,7 +399,7 @@ export interface ReadingOrderRow extends BaseEntity {
   readonly lane: number;
   readonly lane_character: string | null;
   readonly lock_level: number;
-  readonly branch: string | null;
+  readonly branch: ReadingBranch | null;
   readonly external: string | null;
   readonly read_index: number | null;
   readonly order: number;

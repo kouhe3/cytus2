@@ -11,28 +11,26 @@ edit, not a heuristic.
 
 from __future__ import annotations
 
+from ..branches import ENDING_BRANCH_LOCATOR, ending_branch as ending_branch_code
 from ..provenance import manual
 
-# Story gate -> ending-branch label shown by ``Im/帖``'s ``结局分支``.
-# The game ships the gate ids (``story_ending03_good_ending1``) but no display
-# label; the wiki's own pages call them GE/BE.
-IM_POST_ENDING_BRANCHES: dict[str, tuple[str, str]] = {
-    "story_ending03_good_ending1": (
-        "GE",
-        "story_ending03_good_ending1 is the good ending of the ending03 chain",
-    ),
-    "story_ending03_good_ending2": (
-        "BE",
-        "story_ending03_good_ending2 is the bad ending of the ending03 chain",
-    ),
+# Semantic branch code -> label shown by ``Im/帖``'s ``结局分支``.  Gate ids
+# and the reason each code denotes live in the shared ``branches`` module; the
+# wiki's own pages call the two ending03 branches GE/BE, and ending04 has no
+# wiki label.
+IM_POST_ENDING_BRANCH_LABELS: dict[str, str] = {
+    "good_ending1": "GE",
+    "good_ending2": "BE",
 }
-ENDING_BRANCH_LOCATOR = "cytus2db/wiki/overrides.py:IM_POST_ENDING_BRANCHES"
 
 
 def ending_branch(story_gate: str) -> tuple[str, dict[str, str]] | None:
     """Return ``(label, manual provenance)`` for a story gate, if known."""
-    found = IM_POST_ENDING_BRANCHES.get(story_gate)
+    found = ending_branch_code(story_gate)
     if found is None:
         return None
-    label, note = found
-    return label, manual(ENDING_BRANCH_LOCATOR, f"{story_gate}: {note}")
+    code, reason = found
+    label = IM_POST_ENDING_BRANCH_LABELS.get(code)
+    if label is None:
+        return None
+    return label, manual(ENDING_BRANCH_LOCATOR, f"{story_gate}: {reason}")

@@ -187,19 +187,12 @@ def _unlock_fields(
         difficulties = sorted(
             set(by_song[song_id]), key=lambda name: _DIFFICULTY_INDEX.get(name, 99)
         )
+        labels = "/".join(name.upper() for name in difficulties)
         if len(difficulties) == 1:
-            charts.append(f"[[{title}]]（{difficulties[0]}）")
+            charts.append(f"[[{title}]]（{labels}）")
         else:
-            songs.append(f"[[{title}]]（{_difficulty_range(difficulties)}）")
+            songs.append(f"[[{title}]]（{labels}）")
     return "\n".join(songs), "\n".join(charts)
-
-
-def _difficulty_range(difficulties: Iterable[str]) -> str:
-    ordered = sorted(difficulties, key=lambda name: _DIFFICULTY_INDEX.get(name, 99))
-    indices = [_DIFFICULTY_INDEX.get(name, 99) for name in ordered]
-    if indices == list(range(indices[0], indices[-1] + 1)):
-        return f"{ordered[0]}~{ordered[-1]}"
-    return "/".join(ordered)
 
 
 def _dedupe(conflicts: Iterable[Conflict]) -> list[Conflict]:

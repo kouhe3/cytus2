@@ -18,7 +18,7 @@ GOLDEN_OS = (
     "|文件类型=cam\n"
     "|剧情排序=1\n"
     "|所属角色=Alpha\n"
-    "|解锁谱面=[[Second]]（Chaos）\n"
+    "|解锁谱面=[[Second]]（CHAOS）\n"
     "|文件ID=aos001\n"
     "|时间=687_06_30 18:01\n"
     "|内容={{os/对话|Alpha|Hello there}}\n"
@@ -394,3 +394,27 @@ def test_source_blank_line_is_preserved() -> None:
     )
 
     assert text == "{{os/对话|Mayu|第一行}}\n\n{{os/对话|Mayu|第二行}}"
+
+
+def test_unlock_song_lists_uppercase_difficulties() -> None:
+    from cytus2db.wiki.db import Database, Edge
+    from cytus2db.wiki.pages.os_logs import _unlock_fields
+
+    db = Database(
+        {
+            "song": {
+                "song/test": {"id": "song/test", "name": "Test Song"},
+            }
+        },
+        [
+            Edge("os/x", "unlocks_chart", "song/test@Easy"),
+            Edge("os/x", "unlocks_chart", "song/test@Hard"),
+            Edge("os/x", "unlocks_chart", "song/test@Chaos"),
+        ],
+        {},
+    )
+
+    songs, charts = _unlock_fields("os/x", db, [])
+
+    assert songs == "[[Test Song]]（EASY/HARD/CHAOS）"
+    assert charts == ""

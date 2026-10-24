@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { loadMediaManifest, mediaUrl, pickImage, pickVideo, type MediaAsset } from "../data/media";
+import { loadMediaManifest, mediaUrl, pickAudio, pickImage, pickVideo, type MediaAsset } from "../data/media";
 
 type MediaProps = {
   readonly id: string;
@@ -90,5 +90,49 @@ export function MediaVideo({ id, alt }: { readonly id: string; readonly alt?: st
       preload="metadata"
       aria-label={alt ?? id}
     />
+  );
+}
+
+export function MediaAudio({
+  id,
+  kind,
+  label,
+}: {
+  readonly id: string;
+  readonly kind: "sound" | "bgm";
+  readonly label?: string;
+}) {
+  const [asset, setAsset] = useState<MediaAsset | null>(null);
+  useEffect(() => {
+    let active = true;
+    loadMediaManifest()
+      .then((manifest) => {
+        if (active) {
+          setAsset(pickAudio(manifest, id, kind));
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setAsset(null);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [id, kind]);
+  if (!asset) {
+    return null;
+  }
+  return (
+    <span className="media-audio-wrap">
+      <audio
+        className="media-audio"
+        src={mediaUrl(asset.file)}
+        controls
+        preload="metadata"
+        aria-label={label ?? id}
+      />
+      {label ? <span className="media-audio-label">{label}</span> : null}
+    </span>
   );
 }

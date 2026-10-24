@@ -3,7 +3,7 @@ import { useI18n } from "../data/i18n";
 import { fallbackNotice } from "../data/labels";
 import { formatFieldValue } from "../data/selectors";
 import { loadTextRecord } from "../data/text";
-import { MediaImage, MediaVideo } from "./Media";
+import { MediaAudio, MediaImage, MediaVideo } from "./Media";
 import type { Lang, TextBlock, TextRecord } from "../types";
 
 type TextState =
@@ -74,18 +74,23 @@ function Block({ block }: { block: TextBlock }) {
           <MediaVideo id={readString(block, "id")} />
         </div>
       );
-    case "sound":
+    case "sound": {
+      const name = readString(block, "name");
+      const label = readString(block, "label");
       return (
-        <div className="block media-note">
-          {i18n.t("text.sound", { name: readString(block, "name") })}
+        <div className="block media">
+          <MediaAudio id={name} kind="sound" label={label || name} />
         </div>
       );
-    case "bgm":
+    }
+    case "bgm": {
+      const name = readString(block, "name");
       return (
-        <div className="block media-note">
-          {i18n.t("text.bgm", { name: readString(block, "name") })}
+        <div className="block media">
+          <MediaAudio id={name} kind="bgm" label={name} />
         </div>
       );
+    }
     case "booklet":
       return (
         <div className="block media-note">

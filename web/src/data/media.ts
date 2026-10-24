@@ -13,6 +13,10 @@ interface MediaManifest {
   readonly oaAssets: Record<string, MediaAsset>;
   readonly videos: Record<string, MediaAsset>;
   readonly movies: Record<string, MediaAsset>;
+  readonly audio: {
+    readonly sound?: Record<string, MediaAsset>;
+    readonly bgm?: Record<string, MediaAsset>;
+  };
 }
 
 let manifestPromise: Promise<MediaManifest> | null = null;
@@ -91,4 +95,17 @@ export function pickVideo(
 ): MediaAsset | null {
   const key = stripExtension(id.trim());
   return manifest.movies[key] ?? manifest.videos[key] ?? null;
+}
+
+export function pickAudio(
+  manifest: MediaManifest,
+  id: string,
+  kind: "sound" | "bgm",
+): MediaAsset | null {
+  const key = stripExtension(id.split(",")[0]?.trim() ?? "");
+  if (!key) {
+    return null;
+  }
+  const bucket = kind === "bgm" ? manifest.audio.bgm : manifest.audio.sound;
+  return bucket?.[key] ?? null;
 }

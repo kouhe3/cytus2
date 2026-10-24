@@ -74,7 +74,17 @@ function BackupFolderRoute({ db }: { db: Database }) {
 function EntityRoute({ db }: { db: Database }) {
   const location = useLocation();
   const path = decodeEntityPath(location.pathname);
-  const entity = db.entityById.get(path);
+  const fragment = location.hash.startsWith("#") ? location.hash.slice(1) : "";
+  let entity = db.entityById.get(path);
+  if (!entity && fragment) {
+    // Backward-compatible links put the reply floor in the fragment:
+    // /im_reply/P0101#1 -> im_reply/P0101#1.
+    try {
+      entity = db.entityById.get(`${path}#${decodeURIComponent(fragment)}`);
+    } catch {
+      entity = undefined;
+    }
+  }
   if (!entity) {
     return <NotFound path={path} />;
   }

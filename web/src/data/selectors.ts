@@ -153,13 +153,21 @@ function textName(db: Database, textRef: string, lang: Lang): string {
 }
 
 export function entityHref(id: string): string {
-  return `/${encodeURI(id)}`;
+  // Entity ids use "#" for reply floors.  A raw "#" starts the URL fragment,
+  // so encode it into the path; otherwise /im_reply/P0101#1 resolves to the
+  // non-existent /im_reply/P0101.
+  return `/${encodeURI(id).replace(/#/g, "%23").replace(/\?/g, "%3F")}`;
 }
 
 export function decodeEntityPath(pathname: string): string {
   const trimmed = pathname.replace(/^\/+|\/+$/g, "");
   try {
-    return decodeURI(trimmed);
+    // decodeURI leaves reserved characters such as %23 (#) encoded, but
+    // reply ids use "#" in the path: /im_reply/P0101%231.
+    return trimmed
+      .split("/")
+      .map((segment) => decodeURIComponent(segment))
+      .join("/");
   } catch {
     return trimmed;
   }

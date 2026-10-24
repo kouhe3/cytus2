@@ -31,6 +31,7 @@ const FALLBACK_ORDER: readonly Lang[] = [
 
 const SNIPPET_TYPES: Record<string, true> = {
   im_post: true,
+  im_reply: true,
   os_log: true,
   oa_object: true,
   oa_document: true,

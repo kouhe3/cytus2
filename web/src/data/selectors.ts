@@ -105,6 +105,16 @@ export function entityTitle(
   if (isSubtitleLine(entity)) {
     return `${entity.character || i18n.t("entity.voice")} · ${entity.game_id}`;
   }
+  if (entity.type === "im_reply") {
+    const data = recordOf(entity);
+    const textRef = data["text_ref"];
+    if (typeof textRef === "string") {
+      const reply = textSnippet(db, textRef, lang);
+      if (reply) {
+        return reply;
+      }
+    }
+  }
   if (entity.type === "oa_document" && isOaDocument(entity)) {
     return textName(db, entity.text_ref, lang) || entity.game_id;
   }

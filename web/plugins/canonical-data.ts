@@ -160,12 +160,19 @@ function blockText(block: TextBlock): string {
       const body = stringValue(block["body"]);
       return [title, body].filter(Boolean).join(" ");
     }
+    case "booklet": {
+      const title = stringValue(block["title"]);
+      const subtitle = stringValue(block["subtitle"]);
+      const paragraphs = Array.isArray(block["paragraphs"])
+        ? block["paragraphs"].filter((item): item is string => typeof item === "string")
+        : [];
+      return [title, subtitle, ...paragraphs].filter(Boolean).join(" ");
+    }
     case "sound":
     case "bgm":
     case "image":
     case "movie":
     case "imageviewer":
-    case "booklet":
     case "note":
       return "";
     default:

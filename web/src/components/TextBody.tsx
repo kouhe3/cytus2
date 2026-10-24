@@ -19,6 +19,15 @@ function readString(block: TextBlock, key: string): string {
     : "";
 }
 
+function readStrings(block: TextBlock, key: string): string[] {
+  const value = block[key];
+  return Array.isArray(value)
+    ? value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " "))
+    : [];
+}
+
 function Block({ block }: { block: TextBlock }) {
   const i18n = useI18n();
   switch (block.kind) {
@@ -91,12 +100,24 @@ function Block({ block }: { block: TextBlock }) {
         </div>
       );
     }
-    case "booklet":
+    case "booklet": {
+      const title = readString(block, "title");
+      const subtitle = readString(block, "subtitle");
+      const paragraphs = readStrings(block, "paragraphs");
       return (
-        <div className="block media-note">
-          {i18n.t("text.booklet", { id: readString(block, "id") })}
-        </div>
+        <section className="block booklet">
+          <header>
+            <b>{title || "—"}</b>
+            {subtitle ? <span>{subtitle}</span> : null}
+          </header>
+          <div className="booklet-body">
+            {paragraphs.map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
+          </div>
+        </section>
       );
+    }
     case "note":
       return (
         <div className="block note">

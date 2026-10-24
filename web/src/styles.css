@@ -2001,3 +2001,57 @@ kbd {
   border-radius: 8px;
   background: #05070a;
 }
+
+.block.booklet {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+  gap: 24px;
+  margin: 18px 0 24px;
+  padding: 20px 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.block.booklet header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-self: start;
+}
+
+.block.booklet header b {
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.block.booklet header span {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #10131a;
+  align-self: flex-start;
+}
+
+.booklet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.booklet-body p {
+  margin: 0;
+  white-space: pre-line;
+  line-height: 1.75;
+  font-size: 15.5px;
+}
+
+@media (max-width: 720px) {
+  .block.booklet {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}

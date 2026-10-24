@@ -87,9 +87,23 @@ def test_song_and_pack_keys_and_fields(built_db: Path) -> None:
     assert packs["pack/alpha001"]["name"] == "Alpha"
     assert packs["pack/alpha001"]["is_iap"] is False
     assert packs["pack/beta001"]["is_iap"] is True
-    assert packs["pack/alpha001"]["descriptions"] == {
+    assert packs["pack/alpha001"]["text_ref"] == "pack/alpha001"
+    assert "descriptions" not in packs["pack/alpha001"]
+    pack_text = {
+        record["lang"]: record
+        for record in read_jsonl(built_db / "text" / "packs.jsonl")
+        if record["ref"] == "pack/alpha001"
+    }
+    assert pack_text["en"]["text"] == "Alpha pack"
+    assert pack_text["zh-Hans"]["text"] == "Alpha 曲包"
+    assert pack_text["ja"]["missing"] is True
+    assert {
         "en": "Alpha pack",
         "zh-Hans": "Alpha 曲包",
+    } == {
+        record["lang"]: record["text"]
+        for record in read_jsonl(built_db / "text" / "packs.jsonl")
+        if record["ref"] == "pack/alpha001" and "text" in record
     }
 
 
@@ -134,7 +148,14 @@ def test_characters_illustrations_and_subtitles(built_db: Path) -> None:
     assert subtitle["id"] == "subtitle_line/CE0001"
     assert subtitle["character"] == "Alpha"
     assert subtitle["voice_asset_id"] == "asset/voice/CE0001"
-    assert subtitle["text"] == {
+    assert subtitle["text_ref"] == "subtitle_line/CE0001"
+    assert "text" not in subtitle
+    subtitle_text = {
+        record["lang"]: record["text"]
+        for record in read_jsonl(built_db / "text" / "subtitles.jsonl")
+        if record["ref"] == "subtitle_line/CE0001" and "text" in record
+    }
+    assert subtitle_text == {
         "en": "Hello",
         "ja": "こんにちは",
         "zh-Hant": "你好",
@@ -295,3 +316,23 @@ def test_missing_input_dir_exits_non_zero(tmp_path: Path) -> None:
     result = run_build(tmp_path / "does-not-exist", tmp_path / "build")
     assert result.returncode != 0
     assert "input" in result.stderr.lower()
+
+
+def test_sqlite_fts5_indexes_the_text_store(built_db: Path) -> None:
+    connection = sqlite3.connect(built_db / "db.sqlite")
+    try:
+        rows = connection.execute(
+            "SELECT ref, lang, text FROM search WHERE search MATCH ? ORDER BY ref",
+            ("Hello",),
+        ).fetchall()
+        assert ("subtitle_line/CE0001", "en", "Hello") in rows
+        packs = connection.execute(
+            "SELECT ref FROM search WHERE search MATCH ?", ("Alpha",)
+        ).fetchall()
+        assert ("pack/alpha001",) in packs
+        count = connection.execute(
+            "SELECT value FROM meta WHERE key = 'count:search'"
+        ).fetchone()[0]
+        assert int(count) > 0
+    finally:
+        connection.close()

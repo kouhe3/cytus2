@@ -22,7 +22,7 @@ from collections import defaultdict
 from typing import Any
 
 from ..db import Database
-from ..model import SEMANTIC_TEMPLATE, Field, PageModel, Section, Text
+from ..model import SEMANTIC_TEMPLATE, Field, PageModel, Section, Text, provenance_of
 
 _SERIAL = re.compile(r"[0-9]+$")
 _PACK_TITLE_SUFFIX = "（曲包）"
@@ -71,6 +71,7 @@ def build(db: Database) -> list[PageModel]:
                 sections=(Section(SEMANTIC_TEMPLATE, tuple(fields)),),
                 categories=("pack",),
                 omitted=omitted,
+                provenance=provenance_of(pack),
             )
         )
     return pages

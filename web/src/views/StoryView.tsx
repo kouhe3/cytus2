@@ -98,7 +98,7 @@ export function StoryIndexView({ db }: { db: Database }) {
         ) : (
           <p className="hint" data-testid="story-sort-note">
             Default order: reading-order position, spoiler gates already deferred.
-            test01 staging nodes are omitted from this sequence; switch to
+            test01/test02 staging nodes are omitted from this sequence; switch to
             version or chapter to inspect them.
           </p>
         )}

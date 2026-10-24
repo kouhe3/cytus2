@@ -27,24 +27,78 @@
         "注释与外部链接"
       ],
       "params": {
-        "角色排序": {"required": false, "conditional": false, "default": ""},
-        "角色名": {"required": false, "conditional": false, "default": ""},
-        "拥有系统": {"required": true, "conditional": false, "default": ""},
-        "角色分类": {"required": false, "conditional": false, "default": ""},
-        "IMID": {"required": false, "conditional": false, "default": ""},
-        "主题色": {"required": false, "conditional": false, "default": ""},
-        "最高等级": {"required": false, "conditional": false, "default": ""},
-        "获取方式": {"required": false, "conditional": false, "default": ""},
-        "曲风": {"required": false, "conditional": false, "default": ""},
-        "个人档案": {"required": false, "conditional": false, "default": ""},
-        "简介": {"required": false, "conditional": false, "default": ""},
-        "皮肤图片": {"required": false, "conditional": false, "default": ""},
-        "画廊图片": {"required": false, "conditional": false, "default": ""},
-        "其他图片": {"required": false, "conditional": false, "default": ""},
-        "游戏评言": {"required": false, "conditional": false, "default": ""},
-        "轶事": {"required": false, "conditional": false, "default": ""},
-        "其他": {"required": false, "conditional": false, "default": ""},
-        "注释与外部链接": {"required": false, "conditional": false, "default": ""}
+        "角色排序": {
+          "required": false,
+          "conditional": false
+        },
+        "角色名": {
+          "required": false,
+          "conditional": false
+        },
+        "拥有系统": {
+          "required": true,
+          "conditional": false
+        },
+        "角色分类": {
+          "required": false,
+          "conditional": false
+        },
+        "IMID": {
+          "required": false,
+          "conditional": false
+        },
+        "主题色": {
+          "required": false,
+          "conditional": false
+        },
+        "最高等级": {
+          "required": false,
+          "conditional": false
+        },
+        "获取方式": {
+          "required": false,
+          "conditional": false
+        },
+        "曲风": {
+          "required": false,
+          "conditional": false
+        },
+        "个人档案": {
+          "required": false,
+          "conditional": false
+        },
+        "简介": {
+          "required": false,
+          "conditional": false
+        },
+        "皮肤图片": {
+          "required": false,
+          "conditional": false
+        },
+        "画廊图片": {
+          "required": false,
+          "conditional": false
+        },
+        "其他图片": {
+          "required": false,
+          "conditional": false
+        },
+        "游戏评言": {
+          "required": false,
+          "conditional": false
+        },
+        "轶事": {
+          "required": false,
+          "conditional": false
+        },
+        "其他": {
+          "required": false,
+          "conditional": false
+        },
+        "注释与外部链接": {
+          "required": false,
+          "conditional": false
+        }
       },
       "fields": {
         "name": "角色名",
@@ -64,9 +118,7 @@
         "field": "page_title",
         "fallback": "game_id",
         "disambiguator": "（{game_id}）"
-      },
-      "preserve_unknown_params": true,
-      "observed_unknown_params": []
+      }
     }
   }
 }

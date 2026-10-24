@@ -56,7 +56,7 @@ fallback (or a 404) and the page shows which language is being displayed.
 | Endpoint | Source |
 |:--|:--|
 | `GET /db/data.json` | `build/spa/data.json` verbatim |
-| `GET /db/text.json` | snippet and name index derived from `build/text/{im_os,oa,story,extras}.jsonl` |
+| `GET /db/text.json` | snippet and name index derived from `build/text/*.jsonl` (`im_os`, `oa`, `story`, `extras`, `packs`, `subtitles`) |
 | `GET /db/text?ref=…&lang=…` | one full text record with `requested_lang` / `fallback` fields |
 | `GET /db/search?q=…&lang=…&limit=…` | full-text match groups for posts, logs, OA documents and subtitle lines |
 | `GET /media/<path>` | local media export (title clips under `titles/<clip>.mp4`), Range-capable |
@@ -66,6 +66,12 @@ through the same `text_ref` contract as the timeline. `/media/*` defaults to
 `viewer/public/media` and can be pointed elsewhere with `CYTUS2_MEDIA_DIR`.
 When a title clip is absent the page renders an explicit
 `title-video-missing` note instead of a broken player.
+
+Subtitle cues and pack descriptions follow the same contract: the entity only
+carries `text_ref`, and their localized text is read from
+`build/text/subtitles.jsonl` / `build/text/packs.jsonl`. Title names are
+rendered from `text_ref` too, so switching the sidebar language never falls
+back to a hard-coded name.
 
 ## Checks
 

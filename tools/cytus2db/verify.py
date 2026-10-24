@@ -113,6 +113,7 @@ def verify_wiki(
         raise InputError("live sample must be at least 1")
     profile = load_profile(profile_path)
     snapshot = load_snapshot(snapshot_dir)
+    pages_available = snapshot.pages_available
     raw_report = _read_report(wiki)
     raw_pages = raw_report.get("pages")
     if not isinstance(raw_pages, list):
@@ -157,18 +158,23 @@ def verify_wiki(
             generated_titles=generated_titles,
             duplicate_titles=duplicate_titles,
             known_missing=known_missing,
+            pages_available=pages_available,
         )
         entries.append(entry)
         if text is not None:
             rendered.append((entry, text))
 
     global_checks = _verify_report_shape(raw_pages, raw_report)
+    global_checks.details["snapshot_pages_available"] = pages_available
     known_check = _verify_known_missing(
         known_missing, article_titles, redirect_titles
     )
     global_checks.errors.extend(known_check.errors)
     global_checks.details["known_missing"] = known_check.details
     artifact_check = _verify_artifacts(wiki, entries)
+    upload_check = _verify_uploads(wiki, entries)
+    global_checks.errors.extend(upload_check.errors)
+    global_checks.details["uploads"] = upload_check.details
 
     live_report = {"enabled": False}
     if live:
@@ -209,6 +215,7 @@ def verify_wiki(
         entry["ok"] = all(check["ok"] for check in entry["checks"].values())
 
     checks = _aggregate_checks(entries, global_checks, artifact_check)
+    checks["uploads"] = not upload_check.errors
     if live:
         checks["live"] = all(
             entry["checks"]["live"]["ok"]
@@ -218,7 +225,7 @@ def verify_wiki(
     else:
         checks["live"] = None
 
-    counts = _counts(entries, artifact_check)
+    counts = _counts(entries, artifact_check, upload_check)
     red_links = _red_link_index(entries)
     known_red_links = _known_red_link_index(entries, known_missing)
     report = {
@@ -232,6 +239,7 @@ def verify_wiki(
         "counts": counts,
         "checks": checks,
         "artifact_check": artifact_check.as_dict(),
+        "upload_check": upload_check.as_dict(),
         "report_check": global_checks.as_dict(),
         "pages": entries,
         "red_links": red_links,
@@ -302,6 +310,11 @@ def format_summary(report: Mapping[str, Any], *, limit: int = 20) -> str:
             f"  known missing: {counts['known_red_links']} occurrence(s) / "
             f"{counts['known_red_link_targets']} target(s) "
             "(explicitly listed in snapshot/known_missing.json)"
+        ),
+        (
+            f"  uploads: {mark('uploads')} "
+            f"({counts['upload_files']} file(s), "
+            f"{counts['upload_missing']} not on the site)"
         ),
         f"  artifacts: {mark('artifacts')}",
     ]
@@ -506,6 +519,98 @@ def _verify_artifacts(wiki: Path, entries: Iterable[Mapping[str, Any]]) -> _Chec
     return check
 
 
+def _verify_uploads(
+    wiki: Path, entries: Iterable[Mapping[str, Any]]
+) -> _Check:
+    """Check ``uploads.json`` against every ``[[File:…]]`` the pages emit.
+
+    File links are not red links (the verifier ignores them), so the manifest
+    is where upload work is tracked.  A referenced file missing from the
+    manifest is a build bug and fails; a manifest entry with
+    ``status="missing"`` is reported as a gap but does not fail, because the
+    file may simply not have been uploaded yet.
+    """
+    check = _Check()
+    referenced: dict[str, str] = {}
+    for entry in entries:
+        links = entry.get("checks", {}).get("links", {}).get("details", {})
+        for name in links.get("file_targets", []):
+            referenced.setdefault(normalise_title(name), str(name))
+    if not referenced:
+        check.details = {
+            "referenced": 0,
+            "manifest": 0,
+            "missing_from_manifest": [],
+            "missing": [],
+        }
+        return check
+
+    path = wiki / "uploads.json"
+    if not path.is_file():
+        check.fail(
+            f"upload manifest not found: {path} "
+            f"({len(referenced)} file link(s) referenced)"
+        )
+        check.details = {
+            "referenced": len(referenced),
+            "manifest": 0,
+            "missing_from_manifest": sorted(referenced.values()),
+            "missing": [],
+        }
+        return check
+    data = _read_json_object(path)
+    files = data.get("files")
+    if not isinstance(files, list):
+        check.fail(f"{path}: files must be a list")
+        files = []
+    manifest: dict[str, Mapping[str, Any]] = {}
+    for index, item in enumerate(files):
+        if not isinstance(item, dict):
+            check.fail(f"{path}: files[{index}] must be an object")
+            continue
+        name = item.get("name")
+        status = item.get("status")
+        if not isinstance(name, str) or not name.strip():
+            check.fail(f"{path}: files[{index}].name must be a non-empty string")
+            continue
+        if status not in ("existing", "missing"):
+            check.fail(
+                f"{path}: files[{index}].status must be 'existing' or 'missing'"
+            )
+        manifest.setdefault(normalise_title(name), item)
+
+    missing_keys = sorted(set(referenced) - set(manifest))
+    missing_from_manifest = [referenced[key] for key in missing_keys]
+    for name in missing_from_manifest:
+        check.fail(
+            f"{path}: referenced file {name!r} is not in the manifest"
+        )
+    missing = sorted(
+        str(item.get("name"))
+        for item in manifest.values()
+        if item.get("status") == "missing"
+    )
+    check.details = {
+        "referenced": len(referenced),
+        "manifest": len(manifest),
+        "missing_from_manifest": missing_from_manifest,
+        "missing": missing,
+    }
+    return check
+
+
+def _read_json_object(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except OSError as exc:
+        raise InputError(f"cannot read {path}: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise InputError(f"invalid JSON in {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise InputError(f"{path}: must be a JSON object")
+    return data
+
+
 def _aggregate_checks(
     entries: Iterable[Mapping[str, Any]],
     global_checks: _Check,
@@ -544,7 +649,9 @@ def _overall_ok(checks: Mapping[str, bool | None], errors: Iterable[str]) -> boo
 
 
 def _counts(
-    entries: Iterable[Mapping[str, Any]], artifact_check: _Check
+    entries: Iterable[Mapping[str, Any]],
+    artifact_check: _Check,
+    upload_check: _Check,
 ) -> dict[str, Any]:
     materialized = list(entries)
     counts: dict[str, Any] = {
@@ -580,7 +687,11 @@ def _counts(
         "ignored_external_links": 0,
         "ignored_anchor_links": 0,
         "orphan_files": len(artifact_check.details.get("orphans", [])),
+        "upload_files": 0,
+        "upload_missing": 0,
     }
+    counts["upload_files"] = int(upload_check.details.get("referenced", 0))
+    counts["upload_missing"] = len(upload_check.details.get("missing", []))
     for entry in materialized:
         checks = entry["checks"]
         params = checks["template_params"]["details"]
@@ -687,6 +798,7 @@ def _verify_entry(
     generated_titles: set[str],
     duplicate_titles: set[str],
     known_missing: Mapping[str, Mapping[str, str]],
+    pages_available: bool,
 ) -> tuple[dict[str, Any], str | None]:
     report_check = _Check()
     params_check = _Check()
@@ -792,16 +904,32 @@ def _verify_entry(
     patch_params: dict[str, str] = {}
     patch_existing: SnapshotPage | None = None
     if patch_data is not None:
-        patch_params, patch_existing = _verify_patch_target(
-            patch_data,
-            patch_relative=str(patch_relative),
-            entry_title=title if isinstance(title, str) else "",
-            template=template,
-            article_titles=article_titles,
-            redirect_titles=redirect_titles,
-            snapshot_pages=snapshot_pages,
-            check=patch_target_check,
-        )
+        if pages_available:
+            patch_params, patch_existing = _verify_patch_target(
+                patch_data,
+                patch_relative=str(patch_relative),
+                entry_title=title if isinstance(title, str) else "",
+                template=template,
+                article_titles=article_titles,
+                redirect_titles=redirect_titles,
+                snapshot_pages=snapshot_pages,
+                check=patch_target_check,
+            )
+        else:
+            raw_params = patch_data.get("params")
+            if isinstance(raw_params, dict) and all(
+                isinstance(name, str) and isinstance(value, str)
+                for name, value in raw_params.items()
+            ):
+                patch_params = dict(raw_params)
+            else:
+                patch_target_check.fail(
+                    f"{patch_relative}: params must map strings to strings"
+                )
+            patch_target_check.details = {
+                "status": "unavailable",
+                "reason": "snapshot/pages.json is absent (local cache)",
+            }
 
     _verify_parameters(
         template,
@@ -916,7 +1044,8 @@ def _verify_parameters(
             if name not in template.params:
                 unknown.append({"param": name, "source": "page"})
         for name, value in page_params.items():
-            if not value.strip():
+            meta = template.params.get(name)
+            if not value.strip() and not (meta is not None and meta.allow_empty):
                 empty.append({"param": name, "source": "page"})
         actual = set(page_params)
         reported = set(emitted)
@@ -930,7 +1059,8 @@ def _verify_parameters(
         for name, value in patch_params.items():
             if name not in template.params:
                 unknown.append({"param": name, "source": "patch"})
-            if not value.strip():
+            meta = template.params.get(name)
+            if not value.strip() and not (meta is not None and meta.allow_empty):
                 empty.append({"param": name, "source": "patch"})
         unreported = sorted(set(patch_params) - set(emitted))
         if emitted and unreported:
@@ -1241,7 +1371,7 @@ def _verify_links(
     if page_text is not None:
         segments.append(page_text)
     segments.extend(patch_params.values())
-    targets, ignored = _extract_links(segments)
+    targets, ignored, file_targets = _extract_links(segments)
     missing: list[str] = []
     known: list[str] = []
     articles = 0
@@ -1268,14 +1398,16 @@ def _verify_links(
         "known_missing": known,
         "missing": missing,
         "ignored": ignored,
+        "file_targets": sorted(set(file_targets)),
     }
 
 
 def _extract_links(
     segments: Iterable[str],
-) -> tuple[list[str], dict[str, int]]:
+) -> tuple[list[str], dict[str, int], list[str]]:
     targets: list[str] = []
     ignored = {"file": 0, "category": 0, "external": 0, "anchor": 0}
+    file_targets: list[str] = []
     for segment in segments:
         text = _COMMENT_RE.sub("", segment)
         text = _NOWIKI_RE.sub("", text)
@@ -1294,6 +1426,9 @@ def _extract_links(
                 )
                 if prefix in ("file:", "image:", "文件:", "图像:"):
                     ignored["file"] += 1
+                    name = target[len(prefix):].strip()
+                    if name:
+                        file_targets.append(name)
                 else:
                     ignored["category"] += 1
                 continue
@@ -1305,7 +1440,7 @@ def _extract_links(
                 ignored["anchor"] += 1
                 continue
             targets.append(normalised)
-    return targets, ignored
+    return targets, ignored, file_targets
 
 
 def _category_targets(text: str) -> list[str]:

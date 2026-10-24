@@ -308,3 +308,12 @@ def test_check_mode_validates_without_writing(tool, tmp_path):
 
 def test_offline_mode_reports_missing_snapshot(tool, tmp_path):
     assert tool.main(["--offline", "--out", str(tmp_path)]) == 1
+
+
+def test_offline_tolerates_an_absent_pages_cache(tool, tmp_path):
+    """pages.json is a local cache; a clean checkout verifies without it."""
+    for name in ("titles.json", "template_params.json"):
+        shutil.copyfile(EXPECTED / name, tmp_path / name)
+
+    assert tool.main(["--check", "--out", str(tmp_path)]) == 0
+    assert not (tmp_path / "pages.json").exists()

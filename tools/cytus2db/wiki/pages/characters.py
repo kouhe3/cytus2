@@ -40,7 +40,15 @@ from collections import defaultdict
 from typing import Any
 
 from ..db import Database
-from ..model import SEMANTIC_TEMPLATE, Conflict, Field, PageModel, Section, Text
+from ..model import (
+    SEMANTIC_TEMPLATE,
+    Conflict,
+    Field,
+    PageModel,
+    Section,
+    Text,
+    provenance_of,
+)
 
 SYSTEM_ORDER = ("im", "os", "oa", "gallery")
 
@@ -121,6 +129,7 @@ def build(db: Database) -> list[PageModel]:
                 categories=("character",),
                 omitted=omitted,
                 conflicts=tuple(conflicts),
+                provenance=provenance_of(character),
             )
         )
     return pages

@@ -13,7 +13,16 @@ from typing import Any, Iterable
 
 from ..keys import DIFFICULTIES
 from .db import Database
-from .model import SEMANTIC_TEMPLATE, Conflict, Field, Link, PageModel, Section, Text
+from .model import (
+    SEMANTIC_TEMPLATE,
+    Conflict,
+    Field,
+    Link,
+    PageModel,
+    Section,
+    Text,
+    provenance_of,
+)
 
 _LANG_ORDER = ("zh-Hans", "zh-Hant", "en", "ja", "ko")
 _DIFFICULTY_INDEX = {name: index for index, name in enumerate(DIFFICULTIES)}
@@ -117,6 +126,7 @@ def build_song_pages(db: Database) -> list[PageModel]:
                 categories=("song",),
                 omitted=omitted,
                 conflicts=tuple(_dedupe_conflicts(conflicts)),
+                provenance=provenance_of(db.get(song["id"])),
             )
         )
     return pages

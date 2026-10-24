@@ -291,7 +291,7 @@ export function unlockedCharts(db: Database, entity: BaseEntity): ChartEntity[] 
   const charts: ChartEntity[] = [];
   for (const id of chartIds) {
     const chart = db.entityById.get(id);
-    if (chart && isChart(chart)) {
+    if (chart && isChart(chart) && chart.need_unlock) {
       charts.push(chart);
     }
   }

@@ -11,3 +11,6 @@
 
 - 首次生成的页面在这些字段上不完整；需要另开抽取 ticket 从 `songdata` 挖 BPM/时长/Note 数。
 - 人工补充只能进覆盖层（如 `song_notes.json`），并标注来源，不能直接改生成物。
+- wiki 侧的人工事实集中在 `tools/cytus2db/wiki/overrides.py`（如结局分支标签），
+  每一项都以 `kind: manual` provenance 记录 locator 与理由；生成页面底部的
+  `== 数据来源 ==` 会把这些条目渲染成 `<ref>`，游戏数据则只列 `<code>` locator。

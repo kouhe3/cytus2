@@ -42,6 +42,7 @@ from typing import Any, Iterable
 
 from ..errors import BuildError, InputError
 from ..keys import entity_key
+from ..provenance import manual, rva, sort_record, text_asset
 from ..sources import InputSource
 
 TIER_ORDER = ("free", "paid", "side")
@@ -94,37 +95,17 @@ STORY_AFTER: dict[str, tuple[str, ...]] = {
     "story_ending03_good_ending2": ("story_ending03_main",),
     "story_ending04_main": ("story_ending03_main",),
 }
-STORY_GATE_LOCATOR = "cytus2_work/export_im_order.py:STORY_LEVEL_GATES"
+STORY_GATE_LOCATOR = "cytus2_work/export_im_order.py:LEVEL_STORY,STORY_LEVEL_REQ"
 
 
 # --------------------------------------------------------------------- helpers
-def _text_asset(locator: str, note: str | None = None) -> dict[str, str]:
-    entry = {"kind": "text_asset", "locator": locator}
-    if note:
-        entry["note"] = note
-    return entry
-
-
-def _rva(locator: str, note: str | None = None) -> dict[str, str]:
-    entry = {"kind": "rva", "locator": locator}
-    if note:
-        entry["note"] = note
-    return entry
+_text_asset = text_asset
+_rva = rva
+_sorted_provenance = sort_record
 
 
 def _manual(note: str) -> dict[str, str]:
-    return {"kind": "manual", "locator": STORY_GATE_LOCATOR, "note": note}
-
-
-def _sorted_provenance(record: dict[str, Any]) -> None:
-    unique = {
-        (entry.get("kind"), entry.get("locator"), entry.get("note")): entry
-        for entry in record["provenance"]
-    }
-    record["provenance"] = [
-        unique[key]
-        for key in sorted(unique, key=lambda item: (item[0], item[1], item[2] or ""))
-    ]
+    return manual(STORY_GATE_LOCATOR, note)
 
 
 def _character(value: Any) -> str:

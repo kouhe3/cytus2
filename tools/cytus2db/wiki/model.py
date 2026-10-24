@@ -9,7 +9,7 @@ parameter names; that mapping lives in a profile consumed by the renderer.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Union
+from typing import Any, Iterable, Mapping, Union
 
 
 @dataclass(frozen=True)
@@ -86,6 +86,17 @@ class Conflict:
 SEMANTIC_TEMPLATE = "template"
 
 
+def provenance_of(
+    record: Mapping[str, Any] | None, *extra: Mapping[str, str]
+) -> tuple[dict[str, str], ...]:
+    """Return an entity's provenance plus builder-specific manual entries."""
+    entries: list[dict[str, str]] = []
+    if record is not None:
+        entries.extend(record.get("provenance") or ())
+    entries.extend(extra)
+    return tuple(entries)
+
+
 @dataclass
 class PageModel:
     """One entity rendered into sections, fields, links and categories."""
@@ -96,6 +107,7 @@ class PageModel:
     categories: tuple[str, ...] = ()
     omitted: dict[str, str] = field(default_factory=dict)
     conflicts: tuple[Conflict, ...] = ()
+    provenance: tuple[dict[str, str], ...] = ()
 
     def fields(self) -> Iterable[Field]:
         for section in self.sections:

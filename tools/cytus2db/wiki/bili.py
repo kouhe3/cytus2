@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from ..errors import BuildError, InputError
+from ..provenance import is_cited, sorted_entries
 from .model import Conflict, Link, PageModel, Text
 from .titles import (
     IGNORED_TARGET_PREFIXES,
@@ -31,7 +32,9 @@ class ParameterSpec:
     name: str
     required: bool
     conditional: bool
-    default: str
+    # ``allow_empty`` marks a parameter the renderer may emit with an empty
+    # value.  The verifier only tolerates empty values for these parameters.
+    allow_empty: bool = False
 
 
 @dataclass(frozen=True)
@@ -49,8 +52,12 @@ class PageSpec:
     title_field: str
     title_fallback: str
     disambiguator: str
-    preserve_unknown_params: bool
-    observed_unknown_params: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ProvenanceSectionSpec:
+    enabled: bool
+    heading: str
 
 
 @dataclass(frozen=True)
@@ -59,6 +66,8 @@ class Profile:
     categories: dict[str, str]
     templates: dict[str, TemplateSpec]
     pages: dict[str, PageSpec]
+    body_templates: dict[str, str]
+    provenance_section: ProvenanceSectionSpec
     path: Path
 
 
@@ -147,13 +156,60 @@ def load_profile(path: Path | str) -> Profile:
     for page_type, raw in raw_pages.items():
         pages[page_type] = _load_page(source, page_type, raw, templates)
 
+    body_templates = _load_body_templates(source, data.get("body_templates") or {})
+    provenance_section = _load_provenance_section(
+        source, data.get("provenance_section") or {}
+    )
+
     return Profile(
         site=site,
         categories=dict(categories),
         templates=templates,
         pages=pages,
+        body_templates=body_templates,
+        provenance_section=provenance_section,
         path=source,
     )
+
+
+def _load_body_templates(source: Path, raw: Any) -> dict[str, str]:
+    """Load the helper templates page bodies may invoke.
+
+    Page builders emit ``{{引用段落|…}}``, ``{{os/对话|…}}`` and similar
+    dialect templates inside parameter values.  Declaring them here is what
+    lets :func:`render_page` reject an undeclared template instead of
+    publishing wikitext the profile does not know.
+    """
+    where = f"{source}: body_templates"
+    if not isinstance(raw, dict):
+        raise BuildError(f"{where} must be an object")
+    templates: dict[str, str] = {}
+    for key, value in raw.items():
+        if not isinstance(key, str) or not key.strip():
+            raise BuildError(f"{where}: keys must be non-empty strings")
+        if not isinstance(value, str) or not value.strip():
+            raise BuildError(f"{where}[{key!r}] must be a non-empty string")
+        templates[key] = value
+    if len(set(templates.values())) != len(templates):
+        raise BuildError(f"{where}: template names must be unique")
+    return templates
+
+
+def _load_provenance_section(source: Path, raw: Any) -> ProvenanceSectionSpec:
+    where = f"{source}: provenance_section"
+    if not isinstance(raw, dict):
+        raise BuildError(f"{where} must be an object")
+    enabled = raw.get("enabled", False)
+    heading = raw.get("heading", "")
+    if not isinstance(enabled, bool):
+        raise BuildError(f"{where}.enabled must be bool")
+    if not isinstance(heading, str):
+        raise BuildError(f"{where}.heading must be a string")
+    if enabled and not heading.strip():
+        raise BuildError(f"{where}.heading must not be empty when enabled")
+    if not enabled and not heading:
+        heading = "数据来源"
+    return ProvenanceSectionSpec(enabled=enabled, heading=heading)
 
 
 def _deep_merge(base: dict, overlay: dict) -> None:
@@ -178,14 +234,18 @@ def _load_template(source: Path, name: str, raw: Any) -> TemplateSpec:
             raise BuildError(f"{where}.params[{param_name!r}] must be an object")
         required = meta.get("required", False)
         conditional = meta.get("conditional", False)
-        default = meta.get("default", "")
+        allow_empty = meta.get("allow_empty", False)
         if not isinstance(required, bool):
             raise BuildError(f"{where}.params[{param_name!r}].required must be bool")
         if not isinstance(conditional, bool):
             raise BuildError(f"{where}.params[{param_name!r}].conditional must be bool")
-        if not isinstance(default, str):
-            raise BuildError(f"{where}.params[{param_name!r}].default must be a string")
-        params[param_name] = ParameterSpec(param_name, required, conditional, default)
+        if not isinstance(allow_empty, bool):
+            raise BuildError(
+                f"{where}.params[{param_name!r}].allow_empty must be bool"
+            )
+        params[param_name] = ParameterSpec(
+            param_name, required, conditional, allow_empty
+        )
 
     raw_order = raw.get("param_order")
     if not isinstance(raw_order, list) or not raw_order:
@@ -240,20 +300,12 @@ def _load_page(
     disambiguator = str(title.get("disambiguator") or "（{game_id}）")
     if "{game_id}" not in disambiguator:
         raise BuildError(f"{where}.title.disambiguator must contain {{game_id}}")
-    preserve = raw.get("preserve_unknown_params", True)
-    if not isinstance(preserve, bool):
-        raise BuildError(f"{where}.preserve_unknown_params must be bool")
-    observed = raw.get("observed_unknown_params") or []
-    if not isinstance(observed, list) or not all(isinstance(item, str) for item in observed):
-        raise BuildError(f"{where}.observed_unknown_params must be a string list")
     return PageSpec(
         page_type=page_type,
         template=template,
         title_field=title_field,
         title_fallback=title_fallback,
         disambiguator=disambiguator,
-        preserve_unknown_params=preserve,
-        observed_unknown_params=tuple(observed),
     )
 
 
@@ -344,14 +396,20 @@ def render_page(
                 if target not in unresolved_links:
                     unresolved_links.append(target)
         if not value.strip():
-            omitted.append(OmittedParameter(param, field.name, "empty_value"))
-            omitted_params.add(param)
-            continue
+            if not template.params[param].allow_empty:
+                omitted.append(OmittedParameter(param, field.name, "empty_value"))
+                omitted_params.add(param)
+                continue
+            # ``allow_empty`` parameters are always emitted, even with an
+            # empty value: a template whose default is malformed (``ver``)
+            # must receive an explicit value so the default never leaks.
         if param in values:
             raise BuildError(
                 f"{model.entity_id}: parameter {param!r} emitted twice"
             )
         values[param] = value
+
+    _validate_body_templates(values, template, profile, model.entity_id)
 
     for param, meta in template.params.items():
         if meta.required and param not in values:
@@ -390,6 +448,8 @@ def render_page(
         categories.append(target)
         lines.append(f"[[{target}]]")
 
+    lines.extend(_provenance_lines(model, profile))
+
     return RenderedPage(
         model=model,
         title=title_match.title,
@@ -405,6 +465,63 @@ def render_page(
         links=tuple(_render_link(link, resolver) for link in model.links()),
         unresolved_links=tuple(unresolved_links),
     )
+
+
+_BODY_TEMPLATE_RE = re.compile(r"\{\{\s*([^{}|]+?)\s*(?:\||\}\})")
+_PROVENANCE_LABELS = {
+    "text_asset": "游戏数据",
+    "rva": "反编译数据",
+    "manual": "人工补充",
+    "external": "外部资料",
+}
+
+
+def _validate_body_templates(
+    values: dict[str, str],
+    template: TemplateSpec,
+    profile: Profile,
+    entity_id: str,
+) -> None:
+    """Reject a parameter that invokes an undeclared helper template."""
+    # Template names are MediaWiki titles: only the first letter is case
+    # insensitive, so ``os/对话`` and ``Os/对话`` are one template.
+    allowed = {
+        normalise_title(name)
+        for name in (template.name, *profile.body_templates.values())
+    }
+    for param, value in values.items():
+        for name in _BODY_TEMPLATE_RE.findall(value):
+            if normalise_title(name) not in allowed:
+                raise BuildError(
+                    f"{entity_id}: parameter {param!r} emits template "
+                    f"{name!r}, which is not declared in "
+                    f"{profile.path}:body_templates"
+                )
+
+
+def _provenance_lines(model: PageModel, profile: Profile) -> list[str]:
+    """Render the bottom ``== 数据来源 ==`` section.
+
+    Every locator is listed; manual and external facts are cited with
+    ``<ref>`` because they cannot be reproduced from the APK alone.
+    """
+    spec = profile.provenance_section
+    entries = sorted_entries(model.provenance)
+    if not spec.enabled or not entries:
+        return []
+    lines = ["", f"== {spec.heading} =="]
+    for entry in entries:
+        kind = str(entry.get("kind") or "")
+        label = _PROVENANCE_LABELS.get(kind, kind)
+        locator = str(entry.get("locator") or "")
+        note = str(entry.get("note") or "").strip()
+        if is_cited(entry):
+            body = f"{locator}：{note}" if note else locator
+            lines.append(f"* {label}：<ref>{body}</ref>")
+        else:
+            suffix = f"（{note}）" if note else ""
+            lines.append(f"* {label}：<code>{locator}</code>{suffix}")
+    return lines
 
 
 def _render_link(link: Link, resolver: TitleResolver | None) -> Link:

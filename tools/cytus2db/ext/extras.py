@@ -29,6 +29,7 @@ from typing import Any
 
 from ..errors import BuildError, InputError
 from ..keys import entity_key
+from ..provenance import manual, sort_record, text_asset
 from ..sources import LANGS, InputSource
 
 # Title.Type -> video_title_* clips.  Verified against the media export, whose
@@ -62,28 +63,9 @@ _LANG_ORDER = {code: index for index, (code, _) in enumerate(LANGS)}
 
 
 # --------------------------------------------------------------------- helpers
-def _text_asset(locator: str, note: str | None = None) -> dict[str, str]:
-    entry = {"kind": "text_asset", "locator": locator}
-    if note:
-        entry["note"] = note
-    return entry
-
-
-def _manual(locator: str, note: str) -> dict[str, str]:
-    return {"kind": "manual", "locator": locator, "note": note}
-
-
-def _sorted_provenance(record: dict[str, Any]) -> None:
-    unique = {
-        (entry.get("kind"), entry.get("locator"), entry.get("note")): entry
-        for entry in record["provenance"]
-    }
-    record["provenance"] = [
-        unique[key]
-        for key in sorted(
-            unique, key=lambda item: (item[0] or "", item[1] or "", item[2] or "")
-        )
-    ]
+_text_asset = text_asset
+_manual = manual
+_sorted_provenance = sort_record
 
 
 def _dedupe(records: list[dict[str, Any]], label: str) -> list[dict[str, Any]]:

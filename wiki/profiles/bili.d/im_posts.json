@@ -20,18 +20,54 @@
         "头像覆盖"
       ],
       "params": {
-        "剧情排序": {"required": false, "conditional": false, "default": ""},
-        "全局排序": {"required": false, "conditional": false, "default": ""},
-        "iM_ID": {"required": false, "conditional": false, "default": ""},
-        "标题": {"required": false, "conditional": false, "default": ""},
-        "内容": {"required": false, "conditional": false, "default": ""},
-        "评论": {"required": false, "conditional": false, "default": ""},
-        "点赞数": {"required": false, "conditional": false, "default": ""},
-        "解锁条件": {"required": false, "conditional": false, "default": ""},
-        "解锁谱面": {"required": false, "conditional": false, "default": ""},
-        "配图文件名": {"required": false, "conditional": false, "default": ""},
-        "结局分支": {"required": false, "conditional": false, "default": "主线"},
-        "头像覆盖": {"required": false, "conditional": false, "default": ""}
+        "剧情排序": {
+          "required": false,
+          "conditional": false
+        },
+        "全局排序": {
+          "required": false,
+          "conditional": false
+        },
+        "iM_ID": {
+          "required": false,
+          "conditional": false
+        },
+        "标题": {
+          "required": false,
+          "conditional": false
+        },
+        "内容": {
+          "required": false,
+          "conditional": false
+        },
+        "评论": {
+          "required": false,
+          "conditional": false
+        },
+        "点赞数": {
+          "required": false,
+          "conditional": false
+        },
+        "解锁条件": {
+          "required": false,
+          "conditional": false
+        },
+        "解锁谱面": {
+          "required": false,
+          "conditional": false
+        },
+        "配图文件名": {
+          "required": false,
+          "conditional": false
+        },
+        "结局分支": {
+          "required": false,
+          "conditional": false
+        },
+        "头像覆盖": {
+          "required": false,
+          "conditional": false
+        }
       },
       "fields": {
         "plot_order": "剧情排序",
@@ -56,9 +92,11 @@
         "field": "page_title",
         "fallback": "game_id",
         "disambiguator": "（{game_id}）"
-      },
-      "preserve_unknown_params": true,
-      "observed_unknown_params": []
+      }
     }
+  },
+  "body_templates": {
+    "quote": "引用段落",
+    "comment": "Im/评论"
   }
 }

@@ -16,27 +16,13 @@ from typing import Any
 
 from .errors import BuildError, InputError
 from .keys import asset_key, chart_key, entity_key, slug, song_key
-from .sources import LANGS, InputSource
+from .provenance import sort_record, text_asset
+from .sources import InputSource
 
 AssetSeed = dict[str, Any]
 
-
-def _text_asset(locator: str, note: str | None = None) -> dict[str, str]:
-    entry = {"kind": "text_asset", "locator": locator}
-    if note:
-        entry["note"] = note
-    return entry
-
-
-def _sorted_provenance(record: dict[str, Any]) -> None:
-    record["provenance"] = sorted(
-        record["provenance"],
-        key=lambda entry: (
-            entry.get("kind", ""),
-            entry.get("locator", ""),
-            entry.get("note", ""),
-        ),
-    )
+_text_asset = text_asset
+_sorted_provenance = sort_record
 
 
 def _dedupe(records: list[dict[str, Any]], label: str) -> list[dict[str, Any]]:
@@ -91,7 +77,9 @@ def build_catalog(
                 "is_iap": bool(raw_pack.get("is_iap_pack")),
                 "has_im": bool(raw_pack.get("hasIM")),
                 "price": str(raw_pack.get("price") or ""),
-                "descriptions": descriptions,
+                # Localized descriptions live in build/text/packs.jsonl; the
+                # entity only carries the reference (one record per language).
+                "text_ref": entity_key("pack", pack_id),
                 "provenance": [_text_asset(pack_locator)],
             }
         )
@@ -487,10 +475,6 @@ def build_subtitles(
         slots = raw.get("Subtitles") or []
         if not isinstance(slots, list):
             raise BuildError(f"{locator}: Subtitles must be a list")
-        text = {
-            code: (str(slots[slot]) if slot < len(slots) and slots[slot] is not None else "")
-            for code, slot in LANGS
-        }
         subtitles.append(
             {
                 "id": entity_key("subtitle_line", audio_id),
@@ -498,7 +482,9 @@ def build_subtitles(
                 "game_id": audio_id,
                 "character": str(raw.get("Character") or ""),
                 "voice_asset_id": asset_key("voice", audio_id),
-                "text": text,
+                # The cue text lives in build/text/subtitles.jsonl under this
+                # reference; the entity stays free of localized prose.
+                "text_ref": entity_key("subtitle_line", audio_id),
                 "provenance": [_text_asset(locator)],
             }
         )
@@ -540,17 +526,6 @@ def build_assets(seed_lists: list[list[AssetSeed]]) -> list[dict[str, Any]]:
             record["provenance"].extend(seed["provenance"])
 
     for record in merged.values():
-        unique = {
-            (entry.get("kind"), entry.get("locator"), entry.get("note")): entry
-            for entry in record["provenance"]
-        }
-        record["provenance"] = [
-            unique[key]
-            for key in sorted(
-                unique,
-                key=lambda item: (item[0] or "", item[1] or "", item[2] or ""),
-            )
-        ]
         _sorted_provenance(record)
     return [merged[key] for key in sorted(merged)]
 

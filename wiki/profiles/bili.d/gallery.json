@@ -15,28 +15,23 @@
       "params": {
         "文件名": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "剧情排序": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "所属角色": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "文件类型": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "文件内容": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         }
       },
       "fields": {
@@ -55,9 +50,7 @@
         "field": "title",
         "fallback": "none",
         "disambiguator": "（{game_id}）"
-      },
-      "preserve_unknown_params": true,
-      "observed_unknown_params": []
+      }
     }
   }
 }

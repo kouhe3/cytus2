@@ -30,6 +30,12 @@ GOLDEN_PAGES = {
         "|配图文件名=attach01.png\n"
         "}}\n"
         "[[分类:Im剧情]]\n"
+        "\n"
+        "== 数据来源 ==\n"
+        "* 游戏数据：<code>text/imdata/im_attachment_data[0]</code>\n"
+        "* 游戏数据：<code>text/imdata/im_lock_condition_data[0]</code>\n"
+        "* 游戏数据：<code>text/imdata/im_topic_data[0]</code>\n"
+        "* 游戏数据：<code>text/imposts_p0101/posts</code>\n"
     ),
     # Empty body and only an empty reply: both parameters are omitted.
     "P0201": (
@@ -42,6 +48,11 @@ GOLDEN_PAGES = {
         "|解锁条件=已阅读过iM贴文“[[旧页-第一篇]]”\n"
         "}}\n"
         "[[分类:Im剧情]]\n"
+        "\n"
+        "== 数据来源 ==\n"
+        "* 游戏数据：<code>text/imdata/im_lock_condition_data[1]</code>\n"
+        "* 游戏数据：<code>text/imdata/im_topic_data[1]</code>\n"
+        "* 游戏数据：<code>text/imposts_p0201/posts</code>\n"
     ),
     # First post of a duplicated title keeps it; see P0401 for the suffix.
     "P0301": (
@@ -54,6 +65,11 @@ GOLDEN_PAGES = {
         "|点赞数=3\n"
         "}}\n"
         "[[分类:Im剧情]]\n"
+        "\n"
+        "== 数据来源 ==\n"
+        "* 游戏数据：<code>text/imdata/im_lock_condition_data[2]</code>\n"
+        "* 游戏数据：<code>text/imdata/im_topic_data[2]</code>\n"
+        "* 游戏数据：<code>text/imposts_p0301/posts</code>\n"
     ),
     "P0401": (
         "{{Im/帖\n"
@@ -66,6 +82,11 @@ GOLDEN_PAGES = {
         "|解锁条件=已完成剧情 story_alpha01\n"
         "}}\n"
         "[[分类:Im剧情]]\n"
+        "\n"
+        "== 数据来源 ==\n"
+        "* 游戏数据：<code>text/imdata/im_lock_condition_data[3]</code>\n"
+        "* 游戏数据：<code>text/imdata/im_topic_data[3]</code>\n"
+        "* 游戏数据：<code>text/imposts_p0401/posts</code>\n"
     ),
 }
 
@@ -250,6 +271,14 @@ def test_ending_branch_and_avatar_override(im_output: Path) -> None:
     models = {model.entity_id: model for model in im_posts.build(db)}
     assert models["im/P0301"].field_value("ending_branch") == "GE"
     assert models["im/P0401"].field_value("ending_branch") == "BE"
+    # The label is a hand-maintained override, not a hard-coded map: the model
+    # carries manual provenance so the page footer cites it with <ref>.
+    manual = [
+        entry
+        for entry in models["im/P0301"].provenance
+        if entry.get("kind") == "manual"
+    ]
+    assert manual and "IM_POST_ENDING_BRANCHES" in manual[0]["locator"]
     assert models["im/P0201"].field_value("avatar_override") == "alpha alt 01"
     assert models["im/P0101"].field_value("avatar_override") == ""
 
@@ -273,3 +302,44 @@ def test_rich_text_maps_game_markup_to_wikitext(
     assert im_posts._rich_text("<color=red>红</color><Size=20>大</Size>") == "红大"
     # Carriage returns appear in a few post files; markers must still match.
     assert im_posts._rich_text(">>\r\nquoted\r\n<<\r\nhere") == "{{引用段落|quoted}}<br>here"
+
+
+def test_page_title_matching_keeps_mediawiki_case(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``NEKO`` and ``Neko`` are different pages (first letter only folds)."""
+    from cytus2db.wiki.pages import im_posts
+
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    payload = {
+        "templates": {
+            "Im/帖": {
+                "pages": [
+                    {"title": "Site NEKO", "params": {"标题": "NEKO"}},
+                ]
+            }
+        }
+    }
+    (snapshot / "pages.json").write_text(
+        json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+    )
+    monkeypatch.setenv("CYTUS2_WIKI_SNAPSHOT", str(snapshot))
+
+    ranks = {"im/P0001": 1}
+    different_case = [{"id": "im/P0001", "titles": {"zh-Hans": "Neko"}}]
+    assert im_posts._match_page_titles(different_case, ranks, ranks) == {}
+
+    same_case = [{"id": "im/P0001", "titles": {"zh-Hans": "NEKO"}}]
+    assert im_posts._match_page_titles(same_case, ranks, ranks) == {
+        "im/P0001": "Site NEKO"
+    }
+
+    # Parentheses stay significant; they are not stripped wholesale.
+    payload["templates"]["Im/帖"]["pages"] = [
+        {"title": "Site", "params": {"标题": "Headline (variant)"}}
+    ]
+    (snapshot / "pages.json").write_text(
+        json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+    )
+    assert im_posts._match_page_titles(same_case, ranks, ranks) == {}

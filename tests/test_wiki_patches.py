@@ -423,3 +423,40 @@ def test_patch_applies_to_the_existing_page_fixture(patched_output: Path) -> Non
     assert "|轶事=人工轶事\n" in applied
     assert "|曲师=Artist A\n" in applied
     assert "|曲名=First\n" in applied
+
+
+def test_duplicate_named_parameters_use_the_last_value() -> None:
+    from cytus2db.wiki.patches import template_parameters
+
+    text = "{{歌曲\n|曲名=First\n|曲名=Second\n|曲师=Old\n}}\n"
+    assert template_parameters(text, "歌曲") == {"曲名": "Second", "曲师": "Old"}
+
+    patch = {
+        "title": "First",
+        "template": "歌曲",
+        "params": {"曲名": "New"},
+        "page_exists": True,
+    }
+    applied = apply_patch(text, patch)
+    # MediaWiki keeps the last occurrence; the earlier duplicate is untouched.
+    assert "|曲名=First\n" in applied
+    assert "|曲名=New\n" in applied
+    assert "|曲名=Second" not in applied
+
+
+def test_patch_render_requires_the_local_pages_cache(
+    tmp_path: Path, built_db: Path
+) -> None:
+    snapshot = tmp_path / "snapshot"
+    shutil.copytree(FIXTURE_SNAPSHOT, snapshot)
+    (snapshot / "pages.json").unlink()
+
+    result = run_render(
+        built_db,
+        tmp_path / "wiki",
+        "--patches",
+        "--snapshot",
+        str(snapshot),
+    )
+    assert result.returncode != 0
+    assert "pages.json" in result.stderr

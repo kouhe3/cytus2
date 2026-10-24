@@ -13,7 +13,7 @@
     "is_iap",
     "has_im",
     "price",
-    "descriptions",
+    "text_ref",
     "provenance"
   ],
   "additionalProperties": false,
@@ -47,9 +47,10 @@
     "price": {
       "type": "string"
     },
-    "descriptions": {
-      "type": ["object", "null"],
-      "additionalProperties": {"type": "string"}
+    "text_ref": {
+      "type": "string",
+      "pattern": "^pack/[^\\s]+$",
+      "description": "Reference into build/text/packs.jsonl (one record per language)."
     },
     "provenance": {
       "$ref": "common.schema.json#/$defs/provenance"

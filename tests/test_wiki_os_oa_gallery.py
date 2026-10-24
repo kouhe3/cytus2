@@ -34,6 +34,9 @@ GOLDEN_OS = (
     "</poem>\n"
     "}}\n"
     "[[分类:Os剧情目录]]\n"
+    "\n"
+    "== 数据来源 ==\n"
+    "* 游戏数据：<code>text/osdata/alpha001[0]</code>\n"
 )
 
 GOLDEN_OA = (
@@ -50,6 +53,9 @@ GOLDEN_OA = (
     "</poem>\n"
     "}}\n"
     "[[分类:Oa剧情]]\n"
+    "\n"
+    "== 数据来源 ==\n"
+    "* 游戏数据：<code>text/oasystemdata/oa_system_data.Documents[0]</code>\n"
 )
 
 GOLDEN_GALLERY = (
@@ -61,6 +67,9 @@ GOLDEN_GALLERY = (
     "|文件内容=[[File:poster.png|thumb]]\n"
     "}}\n"
     "[[分类:Gallery]]\n"
+    "\n"
+    "== 数据来源 ==\n"
+    "* 游戏数据：<code>text/gallerydata/misc[1]</code>\n"
 )
 
 
@@ -210,3 +219,73 @@ def test_image_gallery_item_links_the_file(page_output: Path) -> None:
     ]
     text = (page_output / page["file"]).read_text(encoding="utf-8")
     assert "[[File:poster.png|thumb]]" in text
+
+
+def test_uploads_manifest_lists_every_file_link(page_output: Path) -> None:
+    data = json.loads((page_output / "uploads.json").read_text(encoding="utf-8"))
+    assert data["kind"] == "wiki_uploads"
+    names = {item["name"] for item in data["files"]}
+    assert {"poster.png", "img001.png"} <= names
+    entry = next(item for item in data["files"] if item["name"] == "poster.png")
+    assert entry["status"] == "missing"
+    assert entry["site_name"] is None
+    assert entry["references"] == ["gallery_item/misc/poster"]
+    assert data["summary"] == {
+        "files": len(data["files"]),
+        "existing": 0,
+        "missing": len(data["files"]),
+    }
+
+
+def test_uploads_manifest_reuses_existing_site_file_names() -> None:
+    from types import SimpleNamespace
+
+    from cytus2db.wiki.build import _build_uploads
+
+    page = SimpleNamespace(
+        wikitext="[[File:poster.png|thumb]]",
+        model=SimpleNamespace(entity_id="gallery_item/misc/poster"),
+    )
+    snapshot = SimpleNamespace(
+        pages=(
+            SimpleNamespace(
+                params={"文件内容": "[[File:Poster.png|thumb]]"},
+            ),
+        )
+    )
+
+    data = _build_uploads([page], snapshot)
+
+    entry = data["files"][0]
+    assert entry["name"] == "poster.png"
+    assert entry["site_name"] == "Poster.png"
+    assert entry["status"] == "existing"
+    assert data["summary"] == {"files": 1, "existing": 1, "missing": 0}
+
+
+def test_os_ver_is_emitted_empty_when_category_is_missing(
+    tmp_path: Path,
+) -> None:
+    input_dir = tmp_path / "input"
+    copy_input(FIXTURE_INPUT, input_dir)
+    path = input_dir / "text" / "osdata" / "alpha001"
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    del rows[0]["Category"]
+    path.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+
+    build_dir = tmp_path / "build"
+    result = run_build(input_dir, build_dir)
+    assert result.returncode == 0, result.stderr
+    out = tmp_path / "wiki"
+    result = run_render(build_dir, out)
+    assert result.returncode == 0, result.stderr
+
+    text = (out / "pages" / "os_log" / "aos001.wikitext").read_text(
+        encoding="utf-8"
+    )
+    # The malformed template default ``|`` must never leak: an explicit empty
+    # value is emitted instead.
+    assert "|ver=\n|文件名=" in text
+    page = report_page(out, "os/aos001")
+    assert "ver" in page["emitted"]
+    assert {"kind": "missing_ver", "detail": "aos001"} in page["conflicts"]

@@ -2,7 +2,7 @@
 
 Edges are never hand-maintained: every relation below is computed from a raw
 TextAsset field or from a reference another extractor already resolved.  The
-six required relations are:
+required relations are:
 
 ``unlocks_chart``
     A source that grants a chart: iM post (``im_topic_data`` ``UnlockCharts``),
@@ -22,6 +22,16 @@ six required relations are:
 ``same_stage``
     Story event -> boss stage when the ``BOSS_STAGE_ID`` reference resolved
     (directly, by display-name alias, or through an alias override).
+``has_reply``
+    iM reply -> the post it belongs to (``im_reply.post_id``).  The reply
+    entity is already flat and carries no parent field, so this edge is the
+    only place the thread relation is represented.
+
+``mentions_song`` is deliberately **not** emitted.  No TextAsset field names a
+song from a post or log body: ``UnlockCharts`` is an unlock grant (already
+``unlocks_chart``), and the game's rich text has no stable song reference.
+Deriving it would mean fuzzy title matching, which ADR-0003 forbids, so the
+SPA has no relation label for it either.
 
 Chart edges skip charts whose ``NeedUnlock`` is false: owning the song already
 grants those charts, so they have no unlock source.  A reference to a chart
@@ -37,6 +47,7 @@ from typing import Any, Iterable
 
 from .errors import BuildError, ValidationError
 from .keys import DIFFICULTIES, chart_key, entity_key
+from .provenance import sorted_entries, text_asset
 from .sources import InputSource, Table
 from .validate import SchemaValidator
 
@@ -48,6 +59,7 @@ RELATIONS = frozenset(
         "belongs_to_pack",
         "appears_in_gallery",
         "same_stage",
+        "has_reply",
     }
 )
 
@@ -59,25 +71,7 @@ _MAX_REPORTED = 20
 
 
 # ------------------------------------------------------------------- helpers
-def _text_asset(locator: str, note: str | None = None) -> dict[str, str]:
-    entry = {"kind": "text_asset", "locator": locator}
-    if note:
-        entry["note"] = note
-    return entry
-
-
-def _sorted_provenance(entries: Iterable[dict[str, str]]) -> list[dict[str, str]]:
-    unique = {
-        (entry.get("kind"), entry.get("locator"), entry.get("note")): entry
-        for entry in entries
-        if entry.get("kind") and entry.get("locator")
-    }
-    return [
-        unique[key]
-        for key in sorted(
-            unique, key=lambda item: (item[0], item[1], item[2] or "")
-        )
-    ]
+_text_asset = text_asset
 
 
 def _rows(table: Table, what: str) -> list[Any]:
@@ -126,7 +120,7 @@ class _EdgeSet:
                 "target": target,
             }
             if provenance:
-                record["provenance"] = _sorted_provenance(provenance)
+                record["provenance"] = sorted_entries(provenance)
             records.append(record)
         return records
 
@@ -484,6 +478,19 @@ def _same_stage_edges(
             edges.add(node["id"], "same_stage", target, provenance)
 
 
+def _im_reply_edges(
+    entities: dict[str, list[dict[str, Any]]],
+    edges: _EdgeSet,
+) -> None:
+    for reply in entities.get("im_reply", []):
+        edges.add(
+            reply["id"],
+            "has_reply",
+            reply["post_id"],
+            reply.get("provenance") or [],
+        )
+
+
 # --------------------------------------------------------------------- build
 def build_edges(
     source: InputSource,
@@ -502,6 +509,7 @@ def build_edges(
     _belongs_to_pack_edges(entities, edges)
     _appears_in_gallery_edges(entities, edges)
     _same_stage_edges(entities, edges)
+    _im_reply_edges(entities, edges)
     return edges.records()
 
 

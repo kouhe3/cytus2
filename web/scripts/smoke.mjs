@@ -901,6 +901,17 @@ try {
     "title unlock conditions link their story node",
   );
   check(titles.firstClip === "title01", "first title plays its title01 clip");
+  await cdp.waitFor(
+    `[...document.querySelectorAll('[data-testid="title-name"] [data-testid="entity-body"]')].length === 10`,
+    "title names load from the text store",
+  );
+  const titleNames = await cdp.evaluate(
+    `[...document.querySelectorAll('[data-testid="title-name"]')].map((el) => el.textContent.trim()).filter(Boolean).length`,
+  );
+  check(
+    titleNames === 10,
+    `titles render names through text_ref (got ${titleNames})`,
+  );
   await cdp.screenshot("extras-titles.png");
 
   // ----------------------------------------------------------------- search
@@ -916,6 +927,12 @@ try {
     paffGroups.includes("im_post") && paffGroups.includes("os_log"),
     "search covers iM posts and OS logs",
   );
+  await cdp.navigate(`${appBase}/subtitle_line/CE0202`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="subtitle-detail"] [data-testid="entity-body"]')?.textContent.trim())`,
+    "subtitle detail renders its text-store body",
+  );
+  check(true, "subtitle detail renders text through text_ref");
   await cdp.navigate(`${appBase}/search?q=OA`);
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="search-result"]').length > 0`,

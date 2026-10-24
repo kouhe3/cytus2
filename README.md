@@ -47,16 +47,38 @@ cd ..
 # 2.2 canonical DB：实体 / 边 / SQLite / SPA 投影（全部写到 build/）
 uv run python -m cytus2db build --out build/ --input cytus2_work
 #   build/db/*.jsonl     实体与 edges.jsonl
-#   build/db.sqlite      查询索引（FTS5）
+#   build/db.sqlite      查询索引（FTS5 全文表 search）
 #   build/spa/data.json  SPA 投影（web/ 的唯一数据来源）
+#   build/text/*.jsonl   各家族本地正文库（实体只持有 text_ref）
 
 # 2.3 wiki 导出与校验（可选）
+uv run python tools/wiki_snapshot.py --out wiki/snapshot    # 本地刷新站点快照
 uv run python -m cytus2db render --out build/wiki --patches
 uv run python -m cytus2db verify
 ```
 
 `--input` 指向解包目录（默认读 `$CYTUS2_WORK`，未设置时用本机解包路径）；
 `build/` 完全由管线重建，`--clean` 会先清空 `db/`、`db.sqlite` 与 `spa/`。
+
+`wiki/snapshot/` 里只有 `titles.json` 与 `template_params.json` 入库；
+`pages.json`（登录站页面正文与模板参数）是**本地缓存**，被 `.gitignore` 忽略，
+由上面的 `wiki_snapshot.py` 刷新。`render --patches` 需要它来比对参数，
+缺少时会报错并提示刷新；没有它时 `verify` 仍校验红链与分类，只是把
+patch 目标检查标记为 `unavailable`。
+
+SQLite 的 `search` 表是 `build/text/*.jsonl` 的 FTS5 索引（JSONL 仍是源），
+例如：
+
+```bash
+sqlite3 build/db.sqlite \
+  "SELECT ref, lang, snippet(search, 3, '[', ']', '…', 12) \
+   FROM search WHERE search MATCH 'Paff' AND lang = 'zh-Hans' \
+   ORDER BY rank LIMIT 20;"
+```
+
+`render` 还会写 `build/wiki/uploads.json`：收集页面里所有 `[[File:…]]`，
+站内已有同名文件时沿用站点拼写（`status=existing`），否则列为待上传
+（`status=missing`）。`verify` 不把 `File:` 链接当红链，但会报告清单缺口。
 
 ## 3. 本地 SPA（`web/`）
 

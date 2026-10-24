@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { EntityList } from "../components/EntityLink";
 import { TypeBadge } from "../components/ui";
 import { isSong, recordOf } from "../data/database";
+import { useI18n } from "../data/i18n";
 import {
   chartReferrerEntities,
   entityHref,
@@ -24,8 +25,9 @@ function SourceList({
   db: Database;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   if (entities.length === 0) {
-    return <p className="muted">Nothing recorded.</p>;
+    return <p className="muted">{i18n.t("value.nothingRecorded")}</p>;
   }
   return (
     <ul className="source-list">
@@ -38,7 +40,7 @@ function SourceList({
             data-source-id={entity.id}
           >
             <span className="source-title">
-              {entityTitle(db, entity, lang)}
+              {entityTitle(db, entity, lang, i18n)}
             </span>
             <span className="source-meta">
               <TypeBadge type={entity.type} />
@@ -54,6 +56,7 @@ function SourceList({
 export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
   const navigate = useNavigate();
   const { lang } = useLanguage();
+  const i18n = useI18n();
   const song = db.entityById.get(chart.song_id);
   const songName =
     song && isSong(song) ? song.name || song.game_id : chart.song_id;
@@ -71,7 +74,7 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
       <main className="content">
         <div className="back-row">
           <Link to="/timeline" className="backlink" data-testid="back-to-timeline">
-            ← Timeline
+            ← {i18n.t("nav.timeline")}
           </Link>
           <button
             type="button"
@@ -79,7 +82,7 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
             data-testid="back-button"
             onClick={() => navigate(-1)}
           >
-            ← Back
+            ← {i18n.t("common.back")}
           </button>
         </div>
 
@@ -90,11 +93,13 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
         >
           <header className="detail-head">
             <p className="eyebrow">
-              Chart · <code>{chart.id}</code>
+              {i18n.t("entity.chartEyebrow")} · <code>{chart.id}</code>
             </p>
             <h1>{songName}</h1>
             <p className="byline">
-              {song && isSong(song) ? song.artist || "Unknown artist" : "Unknown artist"}
+              {song && isSong(song)
+                ? song.artist || i18n.t("value.unknownArtist")
+                : i18n.t("value.unknownArtist")}
               {" · "}
               {chart.difficulty}
             </p>
@@ -102,34 +107,38 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
               <span className={`difficulty difficulty-${chart.difficulty}`}>
                 {chart.difficulty}
               </span>
-              <span className="level-badge chart-level-badge">Lv {chart.level}</span>
+              <span className="level-badge chart-level-badge">
+                {i18n.t("common.level", { level: chart.level })}
+              </span>
               <span
                 className={
                   chart.need_unlock ? "unlock-badge locked" : "unlock-badge free"
                 }
               >
-                {chart.need_unlock ? "Unlock required" : "Always available"}
+                {chart.need_unlock
+                  ? i18n.t("value.unlockRequired")
+                  : i18n.t("value.alwaysAvailable")}
               </span>
             </div>
           </header>
 
           <dl className="facts chart-facts">
             <div className="fact">
-              <dt>Difficulty</dt>
+              <dt>{i18n.t("value.difficulty")}</dt>
               <dd data-testid="chart-difficulty">{chart.difficulty}</dd>
             </div>
             <div className="fact">
-              <dt>Level</dt>
+              <dt>{i18n.t("fact.level")}</dt>
               <dd data-testid="chart-level">{chart.level}</dd>
             </div>
             <div className="fact">
-              <dt>NeedUnlock</dt>
+              <dt>{i18n.t("value.needUnlock")}</dt>
               <dd data-testid="chart-need-unlock">
-                {chart.need_unlock ? "Yes" : "No"}
+                {chart.need_unlock ? i18n.t("common.yes") : i18n.t("common.no")}
               </dd>
             </div>
             <div className="fact">
-              <dt>Song</dt>
+              <dt>{i18n.t("fact.song")}</dt>
               <dd>
                 {song ? (
                   <Link to={entityHref(song.id)} className="inline-link">
@@ -143,9 +152,9 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
           </dl>
 
           <section className="detail-section" data-testid="unlock-sources">
-            <h2>Unlock sources</h2>
+            <h2>{i18n.t("fact.unlockSources")}</h2>
             <p className="hint">
-              Derived <code>unlocks_chart</code> edges that point at this chart.
+              {i18n.t("value.conditionEdges", { relation: "unlocks_chart" })}
             </p>
             <SourceList
               entities={sources}
@@ -156,10 +165,8 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
           </section>
 
           <section className="detail-section" data-testid="chart-backlinks">
-            <h2>Inbound references</h2>
-            <p className="hint">
-              Entities that list this chart in their own chart references.
-            </p>
+            <h2>{i18n.t("fact.backlinks")}</h2>
+            <p className="hint">{i18n.t("value.backlinksHint")}</p>
             <SourceList
               entities={referrers}
               testId="chart-backlink"
@@ -169,22 +176,24 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
           </section>
 
           <section className="detail-section" data-testid="chart-outgoing">
-            <h2>Outgoing edges</h2>
+            <h2>{i18n.t("entity.fact.outgoing")}</h2>
             <p className="hint">
-              Typed edges from this chart to other entities. Unlock sources above
-              are the inbound <code>unlocks_chart</code> edges.
+              {i18n.t("value.outgoingHint", { relation: "unlocks_chart" })}
             </p>
             <EntityList
               db={db}
               entities={outgoing}
               lang={lang}
-              empty="No outgoing edges."
+              empty={i18n.t("value.noOutgoingEdges")}
             />
           </section>
 
           <section className="detail-section">
-            <h2>Other difficulties</h2>
-            <nav className="chart-switcher" aria-label="Other difficulties">
+            <h2>{i18n.t("value.otherDifficulties")}</h2>
+            <nav
+              className="chart-switcher"
+              aria-label={i18n.t("value.otherDifficulties")}
+            >
               {siblings.map((sibling) => (
                 <Link
                   key={sibling.id}
@@ -198,7 +207,9 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
                   data-testid="chart-sibling"
                 >
                   <span>{sibling.difficulty}</span>
-                  <span className="chart-jump-level">Lv {sibling.level}</span>
+                  <span className="chart-jump-level">
+                    {i18n.t("common.level", { level: sibling.level })}
+                  </span>
                 </Link>
               ))}
             </nav>
@@ -206,50 +217,50 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
         </article>
       </main>
 
-      <aside className="context" aria-label="Chart details">
+      <aside className="context" aria-label={i18n.t("entity.chartDetailsAria")}>
         <section className="panel">
-          <h2>Chart</h2>
+          <h2>{i18n.t("entity.charts")}</h2>
           <dl className="facts">
             <div className="fact">
-              <dt>Key</dt>
+              <dt>{i18n.t("fact.key")}</dt>
               <dd>
                 <code>{chart.id}</code>
               </dd>
             </div>
             <div className="fact">
-              <dt>Game ID</dt>
+              <dt>{i18n.t("entity.fact.gameId")}</dt>
               <dd>
                 <code>{chart.game_id}</code>
               </dd>
             </div>
             <div className="fact">
-              <dt>Music ID</dt>
+              <dt>{i18n.t("fact.musicId")}</dt>
               <dd>{chart.music_id || "—"}</dd>
             </div>
             <div className="fact">
-              <dt>Unlock sources</dt>
-              <dd>{sources.length}</dd>
+              <dt>{i18n.t("fact.unlockSources")}</dt>
+              <dd>{i18n.formatNumber(sources.length)}</dd>
             </div>
             <div className="fact">
-              <dt>Backlinks</dt>
-              <dd>{referrers.length}</dd>
+              <dt>{i18n.t("fact.backlinks")}</dt>
+              <dd>{i18n.formatNumber(referrers.length)}</dd>
             </div>
           </dl>
         </section>
 
         <section className="panel">
-          <h2>Song</h2>
+          <h2>{i18n.t("fact.song")}</h2>
           <dl className="facts">
             <div className="fact">
-              <dt>Title</dt>
+              <dt>{i18n.t("fact.title")}</dt>
               <dd>{songName}</dd>
             </div>
             <div className="fact">
-              <dt>Artist</dt>
+              <dt>{i18n.t("fact.artist")}</dt>
               <dd>{song && isSong(song) ? song.artist || "—" : "—"}</dd>
             </div>
             <div className="fact">
-              <dt>Pack</dt>
+              <dt>{i18n.t("fact.pack")}</dt>
               <dd>
                 {song && isSong(song) ? (
                   <Link to={entityHref(song.pack_id)} className="inline-link">
@@ -265,7 +276,7 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
 
         {provenance.length > 0 ? (
           <section className="panel">
-            <h2>Provenance</h2>
+            <h2>{i18n.t("entity.panel.provenance")}</h2>
             <ul className="prov">
               {provenance.map((entry, index) => {
                 if (typeof entry !== "object" || entry === null) {
@@ -274,8 +285,8 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
                 const record = entry as Record<string, unknown>;
                 return (
                   <li key={index}>
-                    <code>{formatFieldValue(record["locator"])}</code>
-                    <span>{formatFieldValue(record["kind"])}</span>
+                    <code>{formatFieldValue(record["locator"], i18n)}</code>
+                    <span>{formatFieldValue(record["kind"], i18n)}</span>
                   </li>
                 );
               })}

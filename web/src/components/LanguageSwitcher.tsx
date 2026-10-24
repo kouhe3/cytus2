@@ -1,12 +1,15 @@
-import { LANGUAGES, useLanguage } from "../data/language";
+import { useLanguage } from "../data/language";
+import { useI18n } from "../data/i18n";
+import { LANGUAGES } from "../data/messages";
 
 export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { lang, setLang } = useLanguage();
+  const i18n = useI18n();
   return (
     <div
       className={compact ? "lang-switch compact" : "lang-switch"}
       role="group"
-      aria-label="Text language"
+      aria-label={i18n.t("language.groupAria")}
       data-testid="language-switcher"
     >
       {LANGUAGES.map((option) => (

@@ -12,6 +12,8 @@ import {
   textSnippet,
 } from "./database";
 import { localizedValue, pickLocalized } from "./language";
+import { conditionKindLabel, relationLabel } from "./labels";
+import type { I18n, MessageKey } from "./messages";
 import type {
   BaseEntity,
   BossStageEntity,
@@ -83,6 +85,7 @@ export function entityTitle(
   db: Database,
   entity: BaseEntity,
   lang: Lang,
+  i18n?: I18n,
 ): string {
   if (isImPost(entity)) {
     return pickLocalized(entity.titles, lang).value || entity.game_id;
@@ -97,7 +100,7 @@ export function entityTitle(
     return entity.name || entity.game_id;
   }
   if (isSubtitleLine(entity)) {
-    return `${entity.character || "Voice"} · ${entity.game_id}`;
+    return `${entity.character || (i18n ? i18n.t("entity.voice") : "Voice")} · ${entity.game_id}`;
   }
   if (entity.type === "oa_document" && isOaDocument(entity)) {
     return textName(db, entity.text_ref, lang) || entity.game_id;
@@ -146,40 +149,6 @@ function textName(db: Database, textRef: string, lang: Lang): string {
   return pickLocalized(names as LocalizedText, lang).value;
 }
 
-export function entityTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    im_post: "iM post",
-    im_reply: "iM reply",
-    os_log: "OS log",
-    chart: "Chart",
-    song: "Song",
-    character: "Character",
-    pack: "Song pack",
-    folder: "Folder",
-    chapter: "Chapter",
-    story_node: "Story node",
-    oa_character: "OA character",
-    oa_object: "OA object",
-    oa_document: "OA document",
-    oa_description: "OA description",
-    gallery_item: "Backup item",
-    gallery_folder: "Backup folder",
-    illustration: "Illustration",
-    capso_shop_pack: "CAPSO pack",
-    capso_shop_item: "CAPSO item",
-    gacha_machine: "Gacha machine",
-    gacha_reward: "Gacha reward",
-    shop_bundle: "Shop bundle",
-    boss_stage: "Boss stage",
-    spoiler_alert: "Spoiler alert",
-    subtitle_line: "Subtitle line",
-    assistant_dialogue: "iM assistant dialogue",
-    title_screen: "Title screen",
-    reading_order: "Reading order",
-  };
-  return labels[type] ?? type;
-}
-
 export function entityHref(id: string): string {
   return `/${encodeURI(id)}`;
 }
@@ -203,7 +172,7 @@ export function maxTimelineLevel(db: Database): number {
   return max;
 }
 
-export function timelineLanes(db: Database): TimelineLane[] {
+export function timelineLanes(db: Database, i18n: I18n): TimelineLane[] {
   const seen = new Map<number, { character: string | null; count: number }>();
   for (const row of db.timelineOrders) {
     const entry = seen.get(row.lane);
@@ -219,8 +188,9 @@ export function timelineLanes(db: Database): TimelineLane[] {
       lane,
       label:
         lane === 300
-          ? "Other / plot"
-          : characterName(db, entry.character) || `Lane ${lane}`,
+          ? i18n.t("timeline.laneOther")
+          : characterName(db, entry.character) ||
+            i18n.t("timeline.laneFallback", { lane }),
       count: entry.count,
     }));
 }
@@ -229,6 +199,7 @@ export function selectTimeline(
   db: Database,
   filters: TimelineFilters,
   lang: Lang,
+  i18n: I18n,
 ): TimelineEntry[] {
   const entries: TimelineEntry[] = [];
   for (const row of db.timelineOrders) {
@@ -251,8 +222,9 @@ export function selectTimeline(
     const threadName = characterName(db, row.thread);
     const laneName =
       row.lane === 300
-        ? "Other / plot"
-        : characterName(db, row.lane_character) || `Lane ${row.lane}`;
+        ? i18n.t("timeline.laneOther")
+        : characterName(db, row.lane_character) ||
+          i18n.t("timeline.laneFallback", { lane: row.lane });
     const spoilerThreshold = row.spoiler_alert
       ? (db.spoilerById.get(row.spoiler_alert)?.threshold ?? null)
       : null;
@@ -264,7 +236,7 @@ export function selectTimeline(
         author: entity.author,
         character: threadName,
         laneName,
-        context: `iM · #${entity.order}`,
+        context: i18n.t("timeline.contextIm", { order: entity.order }),
         snippet: textSnippet(db, entity.text_ref, lang),
         spoilerThreshold,
       });
@@ -273,10 +245,12 @@ export function selectTimeline(
         row,
         entity,
         title: localizedValue(entity.names, lang) || entity.game_id,
-        author: threadName || "OS",
-        character: `OS · ${entity.file}`,
+        author: threadName || i18n.t("timeline.osAuthor"),
+        character: `${i18n.t("timeline.osAuthor")} · ${entity.file}`,
         laneName,
-        context: entity.date || `Index ${entity.index}`,
+        context: entity.date
+          ? i18n.formatDate(entity.date)
+          : i18n.t("timeline.contextOsIndex", { index: entity.index }),
         snippet: textSnippet(db, entity.text_ref, lang),
         spoilerThreshold,
       });
@@ -363,24 +337,11 @@ export interface EdgeGroup {
   readonly edges: Edge[];
 }
 
-const RELATION_LABELS: Record<string, string> = {
-  unlocks_chart: "Unlocks charts",
-  requires_story: "Requires story",
-  same_level: "Same level",
-  same_stage: "Same stage",
-  appears_in_gallery: "Appears in gallery",
-  belongs_to_pack: "Belongs to pack",
-  has_reply: "Has reply",
-};
-
-export function relationLabel(relation: string): string {
-  return (
-    RELATION_LABELS[relation] ??
-    relation.replace(/_/g, " ").replace(/^\w/, (letter) => letter.toUpperCase())
-  );
-}
-
-export function groupEdges(edges: readonly Edge[], relation?: string): EdgeGroup[] {
+export function groupEdges(
+  edges: readonly Edge[],
+  i18n: I18n,
+  relation?: string,
+): EdgeGroup[] {
   const groups = new Map<string, Edge[]>();
   for (const edge of edges) {
     if (relation && edge.relation !== relation) {
@@ -396,13 +357,17 @@ export function groupEdges(edges: readonly Edge[], relation?: string): EdgeGroup
   return [...groups.entries()]
     .map(([name, list]) => ({
       relation: name,
-      label: relationLabel(name),
+      label: relationLabel(i18n, name),
       edges: list,
     }))
     .sort((left, right) => left.label.localeCompare(right.label));
 }
 
-export function formatLevelLocks(db: Database, locks: unknown): string[] {
+export function formatLevelLocks(
+  db: Database,
+  locks: unknown,
+  i18n: I18n,
+): string[] {
   if (!Array.isArray(locks)) {
     return [];
   }
@@ -417,12 +382,16 @@ export function formatLevelLocks(db: Database, locks: unknown): string[] {
     if (!character || level === null) {
       continue;
     }
-    values.push(`${characterName(db, character)} · Lv ${level + 1}`);
+    values.push(
+      `${characterName(db, character)} · ${i18n.t("common.level", {
+        level: level + 1,
+      })}`,
+    );
   }
   return values;
 }
 
-export function formatFieldValue(value: unknown): string {
+export function formatFieldValue(value: unknown, i18n: I18n): string {
   if (value === null || value === undefined) {
     return "";
   }
@@ -430,18 +399,18 @@ export function formatFieldValue(value: unknown): string {
     return String(value);
   }
   if (typeof value === "boolean") {
-    return value ? "Yes" : "No";
+    return value ? i18n.t("common.yes") : i18n.t("common.no");
   }
   if (Array.isArray(value)) {
     const parts: string[] = [];
     for (const item of value.slice(0, 8)) {
-      const formatted = formatFieldValue(item);
+      const formatted = formatFieldValue(item, i18n);
       if (formatted) {
         parts.push(formatted);
       }
     }
     if (value.length > 8) {
-      parts.push(`… ${value.length - 8} more`);
+      parts.push(i18n.t("format.more", { count: value.length - 8 }));
     }
     return parts.join(", ");
   }
@@ -456,10 +425,16 @@ export function formatFieldValue(value: unknown): string {
   return String(value);
 }
 
-export function chartLabel(db: Database, chart: ChartEntity): string {
+export function chartLabel(
+  db: Database,
+  chart: ChartEntity,
+  i18n: I18n,
+): string {
   const song = db.entityById.get(chart.song_id);
   const songName = song && isSong(song) ? song.name || song.game_id : chart.song_id;
-  return `${songName} · ${chart.difficulty} · Lv ${chart.level}`;
+  return `${songName} · ${chart.difficulty} · ${i18n.t("common.level", {
+    level: chart.level,
+  })}`;
 }
 
 export interface ConditionLink {
@@ -468,7 +443,11 @@ export interface ConditionLink {
   readonly id: string | null;
 }
 
-export function conditionLink(db: Database, condition: ConditionEntry): ConditionLink {
+export function conditionLink(
+  db: Database,
+  condition: ConditionEntry,
+  i18n: I18n,
+): ConditionLink {
   const candidates: Record<string, string[]> = {
     os: [`os/${condition.value}`],
     im: [`im/${condition.value}`],
@@ -480,14 +459,20 @@ export function conditionLink(db: Database, condition: ConditionEntry): Conditio
   for (const id of candidates[condition.kind] ?? []) {
     if (db.entityById.has(id)) {
       return {
-        label: `${condition.kind}: ${condition.value}`,
+        label: i18n.t("condition.label", {
+          kind: conditionKindLabel(i18n, condition.kind),
+          value: condition.value,
+        }),
         href: entityHref(id),
         id,
       };
     }
   }
   return {
-    label: `${condition.kind}: ${condition.value}`,
+    label: i18n.t("condition.label", {
+      kind: conditionKindLabel(i18n, condition.kind),
+      value: condition.value,
+    }),
     href: null,
     id: null,
   };
@@ -527,7 +512,9 @@ export function bossStageForGalleryItem(
   return null;
 }
 
-export function entityHome(entity: BaseEntity): { href: string; label: string } | null {
+export function entityHome(
+  entity: BaseEntity,
+): { href: string; labelKey: MessageKey } | null {
   switch (entity.type) {
     case "im_post":
     case "os_log":
@@ -535,28 +522,28 @@ export function entityHome(entity: BaseEntity): { href: string; label: string } 
     case "song":
     case "spoiler_alert":
     case "reading_order":
-      return { href: "/timeline", label: "Timeline" };
+      return { href: "/timeline", labelKey: "nav.timeline" };
     case "oa_character":
     case "oa_object":
     case "oa_document":
     case "oa_description":
-      return { href: "/oa", label: "OA" };
+      return { href: "/oa", labelKey: "nav.oa" };
     case "gallery_item":
     case "gallery_folder":
     case "boss_stage":
-      return { href: "/backup", label: "Backup Database" };
+      return { href: "/backup", labelKey: "nav.backup" };
     case "story_node":
-      return { href: "/story", label: "Story" };
+      return { href: "/story", labelKey: "nav.story" };
     case "capso_shop_pack":
     case "capso_shop_item":
     case "gacha_machine":
     case "gacha_reward":
     case "shop_bundle":
-      return { href: "/shop", label: "Shop" };
+      return { href: "/shop", labelKey: "nav.shop" };
     case "assistant_dialogue":
-      return { href: "/extras/assistants", label: "Extras" };
+      return { href: "/extras/assistants", labelKey: "nav.extras" };
     case "title_screen":
-      return { href: "/extras/titles", label: "Extras" };
+      return { href: "/extras/titles", labelKey: "nav.extras" };
     default:
       return null;
   }

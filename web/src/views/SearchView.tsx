@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { useI18n } from "../data/i18n";
+import { entityTypeLabel, searchGroupLabel } from "../data/labels";
 import { useLanguage } from "../data/language";
+import { formatUnit } from "../data/messages";
 import { useFullTextSearch } from "../data/search";
-import { entityTypeLabel } from "../data/selectors";
 import type { SearchHit } from "../types";
 
 function escapeRegExp(value: string): string {
@@ -44,6 +46,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 
 export function SearchView() {
   const { lang } = useLanguage();
+  const i18n = useI18n();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const query = params.get("q") ?? "";
@@ -102,12 +105,9 @@ export function SearchView() {
     <>
       <main className="content" data-testid="search-view">
         <header className="page-head">
-          <p className="eyebrow">Full-text search</p>
-          <h1>Search</h1>
-          <p className="lede">
-            Searches iM post bodies, OS logs, OA documents and subtitle lines in
-            the selected language. Matches come from the canonical text store.
-          </p>
+          <p className="eyebrow">{i18n.t("search.eyebrow")}</p>
+          <h1>{i18n.t("search.title")}</h1>
+          <p className="lede">{i18n.t("search.lede")}</p>
           <input
             ref={inputRef}
             className="search-input"
@@ -115,8 +115,8 @@ export function SearchView() {
             value={input}
             onChange={(event) => updateQuery(event.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search story text…"
-            aria-label="Full-text search"
+            placeholder={i18n.t("search.placeholder")}
+            aria-label={i18n.t("search.aria")}
             aria-controls="search-results"
             aria-activedescendant={
               hits[selected] ? `search-hit-${selected}` : undefined
@@ -124,16 +124,25 @@ export function SearchView() {
           />
           <div className="search-summary" data-testid="search-summary">
             {search.status === "loading"
-              ? "Searching…"
+              ? i18n.t("search.searching")
               : search.response
-                ? `${search.response.total.toLocaleString()} matches · ${lang}`
-                : `Language ${lang}`}
+                ? i18n.t("search.summary", {
+                    matches: formatUnit(
+                      i18n,
+                      "matches",
+                      search.response.total,
+                    ),
+                    lang,
+                  })
+                : i18n.t("search.langOnly", { lang })}
           </div>
         </header>
 
         {search.status === "error" ? (
           <p className="error-text">
-            Search failed: {search.error?.message ?? "unknown error"}
+            {i18n.t("search.error", {
+              message: search.error?.message ?? i18n.t("common.unknownError"),
+            })}
           </p>
         ) : null}
 
@@ -141,7 +150,7 @@ export function SearchView() {
           id="search-results"
           className="search-results"
           role="listbox"
-          aria-label="Search results"
+          aria-label={i18n.t("search.resultsAria")}
           onKeyDown={onKeyDown}
         >
           {(search.response?.groups ?? []).map((group) => (
@@ -149,12 +158,12 @@ export function SearchView() {
               key={group.type}
               className="search-group"
               role="group"
-              aria-label={group.label}
+              aria-label={searchGroupLabel(i18n, group.type, group.label)}
               data-testid="search-group"
               data-group-type={group.type}
             >
               <h2>
-                {group.label}
+                {searchGroupLabel(i18n, group.type, group.label)}
                 <span className="edge-count">{group.hits.length}</span>
               </h2>
               <ul className="link-list">
@@ -185,11 +194,14 @@ export function SearchView() {
                           <Highlighted text={hit.snippet} query={query} />
                         </span>
                         <span className="entity-link-meta">
-                          <span>{entityTypeLabel(hit.type)}</span>
+                          <span>{entityTypeLabel(i18n, hit.type)}</span>
                           <code>{hit.id}</code>
                           {hit.fallback ? (
                             <span className="fallback-inline">
-                              {lang} missing · showing {hit.lang}
+                              {i18n.t("common.fallbackShowing", {
+                                requested: lang,
+                                actual: hit.lang,
+                              })}
                             </span>
                           ) : null}
                         </span>
@@ -202,48 +214,40 @@ export function SearchView() {
           ))}
           {search.status === "ready" && hits.length === 0 ? (
             <div className="empty-state" data-testid="search-empty">
-              No post, log, OA document or subtitle line matches “{query.trim()}”.
+              {i18n.t("search.noMatches", { query: query.trim() })}
             </div>
           ) : null}
           {search.status === "idle" ? (
             <div className="empty-state" data-testid="search-empty">
-              Type at least one character. Use ↑/↓ to move and Enter to open a
-              result.
+              {i18n.t("search.emptyQuery")}
             </div>
           ) : null}
         </div>
       </main>
 
-      <aside className="context" aria-label="Search options">
+      <aside className="context" aria-label={i18n.t("search.optionsAria")}>
         <section className="panel">
-          <h2>Language</h2>
+          <h2>{i18n.t("search.language")}</h2>
           <LanguageSwitcher compact />
-          <p className="hint">
-            Results use the selected language first and fall back explicitly when
-            it has no text.
-          </p>
+          <p className="hint">{i18n.t("search.languageHint")}</p>
         </section>
         <section className="panel">
-          <h2>Coverage</h2>
+          <h2>{i18n.t("search.coverage")}</h2>
           <ul className="plain-list">
-            <li>iM post bodies</li>
-            <li>OS log blocks</li>
-            <li>OA document text</li>
-            <li>Subtitle lines</li>
+            <li>{i18n.t("search.coverage.im")}</li>
+            <li>{i18n.t("search.coverage.os")}</li>
+            <li>{i18n.t("search.coverage.oa")}</li>
+            <li>{i18n.t("search.coverage.subtitles")}</li>
           </ul>
-          <p className="hint">
-            Replies and story events are browsable from their own views but are
-            not part of full-text search.
-          </p>
+          <p className="hint">{i18n.t("search.coverageHint")}</p>
         </section>
         <section className="panel">
-          <h2>Keyboard</h2>
+          <h2>{i18n.t("search.keyboard")}</h2>
           <p>
-            <kbd>↑</kbd> <kbd>↓</kbd> move · <kbd>Enter</kbd> open
+            <kbd>↑</kbd> <kbd>↓</kbd> {i18n.t("search.keyboardMove")} ·{" "}
+            <kbd>Enter</kbd> {i18n.t("search.keyboardOpen")}
           </p>
-          <p className="hint">
-            <kbd>Ctrl K</kbd> opens the same search from anywhere.
-          </p>
+          <p className="hint">{i18n.t("search.keyboardHint")}</p>
         </section>
       </aside>
     </>

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
+import { entityTypeLabel, searchGroupLabel } from "../data/labels";
 import { useFullTextSearch } from "../data/search";
 import {
   chartLabel,
   entityHref,
   entityTitle,
-  entityTypeLabel,
 } from "../data/selectors";
 import type { Database } from "../types";
 
@@ -34,6 +35,7 @@ export function CommandPalette({
 }) {
   const navigate = useNavigate();
   const { lang } = useLanguage();
+  const i18n = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
@@ -42,8 +44,8 @@ export function CommandPalette({
     const next: PaletteItem[] = [
       {
         key: "command:timeline",
-        label: "Timeline",
-        hint: "iM + OS reading feed",
+        label: i18n.t("nav.timeline"),
+        hint: i18n.t("palette.timelineHint"),
         href: "/timeline",
       },
     ];
@@ -54,8 +56,10 @@ export function CommandPalette({
       }
       next.push({
         key: `entity:${entity.id}`,
-        label: entityTitle(db, entity, lang),
-        hint: `${entityTypeLabel(entity.type)} · Lv ${row.level_gate + 1} · #${row.order}`,
+        label: entityTitle(db, entity, lang, i18n),
+        hint: `${entityTypeLabel(i18n, entity.type)} · ${i18n.t("common.level", {
+          level: row.level_gate + 1,
+        })} · #${row.order}`,
         href: entityHref(entity.id),
       });
     }
@@ -63,14 +67,16 @@ export function CommandPalette({
       for (const chart of charts) {
         next.push({
           key: `chart:${chart.id}`,
-          label: chartLabel(db, chart),
-          hint: `Chart · NeedUnlock ${chart.need_unlock ? "yes" : "no"}`,
+          label: chartLabel(db, chart, i18n),
+          hint: i18n.t("palette.chartHint", {
+            value: chart.need_unlock ? i18n.t("common.yes") : i18n.t("common.no"),
+          }),
           href: entityHref(chart.id),
         });
       }
     }
     return next;
-  }, [db, lang]);
+  }, [db, lang, i18n]);
 
   const needle = query.trim().toLowerCase();
   const search = useFullTextSearch(query, lang, open);
@@ -122,19 +128,25 @@ export function CommandPalette({
         key: "action:search",
         item: {
           key: "action:search",
-          label: `Open full search for “${query.trim()}”`,
-          hint: "Grouped results with keyboard navigation",
+          label: i18n.t("palette.fullSearch", { query: query.trim() }),
+          hint: i18n.t("palette.fullSearchHint"),
           href: `/search?q=${encodeURIComponent(query.trim())}`,
         },
       });
       if (search.status === "loading") {
-        next.push({ kind: "note", key: "note:loading", text: "Searching…" });
+        next.push({
+          kind: "note",
+          key: "note:loading",
+          text: i18n.t("search.searching"),
+        });
       }
       if (search.status === "error") {
         next.push({
           kind: "note",
           key: "note:error",
-          text: `Search failed: ${search.error?.message ?? "unknown error"}`,
+          text: i18n.t("search.error", {
+            message: search.error?.message ?? i18n.t("common.unknownError"),
+          }),
         });
       }
       for (const group of search.response?.groups ?? []) {
@@ -144,7 +156,10 @@ export function CommandPalette({
         next.push({
           kind: "group",
           key: `group:${group.type}`,
-          label: `${group.label} (${group.hits.length})`,
+          label: i18n.t("palette.group", {
+            label: searchGroupLabel(i18n, group.type, group.label),
+            count: group.hits.length,
+          }),
         });
         for (const hit of group.hits) {
           next.push({
@@ -153,8 +168,8 @@ export function CommandPalette({
             item: {
               key: `hit:${hit.type}:${hit.id}`,
               label: hit.title,
-              hint: `${entityTypeLabel(hit.type)} · ${hit.snippet}${
-                hit.fallback ? " · fallback text" : ""
+              hint: `${entityTypeLabel(i18n, hit.type)} · ${hit.snippet}${
+                hit.fallback ? ` · ${i18n.t("common.fallbackText")}` : ""
               }`,
               href: `/${encodeURI(hit.id)}`,
             },
@@ -165,7 +180,7 @@ export function CommandPalette({
         next.push({
           kind: "group",
           key: "group:navigation",
-          label: "Navigation",
+          label: i18n.t("palette.navigation"),
         });
         for (const item of navMatches) {
           next.push({ kind: "item", key: item.key, item });
@@ -177,7 +192,7 @@ export function CommandPalette({
       }
     }
     return next;
-  }, [needle, navMatches, query, search]);
+  }, [needle, navMatches, query, search, i18n]);
 
   const results = useMemo(
     () =>
@@ -247,7 +262,7 @@ export function CommandPalette({
         className="palette"
         role="dialog"
         aria-modal="true"
-        aria-label="Command palette"
+        aria-label={i18n.t("palette.dialogAria")}
         data-testid="command-palette"
         onKeyDown={onKeyDown}
       >
@@ -257,8 +272,8 @@ export function CommandPalette({
           data-testid="palette-input"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search posts, logs, OA files, subtitles, charts…"
-          aria-label="Search the canonical DB"
+          placeholder={i18n.t("palette.placeholder")}
+          aria-label={i18n.t("palette.inputAria")}
           aria-controls="palette-results"
           aria-activedescendant={
             results[selected] ? `palette-option-${selected}` : undefined
@@ -310,19 +325,19 @@ export function CommandPalette({
             );
           })}
           {results.length === 0 ? (
-            <li className="palette-empty">No navigation target matches.</li>
+            <li className="palette-empty">{i18n.t("palette.empty")}</li>
           ) : null}
         </ul>
         <footer className="palette-foot">
           <span>
             <kbd>↑</kbd>
-            <kbd>↓</kbd> select
+            <kbd>↓</kbd> {i18n.t("common.select")}
           </span>
           <span>
-            <kbd>Enter</kbd> open
+            <kbd>Enter</kbd> {i18n.t("common.open")}
           </span>
           <span>
-            <kbd>Esc</kbd> close
+            <kbd>Esc</kbd> {i18n.t("common.close")}
           </span>
         </footer>
       </div>

@@ -16,6 +16,7 @@ import {
   textSnippet,
 } from "./database";
 import { entityTitle } from "./selectors";
+import type { I18n } from "./messages";
 import type {
   BaseEntity,
   BossStageEntity,
@@ -174,6 +175,7 @@ export function storyEntries(
   lang: Lang,
   sort: StorySort,
   kind: StoryKindFilter,
+  i18n?: I18n,
 ): StoryEntry[] {
   const nodes = typed<StoryNodeEntity>(db, "story_node").filter(isStoryNode);
   const entries: StoryEntry[] = [];
@@ -190,7 +192,7 @@ export function storyEntries(
     entries.push({
       node,
       row,
-      title: entityTitle(db, node, lang),
+      title: entityTitle(db, node, lang, i18n),
       snippet: node.text_ref ? textSnippet(db, node.text_ref, lang) : "",
       sortKey,
     });

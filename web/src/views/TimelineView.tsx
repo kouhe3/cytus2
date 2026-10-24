@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { TimelineCard } from "../components/TimelineCard";
+import { useI18n } from "../data/i18n";
+import { tierLabel } from "../data/labels";
 import { useLanguage } from "../data/language";
 import {
   maxTimelineLevel,
@@ -8,23 +10,25 @@ import {
   type TimelineTypeFilter,
 } from "../data/selectors";
 import type { Database, ReadingTier } from "../types";
+import type { MessageKey } from "../data/messages";
 
-const TYPE_OPTIONS: { value: TimelineTypeFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "im_post", label: "iM" },
-  { value: "os_log", label: "OS" },
+const TYPE_OPTIONS: { value: TimelineTypeFilter; labelKey: MessageKey }[] = [
+  { value: "all", labelKey: "common.all" },
+  { value: "im_post", labelKey: "type.im_post" },
+  { value: "os_log", labelKey: "type.os_log" },
 ];
 
-const TIER_OPTIONS: { value: ReadingTier; label: string }[] = [
-  { value: "free", label: "Free" },
-  { value: "paid", label: "Paid" },
-  { value: "side", label: "Side" },
+const TIER_OPTIONS: { value: ReadingTier }[] = [
+  { value: "free" },
+  { value: "paid" },
+  { value: "side" },
 ];
 
 export function TimelineView({ db }: { db: Database }) {
   const { lang } = useLanguage();
+  const i18n = useI18n();
   const maxLevel = useMemo(() => maxTimelineLevel(db), [db]);
-  const lanes = useMemo(() => timelineLanes(db), [db]);
+  const lanes = useMemo(() => timelineLanes(db, i18n), [db, i18n]);
   const [level, setLevel] = useState(maxLevel);
   const [type, setType] = useState<TimelineTypeFilter>("all");
   const [lane, setLane] = useState<number | null>(null);
@@ -33,8 +37,8 @@ export function TimelineView({ db }: { db: Database }) {
   );
 
   const entries = useMemo(
-    () => selectTimeline(db, { maxLevel: level, type, tiers, lane }, lang),
-    [db, level, type, tiers, lane, lang],
+    () => selectTimeline(db, { maxLevel: level, type, tiers, lane }, lang, i18n),
+    [db, level, type, tiers, lane, lang, i18n],
   );
 
   const toggleTier = (tier: ReadingTier) => {
@@ -49,23 +53,38 @@ export function TimelineView({ db }: { db: Database }) {
     });
   };
 
+  const tierSummary =
+    tiers.size === TIER_OPTIONS.length
+      ? i18n.t("timeline.tierAll")
+      : [...tiers].map((tier) => tierLabel(i18n, tier)).join(", ") ||
+        i18n.t("timeline.tierNone");
+  const laneSummary =
+    lane === null
+      ? i18n.t("timeline.tierAll")
+      : (lanes.find((item) => item.lane === lane)?.label ?? String(lane));
+  const typeSummary =
+    type === "all"
+      ? "timeline.types.all"
+      : type === "im_post"
+        ? "timeline.types.im"
+        : "timeline.types.os";
+
   return (
     <>
       <main className="content">
         <header className="page-head">
-          <p className="eyebrow">Canonical reading order</p>
-          <h1>Timeline</h1>
-          <p className="lede">
-            iM posts and OS logs ordered by the derived reading position. OA
-            documents and backup entries stay out of this feed.
-          </p>
+          <p className="eyebrow">{i18n.t("timeline.eyebrow")}</p>
+          <h1>{i18n.t("timeline.title")}</h1>
+          <p className="lede">{i18n.t("timeline.lede")}</p>
           <div className="page-stats" data-testid="timeline-stats">
-            <strong>{entries.length.toLocaleString()}</strong> of{" "}
-            {db.timelineOrders.length.toLocaleString()} entries · level gate ≤{" "}
-            {level + 1} · tier{" "}
-            {tiers.size === 3 ? "all" : [...tiers].join(", ") || "none"} ·{" "}
-            lane {lane === null ? "all" : lanes.find((item) => item.lane === lane)?.label ?? lane} ·{" "}
-            {type === "all" ? "iM + OS" : type === "im_post" ? "iM only" : "OS only"}
+            {i18n.t("timeline.stats", {
+              shown: i18n.formatNumber(entries.length),
+              total: i18n.formatNumber(db.timelineOrders.length),
+              level: level + 1,
+              tier: tierSummary,
+              lane: laneSummary,
+              types: i18n.t(typeSummary),
+            })}
           </div>
         </header>
 
@@ -74,17 +93,14 @@ export function TimelineView({ db }: { db: Database }) {
             <TimelineCard key={entry.entity.id} entry={entry} />
           ))}
           {entries.length === 0 ? (
-            <div className="empty-state">
-              No entries match these filters. Widen the level gate or re-enable a
-              tier.
-            </div>
+            <div className="empty-state">{i18n.t("timeline.empty")}</div>
           ) : null}
         </div>
       </main>
 
-      <aside className="context" aria-label="Timeline filters">
+      <aside className="context" aria-label={i18n.t("timeline.filtersAria")}>
         <section className="panel">
-          <h2>Level gate</h2>
+          <h2>{i18n.t("timeline.levelGate")}</h2>
           <input
             id="level-slider"
             className="level-slider"
@@ -94,23 +110,25 @@ export function TimelineView({ db }: { db: Database }) {
             step={1}
             value={level}
             onChange={(event) => setLevel(Number(event.target.value))}
-            aria-label="Maximum level gate"
+            aria-label={i18n.t("timeline.maxLevelAria")}
             data-testid="level-slider"
           />
           <div className="range-labels">
-            <span>Lv 1</span>
+            <span>{i18n.t("common.level", { level: 1 })}</span>
             <output htmlFor="level-slider">
-              Lv {level + 1} / {maxLevel + 1}
+              {i18n.t("timeline.levelRange", {
+                level: level + 1,
+                max: maxLevel + 1,
+              })}
             </output>
           </div>
           <p className="hint">
-            Keeps entries with <code>level_gate ≤ {level}</code>, shown in game
-            levels as Lv {level + 1}.
+            {i18n.t("timeline.levelHint", { gate: level, level: level + 1 })}
           </p>
         </section>
 
         <section className="panel">
-          <h2>Type</h2>
+          <h2>{i18n.t("timeline.type")}</h2>
           <div className="segmented" data-testid="type-filter">
             {TYPE_OPTIONS.map((option) => (
               <button
@@ -121,15 +139,15 @@ export function TimelineView({ db }: { db: Database }) {
                 data-testid={`type-${option.value}`}
                 onClick={() => setType(option.value)}
               >
-                {option.label}
+                {i18n.t(option.labelKey)}
               </button>
             ))}
           </div>
-          <p className="hint">Only iM posts and OS logs are part of the timeline.</p>
+          <p className="hint">{i18n.t("timeline.typeHint")}</p>
         </section>
 
         <section className="panel">
-          <h2>Tier</h2>
+          <h2>{i18n.t("timeline.tier")}</h2>
           <div className="chips" data-testid="tier-filter">
             {TIER_OPTIONS.map((option) => (
               <button
@@ -142,14 +160,14 @@ export function TimelineView({ db }: { db: Database }) {
                 data-testid={`tier-${option.value}`}
                 onClick={() => toggleTier(option.value)}
               >
-                {option.label}
+                {tierLabel(i18n, option.value)}
               </button>
             ))}
           </div>
         </section>
 
         <section className="panel">
-          <h2>Lane</h2>
+          <h2>{i18n.t("timeline.lane")}</h2>
           <select
             className="lane-select"
             value={lane === null ? "all" : String(lane)}
@@ -158,45 +176,57 @@ export function TimelineView({ db }: { db: Database }) {
                 event.target.value === "all" ? null : Number(event.target.value),
               )
             }
-            aria-label="Account lane"
+            aria-label={i18n.t("timeline.lane")}
             data-testid="lane-filter"
           >
-            <option value="all">All lanes ({db.timelineOrders.length})</option>
+            <option value="all">
+              {i18n.t("timeline.laneAll", {
+                count: i18n.formatNumber(db.timelineOrders.length),
+              })}
+            </option>
             {lanes.map((item) => (
               <option key={item.lane} value={item.lane}>
-                {item.label} ({item.count})
+                {i18n.t("common.labelCount", {
+                  label: item.label,
+                  count: item.count,
+                })}
               </option>
             ))}
           </select>
           <p className="hint">
-            Lanes follow the account thread: free characters, then paid, then
-            side characters; <code>Other / plot</code> collects posts that do
-            not belong to a character account.
+            {i18n.t("timeline.laneHint", { other: i18n.t("timeline.laneOther") })}
           </p>
         </section>
 
         <section className="panel legend">
-          <h2>Legend</h2>
+          <h2>{i18n.t("timeline.legend")}</h2>
           <p>
-            <span className="level-badge">Lv N</span> effective level gate after
-            spoiler deferral.
-          </p>
-          <p>
-            <span className="spoiler-chip">Spoiler</span> the reading position
-            defers this entry until a later level.
+            <span className="level-badge">
+              {i18n.t("timeline.legendLevelBadge")}
+            </span>{" "}
+            {i18n.t("timeline.legendLevelText")}
           </p>
           <p>
-            <span className="meta-chip">Cost</span> the sum of every level lock;
-            multi-character gates cost the sum, so they sort later.
+            <span className="spoiler-chip">
+              {i18n.t("timeline.legendSpoilerBadge")}
+            </span>{" "}
+            {i18n.t("timeline.legendSpoilerText")}
           </p>
           <p>
-            <span className="meta-chip">Branch</span> an ending branch mapped
-            from the story lock; <span className="meta-chip">External</span>{" "}
-            marks a post the model cannot unlock on its own.
+            <span className="meta-chip">{i18n.t("timeline.legendCostBadge")}</span>{" "}
+            {i18n.t("timeline.legendCostText")}
           </p>
-          <p className="hint">
-            Cards are ordered by <code>reading_order.order</code>, ascending.
+          <p>
+            <span className="meta-chip">
+              {i18n.t("timeline.legendBranchBadge")}
+            </span>{" "}
+            {i18n.t("timeline.legendBranchText")}{" "}
+            <span className="meta-chip">
+              {i18n.t("timeline.legendExternalBadge")}
+            </span>{" "}
+            {i18n.t("timeline.legendExternalText")}
           </p>
+          <p className="hint">{i18n.t("timeline.legendOrder")}</p>
         </section>
       </aside>
     </>

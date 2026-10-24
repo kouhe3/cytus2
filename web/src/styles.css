@@ -192,6 +192,17 @@ kbd {
   color: var(--text);
 }
 
+.search-trigger span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-trigger kbd {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .stats {
   margin: 0;
   display: flex;

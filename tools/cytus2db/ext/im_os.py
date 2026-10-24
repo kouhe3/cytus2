@@ -340,12 +340,21 @@ def _parse_blocks(text: str) -> list[dict[str, Any]]:
     speaker: str | None = None
     mode = "dialogue"
     paragraph: list[str] = []
+    dialogue_open = False
     pending_viewer: str | None = None
+    pending_blank = False
+
+    def add(block: dict[str, Any]) -> None:
+        nonlocal pending_blank
+        if pending_blank:
+            block["blank_before"] = True
+        pending_blank = False
+        blocks.append(block)
 
     def flush() -> None:
         nonlocal paragraph
         if paragraph:
-            blocks.append({"kind": "narration", "text": "\n".join(paragraph)})
+            add({"kind": "narration", "text": "\n".join(paragraph)})
             paragraph = []
 
     for raw in (text or "").split("\n"):
@@ -364,7 +373,7 @@ def _parse_blocks(text: str) -> list[dict[str, Any]]:
                 paragraphs = [
                     item.strip("\n") for item in body.split("\n\n") if item.strip()
                 ]
-                blocks.append(
+                add(
                     {
                         "kind": "booklet",
                         "title": _one_line(payload.get("Title")),
@@ -373,7 +382,7 @@ def _parse_blocks(text: str) -> list[dict[str, Any]]:
                     }
                 )
             elif isinstance(payload, dict):
-                blocks.append(
+                add(
                     {
                         "kind": "imageviewer",
                         "id": str(payload.get("Image") or ""),
@@ -381,16 +390,18 @@ def _parse_blocks(text: str) -> list[dict[str, Any]]:
                     }
                 )
             else:
-                blocks.append({"kind": "note", "directive": "json", "value": viewer})
+                add({"kind": "note", "directive": "json", "value": viewer})
             continue
 
         if line.startswith("##"):
+            pending_blank = False
             key, _, value = line[2:].partition("=")
             key, value = key.strip(), value.strip()
             if key == "conversation":
                 flush()
                 speaker = _one_line(value) or None
                 mode = "dialogue"
+                dialogue_open = False
             elif key == "text":
                 flush()
                 speaker = None
@@ -398,19 +409,19 @@ def _parse_blocks(text: str) -> list[dict[str, Any]]:
             elif key == "bgm":
                 if value.lower() not in ("", "mute"):
                     flush()
-                    blocks.append({"kind": "bgm", "name": value})
+                    add({"kind": "bgm", "name": value})
             elif key == "sound":
                 flush()
                 name, _, label = value.partition(",")
-                blocks.append(
+                add(
                     {"kind": "sound", "name": name.strip(), "label": label.strip()}
                 )
             elif key == "image":
                 flush()
-                blocks.append({"kind": "image", "id": value})
+                add({"kind": "image", "id": value})
             elif key == "movie":
                 flush()
-                blocks.append({"kind": "movie", "id": value})
+                add({"kind": "movie", "id": value})
             elif key == "json":
                 flush()
                 pending_viewer = value
@@ -419,7 +430,7 @@ def _parse_blocks(text: str) -> list[dict[str, Any]]:
                 parts = [_one_line(item) for item in value.split(",")]
                 while len(parts) < 3:
                     parts.append("")
-                blocks.append(
+                add(
                     {
                         "kind": "mail",
                         "title": parts[0],
@@ -432,18 +443,32 @@ def _parse_blocks(text: str) -> list[dict[str, Any]]:
                 speaker = None
             else:
                 flush()
-                blocks.append({"kind": "note", "directive": key, "value": value})
+                add({"kind": "note", "directive": key, "value": value})
             continue
 
         stripped = line.strip()
         if not stripped:
             flush()
+            dialogue_open = False
+            pending_blank = True
             continue
         if mode == "mail" and blocks and blocks[-1]["kind"] == "mail":
             body = blocks[-1]["body"]
             blocks[-1]["body"] = (body + "\n" + stripped).strip("\n")
         elif mode == "dialogue" and speaker:
-            blocks.append({"kind": "dialogue", "speaker": speaker, "text": stripped})
+            previous = blocks[-1] if blocks else None
+            if (
+                dialogue_open
+                and previous is not None
+                and previous["kind"] == "dialogue"
+                and previous["speaker"] == speaker
+            ):
+                previous["text"] = f"{previous['text']}<br>{stripped}"
+            else:
+                add(
+                    {"kind": "dialogue", "speaker": speaker, "text": stripped}
+                )
+            dialogue_open = True
         else:
             paragraph.append(stripped)
     flush()

@@ -27,7 +27,9 @@ GOLDEN_OS = (
     "Alpha narration line.\n"
     "{{os/对话|Beta|Second line}}\n"
     "{{邮件抬头|主题=Title|发件人=From|收件人=To}}\n"
+    "<poem>\n"
     "Mail body\n"
+    "</poem>\n"
     "}}\n"
     "[[分类:Os剧情目录]]\n"
     "\n"
@@ -305,7 +307,7 @@ def test_multiline_narration_stays_plain() -> None:
         dialogue_template="os/对话",
         sound_template="os/声音",
     )
-    assert text == "Line one.\nLine two."
+    assert text == "Line one.<br>Line two."
 
 
 def test_oa_prose_joins_paragraphs_for_one_poem() -> None:
@@ -318,3 +320,77 @@ def test_oa_prose_joins_paragraphs_for_one_poem() -> None:
         ]
     )
     assert body == "First paragraph.\n\nSecond paragraph.\nStill second."
+
+
+def test_consecutive_dialogue_lines_merge_with_br() -> None:
+    from cytus2db.ext.im_os import _parse_blocks
+
+    blocks = _parse_blocks(
+        "##conversation=Mayu\n……NEKO？\n妳怎么啦！ ？怎么在哭？\n"
+        "##conversation=Saku\n咦？\n"
+    )
+
+    assert blocks == [
+        {"kind": "dialogue", "speaker": "Mayu", "text": "……NEKO？<br>妳怎么啦！ ？怎么在哭？"},
+        {"kind": "dialogue", "speaker": "Saku", "text": "咦？"},
+    ]
+
+
+def test_parse_script_merges_consecutive_dialogue_lines() -> None:
+    from cytus2db.wiki.pages._content import parse_script
+
+    blocks = parse_script(
+        "##conversation=Mayu\n……NEKO？\n妳怎么啦！ ？怎么在哭？\n"
+        "##conversation=Saku\n咦？\n"
+    )
+
+    assert blocks[0]["text"] == "……NEKO？<br>妳怎么啦！ ？怎么在哭？"
+
+
+def test_prose_only_document_gets_one_poem() -> None:
+    from cytus2db.wiki.pages._content import render_document
+
+    text, _ = render_document(
+        [
+            {"kind": "narration", "text": "第一段。\n第二行。"},
+            {"kind": "narration", "text": "第二段。"},
+            {"kind": "image", "id": "alos0601.png"},
+        ],
+        dialogue_template="os/对话",
+        sound_template="os/声音",
+        poem_prose=True,
+    )
+
+    assert text == (
+        "<poem>\n第一段。\n第二行。\n\n第二段。\n</poem>\n"
+        "[[File:alos0601.png|thumb]]"
+    )
+
+
+def test_dialogue_document_does_not_get_a_poem() -> None:
+    from cytus2db.wiki.pages._content import render_document
+
+    text, _ = render_document(
+        [
+            {"kind": "dialogue", "speaker": "Mayu", "text": "……NEKO？<br>妳怎么啦？"},
+            {"kind": "narration", "text": "第一行。\n第二行。"},
+        ],
+        dialogue_template="os/对话",
+        sound_template="os/声音",
+        poem_prose=True,
+    )
+
+    assert "<poem>" not in text
+    assert "{{os/对话|Mayu|……NEKO？<br>妳怎么啦？}}" in text
+    assert "第一行。<br>第二行。" in text
+
+
+def test_source_blank_line_is_preserved() -> None:
+    from cytus2db.wiki.pages._content import parse_script, render_blocks
+
+    blocks = parse_script("##conversation=Mayu\n第一行\n\n第二行\n")
+    text, _ = render_blocks(
+        blocks, dialogue_template="os/对话", sound_template="os/声音"
+    )
+
+    assert text == "{{os/对话|Mayu|第一行}}\n\n{{os/对话|Mayu|第二行}}"

@@ -29,7 +29,7 @@ from ._content import (
     localized,
     one_line,
     pick_language,
-    render_blocks,
+    render_document,
 )
 
 _FILE_TYPES = {
@@ -154,8 +154,11 @@ def _content(
     blocks = pick_language(records, "blocks")
     if not blocks:
         return "", []
-    return render_blocks(
-        blocks, dialogue_template="os/对话", sound_template="os/声音"
+    return render_document(
+        blocks,
+        dialogue_template="os/对话",
+        sound_template="os/声音",
+        poem_prose=True,
     )
 
 

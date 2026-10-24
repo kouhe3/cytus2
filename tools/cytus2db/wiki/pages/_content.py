@@ -80,41 +80,52 @@ def parse_script(text: str) -> list[dict[str, Any]]:
     speaker: str | None = None
     mode = "dialogue"
     paragraph: list[str] = []
+    pending_blank = False
+    dialogue_open = False
+
+    def add(block: dict[str, Any]) -> None:
+        nonlocal pending_blank
+        if pending_blank:
+            block["blank_before"] = True
+        pending_blank = False
+        blocks.append(block)
 
     def flush() -> None:
         nonlocal paragraph
         if paragraph:
-            blocks.append({"kind": "narration", "text": "\n".join(paragraph)})
+            add({"kind": "narration", "text": "\n".join(paragraph)})
             paragraph = []
 
     for raw in (text or "").split("\n"):
         line = raw.rstrip()
         if line.startswith("##"):
+            pending_blank = False
             flush()
             key, _, value = line[2:].partition("=")
             key, value = key.strip(), value.strip()
             if key == "conversation":
                 speaker = one_line(value) or None
                 mode = "dialogue"
+                dialogue_open = False
             elif key == "text":
                 speaker = None
                 mode = "text"
             elif key == "sound":
                 name, _, label = value.partition(",")
-                blocks.append(
+                add(
                     {"kind": "sound", "name": name.strip(), "label": label.strip()}
                 )
             elif key == "image":
-                blocks.append({"kind": "image", "id": value})
+                add({"kind": "image", "id": value})
             elif key == "movie":
-                blocks.append({"kind": "movie", "id": value})
+                add({"kind": "movie", "id": value})
             elif key == "bgm":
-                blocks.append({"kind": "bgm", "name": value})
+                add({"kind": "bgm", "name": value})
             elif key == "mail":
                 parts = [one_line(item) for item in value.split(",")]
                 while len(parts) < 3:
                     parts.append("")
-                blocks.append(
+                add(
                     {
                         "kind": "mail",
                         "title": parts[0],
@@ -126,18 +137,32 @@ def parse_script(text: str) -> list[dict[str, Any]]:
                 mode = "mail"
                 speaker = None
             else:
-                blocks.append({"kind": "note", "directive": key, "value": value})
+                add({"kind": "note", "directive": key, "value": value})
             continue
 
         stripped = line.strip()
         if not stripped:
             flush()
+            dialogue_open = False
+            pending_blank = True
             continue
         if mode == "mail" and blocks and blocks[-1]["kind"] == "mail":
             body = blocks[-1]["body"]
             blocks[-1]["body"] = (body + "\n" + stripped).strip("\n")
         elif mode == "dialogue" and speaker:
-            blocks.append({"kind": "dialogue", "speaker": speaker, "text": stripped})
+            previous = blocks[-1] if blocks else None
+            if (
+                dialogue_open
+                and previous is not None
+                and previous["kind"] == "dialogue"
+                and previous["speaker"] == speaker
+            ):
+                previous["text"] = f"{previous['text']}<br>{stripped}"
+            else:
+                add(
+                    {"kind": "dialogue", "speaker": speaker, "text": stripped}
+                )
+            dialogue_open = True
         else:
             paragraph.append(stripped)
     flush()
@@ -193,11 +218,56 @@ def _booklet(block: dict[str, Any]) -> str:
 
 def render_prose(blocks: Iterable[dict[str, Any]]) -> str:
     """Join narration paragraphs for a pure-prose document."""
-    return "\n\n".join(
-        text
+    paragraphs: list[str] = []
+    for block in blocks:
+        if block.get("kind") == "narration":
+            text = str(block.get("text") or "").strip("\n")
+        elif block.get("kind") == "mail":
+            text = str(block.get("body") or "").strip("\n")
+        else:
+            continue
+        if text:
+            paragraphs.append(text)
+    return "\n\n".join(paragraphs)
+
+
+def render_document(
+    blocks: Iterable[dict[str, Any]],
+    *,
+    dialogue_template: str,
+    sound_template: str,
+    poem_prose: bool,
+) -> tuple[str, list[Conflict]]:
+    """Render an OS/OA body.
+
+    A document made only of prose and attachments wraps the prose once in
+    ``<poem>`` (the existing diary/announcement pages do this).  A document
+    with dialogue keeps the OS template blocks and uses ``<br>`` for line
+    breaks inside narration.
+    """
+    blocks = list(blocks)
+    if poem_prose and not any(
+        block.get("kind") in ("dialogue", "sound", "movie", "booklet", "imageviewer")
         for block in blocks
-        if block.get("kind") == "narration"
-        and (text := str(block.get("text") or "").strip("\n"))
+    ):
+        body = render_prose(blocks)
+        if not body:
+            return "", []
+        parts = [f"<poem>\n{body}\n</poem>"]
+        for block in blocks:
+            if block.get("kind") in ("image", "imageviewer"):
+                name = _image_name(block.get("id"))
+                if name:
+                    parts.append(f"[[File:{name}|thumb]]")
+            elif block.get("kind") == "mail":
+                header = _mail_header(block)
+                if header:
+                    parts.append(header)
+        return "\n".join(parts), []
+    return render_blocks(
+        blocks,
+        dialogue_template=dialogue_template,
+        sound_template=sound_template,
     )
 
 
@@ -208,38 +278,41 @@ def render_blocks(
     sound_template: str,
 ) -> tuple[str, list[Conflict]]:
     """Render parsed blocks into the site's OS/OA templates."""
-    lines: list[str] = []
+    lines: list[tuple[str, bool]] = []
     conflicts: list[Conflict] = []
     for block in blocks:
         kind = block.get("kind")
+
+        def add_line(text: str, *, _block: dict[str, Any] = block) -> None:
+            lines.append((text, bool(_block.get("blank_before"))))
         if kind == "dialogue":
             speaker = one_line(block.get("speaker"))
             text = str(block.get("text") or "").strip("\n")
             if text:
-                lines.append(f"{{{{{dialogue_template}|{speaker}|{text}}}}}")
+                add_line(f"{{{{{dialogue_template}|{speaker}|{text}}}}}")
         elif kind == "narration":
             text = str(block.get("text") or "").strip("\n")
             if text:
-                lines.append(text)
+                add_line(text.replace("\n", "<br>"))
         elif kind == "sound":
             value = _sound_value(block)
             if value:
-                lines.append(f"{{{{{sound_template}|{value}}}}}")
+                add_line(f"{{{{{sound_template}|{value}}}}}")
         elif kind in ("image", "imageviewer"):
             name = _image_name(block.get("id"))
             if name:
-                lines.append(f"[[File:{name}|thumb]]")
+                add_line(f"[[File:{name}|thumb]]")
         elif kind == "mail":
             header = _mail_header(block)
             if header:
-                lines.append(header)
+                add_line(header)
             body = str(block.get("body") or "").strip("\n")
             if body:
-                lines.append(body)
+                add_line(f"<poem>\n{body}\n</poem>")
         elif kind == "booklet":
             booklet = _booklet(block)
             if booklet:
-                lines.append(booklet)
+                add_line(booklet)
         elif kind == "movie":
             conflicts.append(
                 Conflict("unrendered_movie", f"{one_line(block.get('id'))} has no BV mapping")
@@ -250,7 +323,12 @@ def render_blocks(
             conflicts.append(
                 Conflict("unrendered_block", f"unsupported block {kind!r}")
             )
-    return "\n".join(lines), conflicts
+    parts: list[str] = []
+    for index, (text, blank_before) in enumerate(lines):
+        if index:
+            parts.append("\n\n" if blank_before else "\n")
+        parts.append(text)
+    return "".join(parts), conflicts
 
 
 # --------------------------------------------------------------------- titles

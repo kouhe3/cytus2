@@ -28,8 +28,7 @@ from ._content import (
     one_line,
     parse_script,
     pick_language,
-    render_blocks,
-    render_prose,
+    render_document,
 )
 
 _DOCUMENT_ORDER = re.compile(r"_oa(\d+)$")
@@ -102,22 +101,12 @@ def build(db: Database) -> list[PageModel]:
             omitted["sort_key"] = "document_order_unavailable"
 
         content = str(pick_language(records, "text") or "")
-        blocks = parse_script(content)
-        prose_only = bool(blocks) and all(
-            block.get("kind") in ("narration", "bgm") for block in blocks
+        rendered, block_conflicts = render_document(
+            parse_script(content),
+            dialogue_template="oa/对话",
+            sound_template="oa/声音",
+            poem_prose=True,
         )
-        if prose_only:
-            # OA prose documents wrap the whole body once, matching the
-            # existing pages: <poem> at the start and </poem> at the end.
-            body = render_prose(blocks)
-            rendered = f"<poem>\n{body}\n</poem>" if body else ""
-            block_conflicts = []
-        else:
-            rendered, block_conflicts = render_blocks(
-                blocks,
-                dialogue_template="oa/对话",
-                sound_template="oa/声音",
-            )
         conflicts.extend(block_conflicts)
         if rendered:
             fields.append(Field("content", Text.of(rendered)))

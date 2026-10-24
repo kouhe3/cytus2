@@ -131,6 +131,17 @@
       "song_info_list": []
     },
     {
+      "song_pack_id": "xenon001",
+      "song_pack_name": "Xenon",
+      "theme_color": "#335577",
+      "is_iap_pack": true,
+      "hasIM": true,
+      "price": "USD 9.99",
+      "Category": "Main",
+      "Descriptions": {"en": "Xenon pack"},
+      "song_info_list": []
+    },
+    {
       "song_pack_id": "neko001",
       "song_pack_name": "NEKO",
       "theme_color": "#222222",

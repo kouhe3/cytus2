@@ -54,6 +54,15 @@
     ]
   },
   {
+    "TopicId": "B0201",
+    "TopicLockId": "",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "paff001", "Level": 0, "IsLevelLocked": false}
+    ]
+  },
+  {
     "TopicId": "G0101",
     "TopicLockId": "",
     "StoryLockId": "",
@@ -69,6 +78,63 @@
     "LevelLockDisplay": false,
     "LevelLocks": [
       {"SongPackId": "ivy001", "Level": 0, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "Q0101",
+    "TopicLockId": "",
+    "StoryLockId": "story_ending03_good_ending1",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "alpha001", "Level": 0, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "X0101",
+    "TopicLockId": "",
+    "StoryLockId": "",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "paff001", "Level": 0, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "Q6501",
+    "TopicLockId": "",
+    "StoryLockId": "story_ending03_good_ending1",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "xenon001", "Level": 41, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "ZCAP1",
+    "TopicLockId": "",
+    "StoryLockId": "",
+    "LevelLockDisplay": true,
+    "LevelLocks": [
+      {"SongPackId": "xenon001", "Level": 10, "IsLevelLocked": true},
+      {"SongPackId": "paff001", "Level": 20, "IsLevelLocked": false},
+      {"SongPackId": "neko001", "Level": 0, "IsLevelLocked": false},
+      {"SongPackId": "robo001", "Level": 0, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "B0901",
+    "TopicLockId": "",
+    "StoryLockId": "story_outside01",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "alpha001", "Level": 0, "IsLevelLocked": false}
+    ]
+  },
+  {
+    "TopicId": "Q0201",
+    "TopicLockId": "",
+    "StoryLockId": "story_ending04_main",
+    "LevelLockDisplay": false,
+    "LevelLocks": [
+      {"SongPackId": "alpha001", "Level": 0, "IsLevelLocked": false}
     ]
   }
 ]

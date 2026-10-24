@@ -389,6 +389,7 @@ kbd {
 .level-badge,
 .tier-chip,
 .spoiler-chip,
+.meta-chip,
 .difficulty,
 .unlock-badge {
   display: inline-flex;
@@ -447,6 +448,31 @@ kbd {
   color: var(--spoiler);
   border-color: #5a2e2e;
   background: #180f12;
+}
+
+.meta-chip {
+  color: #8fa3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.branch-chip {
+  color: #e8c48c;
+  border-color: #574326;
+}
+
+.external-chip {
+  color: var(--spoiler);
+  border-color: #5a2e2e;
+}
+
+.lane-select {
+  width: 100%;
+  padding: 6px 8px;
+  background: #0b1016;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12.5px;
 }
 
 .difficulty-easy {

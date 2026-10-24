@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "reading_order.schema.json",
   "title": "reading_order",
-  "description": "A derived unlocking/reading position for a content entity. stage is the simulation round, level_gate the effective level after spoiler deferral; order is the global 1-based position.",
+  "description": "A derived unlocking/reading position for a content entity. stage is the simulation round, level_gate the effective level after spoiler deferral; order is the global 1-based position. cost/lane/lock_level expose the legacy iM ordering metric; read_index is the legacy iM readIndex.",
   "type": "object",
   "required": [
     "id",
@@ -24,6 +24,13 @@
     "spoiler_alert",
     "spoiler_conditions",
     "in_game_order",
+    "cost",
+    "lane",
+    "lane_character",
+    "lock_level",
+    "branch",
+    "external",
+    "read_index",
     "order",
     "provenance"
   ],
@@ -46,7 +53,7 @@
     "stage": {
       "type": "integer",
       "minimum": 1,
-      "description": "Simulation round within the phase; earlier rounds become readable first."
+      "description": "Reading round. iM posts use the legacy global iM fixpoint (1..N) so their (stage, cost, lane, in_game_order) sequence is the legacy readIndex; other entities use the tier-phased simulation round. 98 is the blocked (outside the model) bucket and 99 an unstaged row."
     },
     "level_gate": {
       "type": "integer",
@@ -124,6 +131,49 @@
       "type": "integer",
       "minimum": 0,
       "description": "Stable tie-breaker from the game table order."
+    },
+    "cost": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unlock cost: the sum of every level lock; a multi-character lock costs the sum of the characters' levels."
+    },
+    "lane": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Account lane: free 0.., paid 100.., side 200.., plot/other 300. Within-stage ordering uses it after cost."
+    },
+    "lane_character": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^character/[^\\s]+$"}
+      ],
+      "description": "Character whose account the lane belongs to."
+    },
+    "lock_level": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Highest PAFF/NEKO/ROBO level reached at the row's reading stage."
+    },
+    "branch": {
+      "anyOf": [
+        {"type": "null"},
+        {"enum": ["善终1", "善终2", "结局04"]}
+      ],
+      "description": "Ending branch label mapped from the story lock (manual provenance)."
+    },
+    "external": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ],
+      "description": "Why a blocked row sits outside the model (story lock, topic lock, or level/prerequisite)."
+    },
+    "read_index": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "integer", "minimum": 1}
+      ],
+      "description": "Legacy iM readIndex (global iM-only sequence); null for non-iM entities."
     },
     "order": {
       "type": "integer",

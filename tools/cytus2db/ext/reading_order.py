@@ -55,6 +55,88 @@ MAX_STAGES = 1000
 UNKNOWN_THREAD_RANK = 100_000
 NULL_THREAD_RANK = 200_000
 
+# The simulation raises every character to its current cap, exactly like the
+# legacy iM fixpoint (``min(cap, 99)``); the highest level lock in the data is
+# 98, so the clamp never blocks a real gate.
+LEVEL_CAP = 99
+
+# Reading stages outside the fixpoint's 1..N range.  ``BLOCKED_STAGE`` is the
+# legacy iM model's "outside the model" bucket; ``UNSTAGED_STAGE`` is a row the
+# tier simulation could not place at all.
+BLOCKED_STAGE = 98
+UNSTAGED_STAGE = 99
+
+# Lane = character account thread, laid out as free -> paid -> side.  The
+# within-tier order is the legacy viewer's ``TIER_ORDER``: it is editorial
+# (which account the reader follows first), not derivable from the pack table.
+# Characters absent from this list are appended to their tier sorted by id.
+PLOT_LANE = 300
+CHARACTER_TIERS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "free",
+        ("paff001", "neko001", "robo001", "ivy001", "cherry002", "vanessa001", "bobo001"),
+    ),
+    (
+        "paid",
+        (
+            "ilka001",
+            "xenon001",
+            "conner001",
+            "cherry001",
+            "joe001",
+            "sagar001",
+            "rin001",
+            "paff002",
+            "robo002",
+            "neko002",
+        ),
+    ),
+    (
+        "side",
+        (
+            "graffj001",
+            "miku001",
+            "ai001",
+            "alice001",
+            "hans001",
+            "kaf001",
+            "amiya001",
+            "tairitsu001",
+            "neko003",
+            "paff003",
+        ),
+    ),
+)
+CHARACTER_TIER_LOCATOR = "cytus2_work/export_im_order.py:TIER_ORDER"
+
+# Manual tier corrections, applied on top of the pack table before the lane is
+# built.  The layer exists so a tier fix never leaks into the sorting logic.
+# Crystal PuNK (``cherry002``) and Bo Bo (``bobo001``) were briefly reported as
+# paid; the Fandom character list puts both under Free Characters and the APK's
+# ``is_iap_pack`` is false for both, so no override is applied.  Graff.J
+# (``graffj001``) is "Free" on Fandom but "Extra" in the pack table; that
+# remains an open question and is intentionally not overridden either.
+CHARACTER_TIER_OVERRIDES: dict[str, str] = {}
+
+# ``StoryLockId`` -> branch label, from the legacy viewer.  The three ending
+# branches are indistinguishable from the data alone (all three are plain story
+# locks), so the labels are manual.
+BRANCH_LABELS: dict[str, str] = {
+    "story_ending03_good_ending1": "善终1",
+    "story_ending03_good_ending2": "善终2",
+    "story_ending04_main": "结局04",
+}
+BRANCH_LOCATOR = "cytus2_work/export_im_order.py:branch"
+
+# Legacy iM fixpoint inputs.  The legacy script hard-coded these because they
+# are ``_ConditionCheck`` results, not TextAsset fields.
+LEGACY_DONE_BY_DEFAULT = frozenset({"story01"})
+LEGACY_ALWAYS = frozenset({"story05"})
+LEGACY_LEVEL_STORY = {"story04": ("neko001", 24)}
+LEGACY_OS_STORY_NEEDS = {"story_cherry02": "cpos033"}
+LEGACY_SIDE_GATE = "story_ending02"
+LEGACY_LOCATOR = "cytus2_work/export_im_order.py"
+
 # Decompiled ``SpoilerAlertTable..cctor`` (RVA 0x254FFDC).  Levels are 0-based;
 # the game UI displays level + 1.
 SPOILER_RVA = "0x254FFDC"
@@ -180,6 +262,89 @@ def _tier_of(character_id: str | None, packs: dict[str, _Pack]) -> str:
     return "side"
 
 
+@dataclass(frozen=True)
+class _LaneEntry:
+    lane: int
+    tier: str
+
+
+def _lane_table(
+    packs: dict[str, _Pack],
+    overrides: dict[str, str] | None = None,
+) -> dict[str, _LaneEntry]:
+    """Map character -> lane rank (free 0.., paid 100.., side 200..).
+
+    The tier comes from the pack table (``Category`` + ``is_iap_pack``) with the
+    manual override layer on top.  Within a tier the legacy editorial order is
+    used first; characters the list does not know are appended sorted by id, so
+    two builds always agree.
+    """
+    corrections = CHARACTER_TIER_OVERRIDES if overrides is None else overrides
+    editorial = {
+        tier: {character: index for index, character in enumerate(characters)}
+        for tier, characters in CHARACTER_TIERS
+    }
+    buckets: dict[str, list[str]] = {tier: [] for tier in TIER_ORDER}
+    for character in packs:
+        tier = corrections.get(character, packs[character].tier)
+        if tier not in buckets:
+            tier = "side"
+        buckets[tier].append(character)
+
+    lanes: dict[str, _LaneEntry] = {}
+    for tier in TIER_ORDER:
+        order = editorial[tier]
+        members = sorted(
+            buckets[tier],
+            key=lambda character: (
+                0,
+                order[character],
+                character,
+            )
+            if character in order
+            else (1, 0, character),
+        )
+        for index, character in enumerate(members):
+            lanes[character] = _LaneEntry(TIER_RANK[tier] * 100 + index, tier)
+    return lanes
+
+
+def _avatar_character(avatar: str, lanes: dict[str, _LaneEntry]) -> str | None:
+    """Legacy ``_pack_of_avatar``: avatar id -> account character."""
+    base, _, number = (avatar or "").strip().partition("_")
+    if number.isdigit():
+        candidate = f"{base}{int(number):03d}"
+        if candidate in lanes:
+            return candidate
+    direct = {
+        "paff": "paff001",
+        "neko": "neko001",
+        "robo": "robo001",
+        "cherry": "cherry001",
+    }
+    candidate = direct.get(base.lower())
+    if candidate in lanes:
+        return candidate
+    return None
+
+
+def _avatar_families(
+    source: InputSource, lanes: dict[str, _LaneEntry]
+) -> dict[str, str | None]:
+    """``im_filter_data`` groups avatars under one account (PAFF owns paff_01/02)."""
+    table = source.text_json("imdata", "im_filter_data")
+    if table is None or not isinstance(table.data, dict):
+        return {}
+    families: dict[str, str | None] = {}
+    for item in table.data.get("Items") or []:
+        if not isinstance(item, dict):
+            continue
+        family = _avatar_character(str(item.get("DisplayAvatarId") or ""), lanes)
+        for avatar in item.get("FilterAvatarIds") or []:
+            families[str(avatar)] = family
+    return families
+
+
 def _thread_rank(thread: str | None, packs: dict[str, _Pack]) -> int:
     character_id = _character(thread)
     if not character_id:
@@ -255,6 +420,11 @@ class _Row:
     thread: str | None
     raw_level: int
     level_locks: list[dict[str, Any]] = field(default_factory=list)
+    # Original lock order matters: the legacy lane picks the first non-main
+    # character of the list, and ``cost`` sums every lock.
+    lock_pairs: list[tuple[str, int]] = field(default_factory=list)
+    avatar: str | None = None
+    story_lock: str | None = None
     deps: list[str] = field(default_factory=list)
     in_game_order: int = 0
     version: str | None = None
@@ -271,17 +441,25 @@ class _Row:
     level_gate: int = 0
     spoiler_alert: str | None = None
     spoiler_conditions: list[dict[str, Any]] = field(default_factory=list)
+    cost: int = 0
+    lane: int = PLOT_LANE
+    lane_character: str | None = None
+    lock_level: int = 0
+    branch: str | None = None
+    external: str | None = None
+    read_index: int | None = None
 
     @property
     def character(self) -> str | None:
         return _character(self.thread) or None
 
     def sort_key(self, packs: dict[str, _Pack]) -> tuple[Any, ...]:
+        # One metric for the merged timeline: unlock cost, account lane, entity
+        # type as a stable tie-break (iM before OS), then the game's own order.
         return (
             self.stage,
-            self.level_gate,
-            _thread_rank(self.thread, packs),
-            _character(self.thread),
+            self.cost,
+            self.lane,
             ENTITY_ORDER[self.entity_type],
             self.in_game_order,
             self.entity_id,
@@ -391,6 +569,11 @@ def _im_rows(source: InputSource, packs: dict[str, _Pack]) -> list[_Row]:
             thread=_character_key(thread) if thread else None,
             raw_level=_row_level(level_locks),
             level_locks=_sorted_level_locks(level_locks),
+            lock_pairs=[
+                (lock["character"], lock["level"]) for lock in level_locks
+            ],
+            avatar=avatar or None,
+            story_lock=story_gate or None,
             deps=deps,
             in_game_order=topic_index,
             provenance=[
@@ -461,6 +644,9 @@ def _os_rows(source: InputSource) -> list[_Row]:
                 thread=_character_key(file_name),
                 raw_level=_row_level(level_locks),
                 level_locks=_sorted_level_locks(level_locks),
+                lock_pairs=[
+                    (lock["character"], lock["level"]) for lock in level_locks
+                ],
                 deps=deps,
                 in_game_order=sequence,
                 version=version,
@@ -537,6 +723,9 @@ def _oa_rows(source: InputSource) -> list[_Row]:
             thread=_character_key(thread) if thread else None,
             raw_level=_row_level(level_locks),
             level_locks=_sorted_level_locks(level_locks),
+            lock_pairs=[
+                (lock["character"], lock["level"]) for lock in level_locks
+            ],
             deps=deps,
             in_game_order=index,
             provenance=[
@@ -559,6 +748,41 @@ _TOUCH_RE = re.compile(r"TOUCH_IM_(?:POST|TOPIC)_([A-Za-z0-9]+)")
 
 def _dump_path(source: InputSource) -> Path:
     return source.root / "il2cppdumper" / "dump.cs"
+
+
+def _topic_triggers(source: InputSource) -> dict[str, str]:
+    """``TOUCH_IM_POST_*`` constant -> story id, one class block at a time.
+
+    This mirrors the legacy ``derive_triggers``: only a class that declares a
+    story ``ID`` contributes its touch constants.
+    """
+    path = _dump_path(source)
+    if not path.is_file():
+        return {}
+    triggers: dict[str, str] = {}
+    topics: set[str] = set()
+    story_id: str | None = None
+
+    def flush() -> None:
+        nonlocal topics, story_id
+        if story_id:
+            for topic in topics:
+                triggers.setdefault(topic, story_id)
+        topics = set()
+        story_id = None
+
+    with path.open(encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            if _CLASS_RE.match(line):
+                flush()
+                continue
+            if story_id is None:
+                found = _ID_RE.search(line)
+                if found:
+                    story_id = found.group(1)
+            topics.update(topic.upper() for topic in _TOUCH_RE.findall(line))
+    flush()
+    return triggers
 
 
 def _story_definitions(source: InputSource) -> list[dict[str, Any]]:
@@ -870,7 +1094,15 @@ def _finalize_rows(rows: list[_Row], packs: dict[str, _Pack]) -> None:
             for dependency in dict.fromkeys(row.deps)
             if dependency in all_ids and dependency != row.entity_id
         ]
-        row.phase = TIER_RANK[_tier_of(_character(row.thread), packs)]
+        # An iM post is readable whenever its own level locks and story gates
+        # are satisfied; the posting account's purchase does not gate it (a
+        # Xenon post with PAFF/NEKO/ROBO locks is readable for free).  Other
+        # entity types live in their account's pack, so the thread counts.
+        row.phase = (
+            0
+            if row.entity_type == "im_post"
+            else TIER_RANK[_tier_of(_character(row.thread), packs)]
+        )
         for lock in row.level_locks:
             row.phase = max(
                 row.phase,
@@ -892,6 +1124,66 @@ def _finalize_rows(rows: list[_Row], packs: dict[str, _Pack]) -> None:
 
     for row in rows:
         row.level_gate = max(row.raw_level, 0)
+
+
+def _identity_from_locks(
+    lock_pairs: Iterable[tuple[str, int]],
+    avatar: str | None,
+    lanes: dict[str, _LaneEntry],
+    families: dict[str, str | None],
+) -> str | None:
+    """Legacy ``resolve_identity``: account behind an iM post."""
+    for character, _ in lock_pairs:
+        if character in lanes and character not in MAIN_TRIO:
+            return character
+    family = families.get(avatar or "")
+    if family in lanes:
+        return family
+    candidate = _avatar_character(avatar or "", lanes)
+    return candidate if candidate in lanes else None
+
+
+def _lane_character(
+    row: _Row,
+    lanes: dict[str, _LaneEntry],
+    families: dict[str, str | None],
+) -> str | None:
+    """The account a row belongs to; other entity types use their own thread."""
+    if row.entity_type == "im_post":
+        return _identity_from_locks(row.lock_pairs, row.avatar, lanes, families)
+    character = row.character
+    return character if character in lanes else None
+
+
+def _apply_lane(
+    rows: list[_Row],
+    lanes: dict[str, _LaneEntry],
+    families: dict[str, str | None],
+) -> None:
+    overrides = {
+        character: tier
+        for character, tier in CHARACTER_TIER_OVERRIDES.items()
+        if character in lanes
+    }
+    for row in rows:
+        row.cost = sum(int(lock["level"]) for lock in row.level_locks)
+        character = _lane_character(row, lanes, families)
+        if character is None:
+            row.lane = PLOT_LANE
+            row.lane_character = None
+        else:
+            row.lane = lanes[character].lane
+            row.lane_character = _character_key(character)
+        touched = [character] + [lock["character"] for lock in row.level_locks]
+        for name in dict.fromkeys(touched):
+            if name in overrides:
+                row.provenance.append(
+                    manual(
+                        CHARACTER_TIER_LOCATOR,
+                        f"{name} tier {overrides[name]}",
+                    )
+                )
+                break
 
 
 def _cap_rows(source: InputSource) -> list[list[dict[str, Any]]]:
@@ -965,22 +1257,28 @@ def _simulate(
     packs: dict[str, _Pack],
     caps: list[list[dict[str, Any]]],
     characters: set[str],
-) -> None:
+) -> dict[tuple[int, int], int]:
+    """Tier-phased simulation; returns ``(phase, stage) -> trio level``."""
+    stage_levels: dict[tuple[int, int], int] = {}
+    all_ids = {row.entity_id for row in rows}
+    side_gate = entity_key("story_node", LEGACY_SIDE_GATE)
+    if side_gate not in all_ids:
+        side_gate = None
     for phase in range(len(TIER_ORDER)):
         pending = [row for row in rows if row.phase == phase]
         if not pending:
             continue
         levels: dict[str, int] = {}
-        for character in characters:
+        for character in sorted(characters):
             tier = _tier_of(character, packs)
             levels[character] = (
-                MAX_LEVEL if TIER_RANK[tier] < phase else 0
+                LEVEL_CAP if TIER_RANK[tier] < phase else 0
             )
-        current = [
+        current = sorted(
             character
             for character in characters
             if TIER_RANK[_tier_of(character, packs)] == phase
-        ]
+        )
         read = {
             row.entity_id for row in rows if row.phase < phase
         }
@@ -991,13 +1289,20 @@ def _simulate(
             for character in current:
                 cap = _cap_for(character, levels, caps)
                 if levels[character] < cap:
-                    levels[character] = cap
+                    levels[character] = min(cap, LEVEL_CAP)
                     progressed = True
+            stage_levels[(phase, stage)] = max(
+                (levels.get(character, 0) for character in MAIN_TRIO), default=0
+            )
             while True:
                 newly_read = False
                 for row in sorted(pending, key=lambda item: item.sort_key(packs)):
                     if row.entity_id in read:
                         continue
+                    if row.phase == TIER_RANK["side"] and side_gate:
+                        # The legacy model keeps side content behind ending 02.
+                        if side_gate not in read:
+                            continue
                     if not _levels_ok(row, levels) or not _spoiler_ok(row, levels):
                         continue
                     if any(dependency not in read for dependency in row.deps):
@@ -1012,7 +1317,8 @@ def _simulate(
                 break
         for row in pending:
             if row.stage == 0:
-                row.stage = max(stage + 1, 1)
+                row.stage = UNSTAGED_STAGE
+    return stage_levels
 
 
 def _final_order(rows: list[_Row], packs: dict[str, _Pack]) -> list[_Row]:
@@ -1057,6 +1363,255 @@ def _final_order(rows: list[_Row], packs: dict[str, _Pack]) -> list[_Row]:
     return ordered
 
 
+def _legacy_im_order(
+    source: InputSource,
+    lanes: dict[str, _LaneEntry],
+    families: dict[str, str | None],
+    os_by_id: dict[str, _Row],
+) -> dict[str, dict[str, Any]]:
+    """Reproduce the legacy iM fixpoint and its ``readIndex``.
+
+    The merged tier simulation deliberately separates free/paid/side, so it
+    cannot reproduce the legacy global sequence (paid posts appear from round
+    one there).  This pass is the parity twin: levels rise to the
+    ``IsLevelLocked`` caps every round, story triggers fire from read posts, and
+    side lanes wait for ``story_ending02``.  ``read_index`` is the legacy
+    ``readIndex``: stages in order, ordered by cost, lane, and topic table
+    position, with posts outside the model appended as blocked.
+    """
+    locks_table = source.text_json("imdata", "im_lock_condition_data")
+    topics_table = source.text_json("imdata", "im_topic_data")
+    if locks_table is None or not isinstance(locks_table.data, list):
+        return {}
+
+    topic_order: dict[str, int] = {}
+    avatars: dict[str, str] = {}
+    if topics_table is not None and isinstance(topics_table.data, list):
+        for index, raw in enumerate(topics_table.data):
+            if not isinstance(raw, dict):
+                continue
+            game_id = str(raw.get("Id") or "").strip().upper()
+            if not game_id:
+                continue
+            topic_order.setdefault(game_id, index)
+            avatars.setdefault(game_id, str(raw.get("AvatarId") or "").strip())
+
+    entries: list[dict[str, Any]] = []
+    for raw in locks_table.data:
+        if not isinstance(raw, dict):
+            continue
+        game_id = str(raw.get("TopicId") or "").strip().upper()
+        if not game_id:
+            continue
+        pairs: list[tuple[str, int]] = []
+        locked: list[dict[str, Any]] = []
+        for entry in raw.get("LevelLocks") or []:
+            if not isinstance(entry, dict):
+                continue
+            character = _character(entry.get("SongPackId"))
+            if character:
+                level = int(entry.get("Level") or 0)
+                pairs.append((character, level))
+                locked.append(
+                    {
+                        "character": character,
+                        "level": level,
+                        "locked": bool(entry.get("IsLevelLocked")),
+                    }
+                )
+        entries.append(
+            {
+                "id": game_id,
+                "pairs": pairs,
+                "locked": locked,
+                "story": str(raw.get("StoryLockId") or "").strip(),
+                "topic": str(raw.get("TopicLockId") or "").strip().upper(),
+            }
+        )
+
+    triggers = _topic_triggers(source)
+    characters = sorted(
+        {character for entry in entries for character, _ in entry["pairs"]}
+    )
+    levels = {character: 0 for character in characters}
+    read: set[str] = set()
+    stories_done = set(LEGACY_DONE_BY_DEFAULT)
+    stages: list[dict[str, Any]] = []
+
+    def os_ready(entry_id: str) -> bool:
+        row = os_by_id.get(entity_key("os", entry_id))
+        if row is None:
+            return False
+        if any(
+            levels.get(character, 0) < level for character, level in row.lock_pairs
+        ):
+            return False
+        for dependency in row.deps:
+            kind, _, target = dependency.partition("/")
+            if kind in ("os", "story_node") and target not in stories_done:
+                return False
+        return True
+
+    def caps() -> dict[str, int]:
+        cap = {character: MAX_LEVEL for character in characters}
+        for entry in entries:
+            for target in entry["locked"]:
+                if not target["locked"]:
+                    continue
+                others = {
+                    item["character"]: item["level"]
+                    for item in entry["locked"]
+                    if item["character"] != target["character"]
+                }
+                if all(
+                    levels.get(other, 0) >= need for other, need in others.items()
+                ):
+                    continue
+                cap[target["character"]] = min(
+                    cap[target["character"]], target["level"]
+                )
+        return cap
+
+    def lane_of(entry: dict[str, Any]) -> int:
+        character = _identity_from_locks(
+            entry["pairs"], avatars.get(entry["id"], ""), lanes, families
+        )
+        member = lanes.get(character) if character else None
+        return member.lane if member else PLOT_LANE
+
+    for stage in range(1, 200):
+        before = (dict(levels), len(read), len(stories_done))
+        for character, cap in caps().items():
+            levels[character] = max(levels[character], min(cap, LEVEL_CAP))
+        for story_id, (character, need) in LEGACY_LEVEL_STORY.items():
+            if levels.get(character, 0) >= need:
+                stories_done.add(story_id)
+        stories_done |= LEGACY_ALWAYS
+        for story_id, entry_id in LEGACY_OS_STORY_NEEDS.items():
+            if story_id not in stories_done and os_ready(entry_id):
+                stories_done.add(story_id)
+        changed = True
+        while changed:
+            changed = False
+            for story_id, needs in STORY_AFTER.items():
+                if story_id in stories_done or not set(needs) <= stories_done:
+                    continue
+                required = STORY_LEVEL_GATES.get(story_id)
+                if required and any(
+                    levels.get(character, 0) < level
+                    for character, level in required
+                ):
+                    continue
+                stories_done.add(story_id)
+                changed = True
+
+        newly: list[str] = []
+        changed = True
+        while changed:
+            changed = False
+            for entry in entries:
+                game_id = entry["id"]
+                if game_id in read:
+                    continue
+                if entry["story"] and entry["story"] not in stories_done:
+                    continue
+                if entry["topic"] and entry["topic"] not in read:
+                    continue
+                if any(
+                    levels.get(character, 0) < level
+                    for character, level in entry["pairs"]
+                ):
+                    continue
+                lane = lane_of(entry)
+                if (
+                    TIER_RANK["side"] * 100 <= lane < PLOT_LANE
+                    and LEGACY_SIDE_GATE not in stories_done
+                ):
+                    continue
+                read.add(game_id)
+                newly.append(game_id)
+                if game_id in triggers:
+                    stories_done.add(triggers[game_id])
+                changed = True
+        if not newly and (dict(levels), len(read), len(stories_done)) == before:
+            break
+        stages.append(
+            {
+                "stage": stage,
+                "lock_level": max(
+                    (levels.get(character, 0) for character in MAIN_TRIO),
+                    default=0,
+                ),
+                "posts": newly,
+            }
+        )
+
+    blocked = [entry["id"] for entry in entries if entry["id"] not in read]
+    cost = {
+        entry["id"]: sum(level for _, level in entry["pairs"])
+        for entry in entries
+    }
+    topic_seq = {entry["id"]: topic_order.get(entry["id"], 10_000) for entry in entries}
+    lanes_by_id = {entry["id"]: lane_of(entry) for entry in entries}
+    stage_of: dict[str, int] = {
+        game_id: stage["stage"]
+        for stage in stages
+        for game_id in stage["posts"]
+    }
+    lock_level = {
+        game_id: stage["lock_level"]
+        for stage in stages
+        for game_id in stage["posts"]
+    }
+
+    read_index: dict[str, int] = {}
+    sequence = 0
+    for stage in stages:
+        ordered = sorted(
+            stage["posts"],
+            key=lambda game_id: (
+                cost.get(game_id, 0),
+                lanes_by_id.get(game_id, PLOT_LANE),
+                topic_seq.get(game_id, 10_000),
+            ),
+        )
+        for game_id in ordered:
+            sequence += 1
+            read_index[game_id] = sequence
+
+    external: dict[str, str] = {}
+    by_id = {entry["id"]: entry for entry in entries}
+    blocked_sorted = sorted(
+        blocked,
+        key=lambda game_id: (
+            max(
+                (level for _, level in by_id[game_id]["pairs"]),
+                default=0,
+            ),
+            topic_seq.get(game_id, 10_000),
+        ),
+    )
+    for game_id in blocked_sorted:
+        sequence += 1
+        read_index[game_id] = sequence
+        entry = by_id[game_id]
+        external[game_id] = (
+            entry["story"]
+            or entry["topic"]
+            or "level or prerequisite outside the model"
+        )
+
+    return {
+        entry["id"]: {
+            "stage": stage_of.get(entry["id"], BLOCKED_STAGE),
+            "read_index": read_index.get(entry["id"]),
+            "lock_level": lock_level.get(entry["id"], 0),
+            "external": external.get(entry["id"]),
+        }
+        for entry in entries
+    }
+
+
 def _record(row: _Row) -> dict[str, Any]:
     return {
         "id": entity_key("reading_order", row.entity_id),
@@ -1078,6 +1633,13 @@ def _record(row: _Row) -> dict[str, Any]:
         "spoiler_alert": row.spoiler_alert,
         "spoiler_conditions": row.spoiler_conditions,
         "in_game_order": row.in_game_order,
+        "cost": row.cost,
+        "lane": row.lane,
+        "lane_character": row.lane_character,
+        "lock_level": row.lock_level,
+        "branch": row.branch,
+        "external": row.external,
+        "read_index": row.read_index,
         "order": 0,
         "provenance": row.provenance,
     }
@@ -1086,6 +1648,8 @@ def _record(row: _Row) -> dict[str, Any]:
 def build(source: InputSource) -> dict[str, list[dict[str, Any]]]:
     alerts, alerts_by_character = _spoilers()
     packs = _packs(source)
+    lanes = _lane_table(packs)
+    families = _avatar_families(source, lanes)
 
     im_rows = _im_rows(source, packs)
     os_rows = _os_rows(source)
@@ -1097,6 +1661,7 @@ def build(source: InputSource) -> dict[str, list[dict[str, Any]]]:
     _apply_known_story_gates(rows)
     _apply_story_fallbacks(rows, packs)
     _finalize_rows(rows, packs)
+    _apply_lane(rows, lanes, families)
 
     for row in rows:
         alert = alerts_by_character.get(row.character or "")
@@ -1122,7 +1687,32 @@ def build(source: InputSource) -> dict[str, list[dict[str, Any]]]:
         for condition in row.spoiler_conditions:
             characters.add(_character(condition["character"]))
 
-    _simulate(rows, packs, _cap_rows(source), characters)
+    stage_levels = _simulate(rows, packs, _cap_rows(source), characters)
+    legacy = _legacy_im_order(source, lanes, families, os_by_id)
+    for row in rows:
+        game_id = row.entity_id.split("/", 1)[1]
+        legacy_row = legacy.get(game_id) if row.entity_type == "im_post" else None
+        if legacy_row is not None:
+            # The legacy sequence is the parity contract for iM posts: it owns
+            # their stage, read index, stage trio level and blocked bucket.
+            row.stage = legacy_row["stage"]
+            row.read_index = legacy_row["read_index"]
+            row.external = legacy_row["external"]
+            row.lock_level = legacy_row["lock_level"]
+        else:
+            row.lock_level = stage_levels.get((row.phase, row.stage), 0)
+            if row.stage == UNSTAGED_STAGE and row.external is None:
+                row.external = "unresolved prerequisite"
+
+        story = row.story_lock if row.entity_type == "im_post" else (
+            game_id if row.entity_type == "story_node" else None
+        )
+        if story in BRANCH_LABELS:
+            row.branch = BRANCH_LABELS[story]
+            row.provenance.append(
+                manual(BRANCH_LOCATOR, f"branch label for {story}")
+            )
+
     ordered = _final_order(rows, packs)
 
     records: list[dict[str, Any]] = []

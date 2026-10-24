@@ -390,6 +390,13 @@ export interface ReadingOrderRow extends BaseEntity {
   readonly spoiler_alert: string | null;
   readonly spoiler_conditions: LevelLock[];
   readonly in_game_order: number;
+  readonly cost: number;
+  readonly lane: number;
+  readonly lane_character: string | null;
+  readonly lock_level: number;
+  readonly branch: string | null;
+  readonly external: string | null;
+  readonly read_index: number | null;
   readonly order: number;
 }
 

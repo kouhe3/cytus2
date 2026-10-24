@@ -12,7 +12,15 @@ from collections import Counter
 from typing import Any, Iterable
 
 from ..db import Database
-from ..model import SEMANTIC_TEMPLATE, Conflict, Field, PageModel, Section, Text
+from ..model import (
+    SEMANTIC_TEMPLATE,
+    Conflict,
+    Field,
+    PageModel,
+    Section,
+    Text,
+    provenance_of,
+)
 from ._content import (
     disambiguate_titles,
     display_name,
@@ -111,6 +119,7 @@ def build(db: Database) -> list[PageModel]:
                 categories=("gallery",),
                 omitted=omitted,
                 conflicts=tuple(_dedupe(conflicts)),
+                provenance=provenance_of(item),
             )
         )
     disambiguate_titles(models, reserved=_os_titles(db))

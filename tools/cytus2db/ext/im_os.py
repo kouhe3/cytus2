@@ -24,6 +24,7 @@ from typing import Any
 
 from ..errors import BuildError, InputError
 from ..keys import asset_key, chart_key, entity_key, slug
+from ..provenance import sort_record, text_asset
 from ..sources import LANGS, InputSource
 
 _DIFFICULTY_BY_INDEX = {0: "Easy", 1: "Hard", 2: "Chaos", 3: "Glitch"}
@@ -32,22 +33,8 @@ _TEXT_ARTIFACT = Path("text") / "im_os.jsonl"
 
 
 # --------------------------------------------------------------------- shared
-def _text_asset(locator: str, note: str | None = None) -> dict[str, str]:
-    entry = {"kind": "text_asset", "locator": locator}
-    if note:
-        entry["note"] = note
-    return entry
-
-
-def _sorted_provenance(record: dict[str, Any]) -> None:
-    unique = {
-        (entry.get("kind"), entry.get("locator"), entry.get("note")): entry
-        for entry in record["provenance"]
-    }
-    record["provenance"] = [
-        unique[key]
-        for key in sorted(unique, key=lambda item: (item[0] or "", item[1] or "", item[2] or ""))
-    ]
+_text_asset = text_asset
+_sorted_provenance = sort_record
 
 
 def _one_line(value: Any) -> str:

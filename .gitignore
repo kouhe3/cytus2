@@ -62,3 +62,8 @@ viewer/.shots/
 # 其它
 *.log
 __pycache__/
+
+# wiki snapshot cache: pages.json carries existing wiki page text and is
+# regenerated locally by tools/wiki_snapshot.py; only titles.json and
+# template_params.json are committed.
+/wiki/snapshot/pages.json

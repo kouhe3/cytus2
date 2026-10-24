@@ -67,6 +67,9 @@ class Snapshot:
     articles: frozenset[str]
     pages: tuple[SnapshotPage, ...] = ()
     redirects: frozenset[str] = frozenset()
+    # ``pages.json`` is a local cache of wiki text and is not committed; a
+    # titles-only checkout can still verify links but cannot diff parameters.
+    pages_available: bool = True
 
     @cached_property
     def article_keys(self) -> frozenset[str]:
@@ -121,13 +124,19 @@ class PatchEntry:
 
 
 # ------------------------------------------------------------------ snapshot
-def load_snapshot(directory: Path | str) -> Snapshot:
+def load_snapshot(directory: Path | str, *, require_pages: bool = False) -> Snapshot:
     root = Path(directory)
     titles_path = root / "titles.json"
     pages_path = root / "pages.json"
-    for path in (titles_path, pages_path):
-        if not path.is_file():
-            raise InputError(f"wiki snapshot not found: {path}")
+    if not titles_path.is_file():
+        raise InputError(f"wiki snapshot not found: {titles_path}")
+    if not pages_path.is_file() and require_pages:
+        raise InputError(
+            f"wiki snapshot not found: {pages_path}. pages.json is a local "
+            "cache of existing site pages (wiki text) and is not committed; "
+            "refresh it with `python tools/wiki_snapshot.py --out wiki/snapshot` "
+            "before using --patches."
+        )
 
     titles = _read_json(titles_path)
     raw_articles = titles.get("articles")
@@ -142,6 +151,24 @@ def load_snapshot(directory: Path | str) -> Snapshot:
     ):
         raise InputError(f"{titles_path}: redirects must be a string list")
 
+    pages = load_pages(pages_path) if pages_path.is_file() else ()
+    return Snapshot(
+        articles=articles,
+        pages=pages,
+        redirects=frozenset(raw_redirects),
+        pages_available=pages_path.is_file(),
+    )
+
+
+def load_pages(path: Path | str) -> tuple[SnapshotPage, ...]:
+    """Read the local ``pages.json`` cache into :class:`SnapshotPage` records.
+
+    ``pages.json`` is a local cache, not a committed artifact: it holds the
+    existing site pages' parameter blocks and therefore carries wiki text.
+    ``render --patches`` needs it; a titles-only checkout still verifies links
+    and categories, but cannot diff parameters.
+    """
+    pages_path = Path(path)
     pages_data = _read_json(pages_path)
     raw_templates = pages_data.get("templates")
     if not isinstance(raw_templates, dict):
@@ -172,11 +199,7 @@ def load_snapshot(directory: Path | str) -> Snapshot:
                     },
                 )
             )
-    return Snapshot(
-        articles=articles,
-        pages=tuple(pages),
-        redirects=frozenset(raw_redirects),
-    )
+    return tuple(pages)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -193,6 +216,8 @@ def _read_json(path: Path) -> dict[str, Any]:
 def template_parameters(wikitext: str, template: str) -> dict[str, str]:
     """Return the top-level ``template`` block's parameters.
 
+    MediaWiki semantics: a duplicated named parameter keeps the *last*
+    occurrence's value, so that is the slice returned here.
     Raises :class:`PatchError` when the page has no such template block.
     """
     block = _find_template(wikitext, template)
@@ -255,7 +280,11 @@ def _measure(wikitext: str, start: int) -> tuple[int, int] | None:
 def _parameter_slices(
     wikitext: str, open_start: int, close_start: int
 ) -> dict[str, tuple[int, int]]:
-    """Map parameter name to its value slice inside one template block."""
+    """Map parameter name to its effective value slice.
+
+    A duplicate named parameter is legal wikitext; MediaWiki uses the last
+    occurrence, so later segments overwrite earlier ones.
+    """
     slices: dict[str, tuple[int, int]] = {}
     for position, (segment_start, segment_end) in enumerate(
         _split_segments(wikitext, open_start + 2, close_start)
@@ -268,7 +297,7 @@ def _parameter_slices(
         name = wikitext[segment_start:equals].strip()
         if not name:
             continue
-        slices.setdefault(name, (equals + 1, segment_end))
+        slices[name] = (equals + 1, segment_end)
     return slices
 
 
@@ -353,6 +382,10 @@ def _find_equals(wikitext: str, start: int, end: int) -> int | None:
 @dataclass(frozen=True)
 class _Rule:
     key: tuple[str, ...]
+    # ``strict_only`` rules never fall back to the loose match key: the
+    # identity field is a page title whose case is significant beyond the
+    # first letter (``NEKO`` and ``Neko`` are different pages).
+    strict_only: bool = False
 
 
 _RULES = {
@@ -362,7 +395,7 @@ _RULES = {
     "Os/文件": _Rule(("文件名", "所属角色")),
     "Oa/文件": _Rule(("文件名", "所属角色")),
     "Gallery文件": _Rule(("文件名", "所属角色")),
-    "Im/帖": _Rule(("标题",)),
+    "Im/帖": _Rule(("标题",), strict_only=True),
 }
 _IM_SORT_KEYS = ("全局排序", "剧情排序")
 
@@ -462,10 +495,10 @@ def _match_one(
             _key_value(page.params.get(name, "")) for name in rule.key
         )
         key_candidates = by_key.get(strict_key, [])
-        if not key_candidates:
+        if not key_candidates and not rule.strict_only:
             key_candidates = by_loose.get(loose_key, [])
             normalised_key = bool(key_candidates)
-        if not key_candidates and len(rule.key) == 2:
+        if not key_candidates and len(rule.key) == 2 and not rule.strict_only:
             # Older OA pages carry no 所属角色 parameter; fall back to the
             # filename when exactly one page owns it.
             loose = by_first.get(strict_key[0], [])

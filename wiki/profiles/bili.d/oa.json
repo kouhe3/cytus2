@@ -17,38 +17,31 @@
       "params": {
         "所属物品": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "文件名": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "描述": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "条件": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "剧情排序": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "任务排序": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "内容": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         }
       },
       "fields": {
@@ -68,9 +61,13 @@
         "field": "title",
         "fallback": "none",
         "disambiguator": "（{game_id}）"
-      },
-      "preserve_unknown_params": true,
-      "observed_unknown_params": []
+      }
     }
+  },
+  "body_templates": {
+    "oa_dialogue": "Oa/对话",
+    "oa_sound": "Oa/声音",
+    "mail_header": "邮件抬头",
+    "booklet": "小册子"
   }
 }

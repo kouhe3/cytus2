@@ -13,7 +13,15 @@ from typing import Any, Iterable
 
 from ...keys import DIFFICULTIES
 from ..db import Database
-from ..model import SEMANTIC_TEMPLATE, Conflict, Field, PageModel, Section, Text
+from ..model import (
+    SEMANTIC_TEMPLATE,
+    Conflict,
+    Field,
+    PageModel,
+    Section,
+    Text,
+    provenance_of,
+)
 from ._content import (
     disambiguate_titles,
     display_name,
@@ -108,10 +116,11 @@ def build(db: Database) -> list[PageModel]:
             conflicts.append(Conflict("missing_content", record["game_id"]))
 
         category = one_line(record.get("category"))
-        if category:
-            fields.append(Field("ver", Text.of(category)))
-        else:
-            omitted["ver"] = "category_missing"
+        # ``ver`` is always emitted, even when the APK has no Category: the
+        # template's default is the malformed literal ``|``, and the profile
+        # marks the parameter ``allow_empty`` so an explicit empty value wins.
+        fields.append(Field("ver", Text.of(category)))
+        if not category:
             conflicts.append(Conflict("missing_ver", record["game_id"]))
 
         models.append(
@@ -122,6 +131,7 @@ def build(db: Database) -> list[PageModel]:
                 categories=("os",),
                 omitted=omitted,
                 conflicts=tuple(_dedupe(conflicts)),
+                provenance=provenance_of(record),
             )
         )
     disambiguate_titles(models)

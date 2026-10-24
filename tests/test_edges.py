@@ -17,6 +17,7 @@ REQUIRED_RELATIONS = {
     "belongs_to_pack",
     "appears_in_gallery",
     "same_stage",
+    "has_reply",
 }
 
 
@@ -171,6 +172,17 @@ def test_story_events_share_stage_with_resolved_boss_stages(edges: list[dict]) -
         "boss_stage/ending03"
     }
     assert edges_from(edges, "story_node/story_vanessa04", "same_stage") == set()
+
+
+def test_im_replies_point_at_their_post(edges: list[dict]) -> None:
+    assert edges_from(edges, "im_reply/P0101#1", "has_reply") == {"im/P0101"}
+    assert edges_from(edges, "im_reply/P0101#2", "has_reply") == {"im/P0101"}
+    # Replies have no outgoing relation other than their post.
+    assert {
+        edge["relation"]
+        for edge in edges
+        if edge["source"].startswith("im_reply/")
+    } == {"has_reply"}
 
 
 # ------------------------------------------------------------- identity rules

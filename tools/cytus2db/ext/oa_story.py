@@ -29,6 +29,7 @@ from typing import Any, Iterable
 
 from ..errors import BuildError, InputError
 from ..keys import DIFFICULTIES, chart_key, entity_key
+from ..provenance import manual, sort_record, text_asset
 from ..sources import LANGS, InputSource, Table
 
 OA_TABLE = ("oasystemdata", "oa_system_data")
@@ -83,26 +84,12 @@ _STORY_CONST_KEYS = (
 
 
 # --------------------------------------------------------------------- helpers
-def _text_asset(locator: str, note: str | None = None) -> dict[str, str]:
-    entry = {"kind": "text_asset", "locator": locator}
-    if note:
-        entry["note"] = note
-    return entry
+_text_asset = text_asset
+_sorted_provenance = sort_record
 
 
 def _manual(note: str) -> dict[str, str]:
-    return {"kind": "manual", "locator": OVERRIDE_LOCATOR, "note": note}
-
-
-def _sorted_provenance(record: dict[str, Any]) -> None:
-    record["provenance"] = sorted(
-        record["provenance"],
-        key=lambda entry: (
-            entry.get("kind", ""),
-            entry.get("locator", ""),
-            entry.get("note", ""),
-        ),
-    )
+    return manual(OVERRIDE_LOCATOR, note)
 
 
 def _unique(values: Iterable[Any]) -> list[Any]:

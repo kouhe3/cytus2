@@ -71,7 +71,7 @@ def test_chart_difficulty_enum_is_enforced() -> None:
     assert errors
 
 
-def test_pack_descriptions_accept_arbitrary_language_keys() -> None:
+def test_pack_text_lives_behind_text_ref() -> None:
     validator = SchemaValidator()
     record = {
         "id": "pack/alpha001",
@@ -83,11 +83,13 @@ def test_pack_descriptions_accept_arbitrary_language_keys() -> None:
         "is_iap": False,
         "has_im": True,
         "price": "",
-        "descriptions": {"zh-TW": "x", "zh-CN": "y"},
+        "text_ref": "pack/alpha001",
         "provenance": [],
     }
     assert validator.errors("pack", record) == []
-    assert validator.errors("pack", {**record, "descriptions": {"en": 1}})
+    # Inline localized text is rejected: it belongs in build/text/packs.jsonl.
+    assert validator.errors("pack", {**record, "descriptions": {"en": "x"}})
+    assert validator.errors("pack", {**record, "text_ref": "alpha001"})
 
 
 def test_unsupported_schema_keyword_is_a_hard_error(tmp_path: Path) -> None:

@@ -228,6 +228,7 @@ function TitleClip({ clip }: { clip: string }) {
 }
 
 export function TitlesView({ db }: { db: Database }) {
+  const { lang } = useLanguage();
   const titles = titleEntities(db);
   const clips = titles.reduce((sum, title) => sum + title.video_clips.length, 0);
 
@@ -257,7 +258,9 @@ export function TitlesView({ db }: { db: Database }) {
             >
               <header className="title-head">
                 <span className="title-number mono">Type {title.number}</span>
-                <h2>{title.name}</h2>
+                <div className="title-name" data-testid="title-name">
+                  <TextBody textRef={title.text_ref} lang={lang} />
+                </div>
                 <div className="title-conditions" data-testid="title-conditions">
                   <span className="muted">Unlock</span>
                   {title.unlock_conditions.length === 0 ? (

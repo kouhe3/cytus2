@@ -231,7 +231,12 @@ export function buildDatabase(
       charts.push(record);
     }
   }
-  const chartIds = new Set(charts.map((chart) => chart.id));
+  // edges.py emits ``unlocks_chart`` only for charts that need an unlock
+  // (owning the song already grants the rest), so chart references follow the
+  // same rule here.
+  const chartIds = new Set(
+    charts.filter((chart) => chart.need_unlock).map((chart) => chart.id),
+  );
   const chartsBySong = new Map<string, ChartEntity[]>();
   for (const chart of charts) {
     const list = chartsBySong.get(chart.song_id);

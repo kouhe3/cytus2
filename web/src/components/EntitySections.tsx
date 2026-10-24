@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ConditionList, LevelLockList } from "./Conditions";
 import { EntityLink, EntityList } from "./EntityLink";
 import { Fact, Facts } from "./Facts";
+import { TextBody } from "./TextBody";
 import { MediaKindBadge, StoryKindBadge } from "./ui";
 import {
   isBossStage,
@@ -19,7 +20,6 @@ import {
   entityTitle,
 } from "../data/selectors";
 import { oaGroups } from "../data/collections";
-import { pickLocalized } from "../data/language";
 import type {
   BossStageEntity,
   CapsoShopItemEntity,
@@ -759,21 +759,11 @@ export function SubtitleLineDetails({
   entity: SubtitleLineEntity;
   lang: Lang;
 }) {
-  const picked = pickLocalized(entity.text, lang);
   const voice = db.entityById.get(entity.voice_asset_id);
   return (
     <>
       <Section title="Subtitle line" testId="subtitle-detail">
-        {picked.fallback || !picked.value ? (
-          <div className="fallback-note" data-testid="language-fallback">
-            {picked.value
-              ? `${lang} missing · showing ${picked.lang}`
-              : `No text in ${lang} or any fallback language`}
-          </div>
-        ) : null}
-        <blockquote className="subtitle-quote" data-lang={picked.lang ?? "none"}>
-          {picked.value || "—"}
-        </blockquote>
+        <TextBody textRef={entity.text_ref} lang={lang} />
         <Facts>
           <Fact label="Character">{entity.character || "—"}</Fact>
           <Fact label="Game ID">

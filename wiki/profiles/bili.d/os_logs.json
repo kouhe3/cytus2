@@ -22,57 +22,47 @@
         "ver": {
           "required": false,
           "conditional": false,
-          "default": "|"
+          "allow_empty": true
         },
         "文件名": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "文件类型": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "剧情排序": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "所属角色": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "解锁谱面": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "解锁曲目": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "指令码": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "文件ID": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "时间": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "内容": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         }
       },
       "fields": {
@@ -97,9 +87,13 @@
         "field": "title",
         "fallback": "none",
         "disambiguator": "（{game_id}）"
-      },
-      "preserve_unknown_params": true,
-      "observed_unknown_params": []
+      }
     }
+  },
+  "body_templates": {
+    "os_dialogue": "Os/对话",
+    "os_sound": "Os/声音",
+    "mail_header": "邮件抬头",
+    "booklet": "小册子"
   }
 }

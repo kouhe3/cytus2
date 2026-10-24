@@ -42,6 +42,7 @@ const SEARCHABLE_TEXT_TYPES: Record<string, true> = {
   im_post: true,
   os_log: true,
   oa_document: true,
+  subtitle_line: true,
 };
 
 const SEARCH_GROUPS: readonly { type: string; label: string }[] = [
@@ -51,7 +52,14 @@ const SEARCH_GROUPS: readonly { type: string; label: string }[] = [
   { type: "subtitle_line", label: "Subtitle lines" },
 ];
 
-const TEXT_FILES = ["im_os.jsonl", "oa.jsonl", "story.jsonl", "extras.jsonl"] as const;
+const TEXT_FILES = [
+  "im_os.jsonl",
+  "oa.jsonl",
+  "story.jsonl",
+  "extras.jsonl",
+  "packs.jsonl",
+  "subtitles.jsonl",
+] as const;
 
 const MEDIA_PREFIX = "/media/";
 
@@ -442,19 +450,11 @@ class TextStore {
 }
 
 /* ------------------------------------------------------ projection store */
-interface SubtitleDoc {
-  readonly id: string;
-  readonly character: string;
-  readonly gameId: string;
-  readonly langs: Map<Lang, string>;
-}
-
 class ProjectionStore {
   private readonly file: string;
   private signature = "\u0000";
   private loading: Promise<void> | null = null;
   private entities = new Map<string, Json>();
-  private subtitles: SubtitleDoc[] = [];
 
   constructor(file: string) {
     this.file = file;
@@ -488,7 +488,6 @@ class ProjectionStore {
 
   private async build(): Promise<void> {
     this.entities = new Map();
-    this.subtitles = [];
     if (!fs.existsSync(this.file)) {
       return;
     }
@@ -516,30 +515,8 @@ class ProjectionStore {
           continue;
         }
         this.entities.set(id, record);
-        if (type === "subtitle_line") {
-          this.subtitles.push(this.subtitleDoc(record, id));
-        }
       }
     }
-  }
-
-  private subtitleDoc(record: Json, id: string): SubtitleDoc {
-    const langs = new Map<Lang, string>();
-    const text = record["text"];
-    if (isJson(text)) {
-      for (const lang of LANGUAGES) {
-        const value = text[lang];
-        if (typeof value === "string" && value.trim()) {
-          langs.set(lang, value);
-        }
-      }
-    }
-    return {
-      id,
-      character: stringValue(record["character"]),
-      gameId: stringValue(record["game_id"]),
-      langs,
-    };
   }
 
   private localizedTitle(record: Json, field: string, lang: Lang): string {
@@ -610,44 +587,6 @@ class ProjectionStore {
     }
     const value = record["game_id"];
     return typeof value === "string" ? value : "";
-  }
-
-  subtitleSearch(
-    matchers: readonly TextMatcher[],
-    tokens: readonly string[],
-    lang: Lang,
-  ): SearchRow[] {
-    const rows: SearchRow[] = [];
-    for (const doc of this.subtitles) {
-      let langCode: Lang | null = null;
-      let body: string | undefined;
-      for (const code of [lang, ...FALLBACK_ORDER]) {
-        const value = doc.langs.get(code);
-        if (value) {
-          langCode = code;
-          body = value;
-          break;
-        }
-      }
-      if (!body || !langCode) {
-        continue;
-      }
-      const plain = stripMarkup(body);
-      const lower = plain.toLowerCase();
-      if (!matchers.every((matches) => matches(lower))) {
-        continue;
-      }
-      rows.push({
-        id: doc.id,
-        ref: doc.id,
-        type: "subtitle_line",
-        lang: langCode,
-        fallback: langCode !== lang,
-        snippet: matchSnippet(plain, tokens),
-        title: `${doc.character || "Voice"} · ${doc.gameId}`,
-      });
-    }
-    return rows;
   }
 
   titleSearch(
@@ -805,10 +744,7 @@ function searchResponse(
     return { query, lang, groups: [], total: 0 };
   }
   const matchers = tokens.map(matcherFor);
-  const textRows = [
-    ...store.search(matchers, tokens, lang),
-    ...projection.subtitleSearch(matchers, tokens, lang),
-  ];
+  const textRows = store.search(matchers, tokens, lang);
   const covered = new Set(textRows.map((row) => row.ref));
   const rows = [
     ...textRows,

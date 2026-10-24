@@ -8,6 +8,7 @@ profile decide content; this module just coordinates files and the report.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path
 from urllib.parse import quote
@@ -29,6 +30,10 @@ from .patches import (
     plan_patches,
 )
 from .titles import TitleResolver
+
+_FILE_LINK_RE = re.compile(
+    r"\[\[\s*(?:File|Image|文件|图像)\s*:\s*([^|\]\n]+)", re.IGNORECASE
+)
 
 
 def build_page_models(db: Database) -> list[PageModel]:
@@ -63,7 +68,10 @@ def render_wiki(
     plan: dict[str, PatchEntry] | None = None
     resolver: TitleResolver | None = None
     if snapshot_dir is not None:
-        snapshot = load_snapshot(snapshot_dir)
+        # Patch diffing compares against every existing page's parameter
+        # block, so it needs the local pages.json cache; titles alone would
+        # misreport every page as unmatched.
+        snapshot = load_snapshot(snapshot_dir, require_pages=True)
         plan = plan_patches([patch_page(page) for page in rendered], snapshot)
         # The first pass supplies the page identities.  Matching maps every
         # generated title to the snapshot spelling; rendering again with that
@@ -145,12 +153,20 @@ def render_wiki(
     for page in rendered:
         counts[page.model.page_type] = counts.get(page.model.page_type, 0) + 1
 
+    uploads = _build_uploads(rendered, snapshot if snapshot_dir is not None else None)
+    (out / "uploads.json").write_text(
+        json.dumps(uploads, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
     report = {
         "profile": Path(profile_path).as_posix(),
         "db": Path(db_dir).as_posix(),
         "page_count": len(rendered),
         "counts": dict(sorted(counts.items())),
         "pages": entries,
+        "uploads": uploads["summary"],
     }
     result: dict[str, object] = {
         "page_count": len(rendered),
@@ -200,6 +216,61 @@ def render_wiki(
         newline="\n",
     )
     return result
+
+
+def _build_uploads(
+    rendered: list[RenderedPage], snapshot: object | None
+) -> dict[str, object]:
+    """Collect ``[[File:…]]`` targets into ``uploads.json``.
+
+    The manifest is the upload worklist: one entry per referenced file, with
+    the site's existing spelling when the local snapshot already shows that
+    file and ``status="missing"`` otherwise.  Names in file links are
+    MediaWiki titles, so matching uses the shared title key.
+    """
+    from .titles import normalise_title
+
+    references: dict[str, set[str]] = {}
+    spelling: dict[str, str] = {}
+    for page in rendered:
+        for name in _FILE_LINK_RE.findall(page.wikitext):
+            clean = " ".join(name.split())
+            if not clean:
+                continue
+            key = normalise_title(clean)
+            references.setdefault(key, set()).add(page.model.entity_id)
+            spelling.setdefault(key, clean)
+
+    site_names: dict[str, str] = {}
+    for snapshot_page in getattr(snapshot, "pages", ()) or ():
+        for value in snapshot_page.params.values():
+            for name in _FILE_LINK_RE.findall(value):
+                clean = " ".join(name.split())
+                if clean:
+                    site_names.setdefault(normalise_title(clean), clean)
+
+    files = []
+    for key in sorted(references):
+        site_name = site_names.get(key)
+        files.append(
+            {
+                "name": spelling[key],
+                "site_name": site_name,
+                "status": "existing" if site_name is not None else "missing",
+                "references": sorted(references[key]),
+            }
+        )
+    missing = sum(1 for item in files if item["status"] == "missing")
+    return {
+        "schema_version": 1,
+        "kind": "wiki_uploads",
+        "files": files,
+        "summary": {
+            "files": len(files),
+            "existing": len(files) - missing,
+            "missing": missing,
+        },
+    }
 
 
 def _unresolved_links(rendered: list[RenderedPage]) -> list[dict[str, object]]:

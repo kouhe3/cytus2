@@ -5,7 +5,8 @@
   "notes": {
     "semantics": "required = source uses {{{name}}} with no default; conditional = template guards the parameter with #if and also has a default; optional = every occurrence has a default.",
     "unknown_params": "Existing 歌曲 pages use historical keys outside the 37 template parameters; parameter patches must preserve them.",
-    "drop_rating": "The template defines six *Rating parameters (Easy/Hard/Chaos/Glitch/Crash/Dream). Drop charts have no parameter and must be reported, never emitted."
+    "drop_rating": "The template defines six *Rating parameters (Easy/Hard/Chaos/Glitch/Crash/Dream). Drop charts have no parameter and must be reported, never emitted.",
+    "body_templates": "Helper templates page bodies may invoke. render_page rejects an undeclared {{name}} in any parameter value."
   },
   "categories": {
     "song": "分类:歌曲"
@@ -55,188 +56,151 @@
       "params": {
         "歌曲排序": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "曲名": {
           "required": false,
-          "conditional": true,
-          "default": ""
+          "conditional": true
         },
         "作曲": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "作词": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "演唱": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "编曲": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "谱师": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "曲绘": {
           "required": false,
-          "conditional": true,
-          "default": ""
+          "conditional": true
         },
         "曲绘版本": {
           "required": false,
-          "conditional": true,
-          "default": ""
+          "conditional": true
         },
         "版本": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "曲绘备注": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "曲绘文件": {
           "required": false,
-          "conditional": true,
-          "default": ""
+          "conditional": true
         },
         "所属角色": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "曲师": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "曲师备注": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "所属曲包": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "BPM": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "时长": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "EasyRating": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "HardRating": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "ChaosRating": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "GlitchRating": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "CrashRating": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "DreamRating": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "是否被移除": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "获取方式": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "EasyNote": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "HardNote": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "ChaosNote": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "GlitchNote": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "CrashNote": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "DreamNote": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "歌词": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "轶事": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "其他": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "相关图片": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         },
         "注释与外部链接": {
           "required": false,
-          "conditional": false,
-          "default": ""
+          "conditional": false
         }
       },
       "fields": {
@@ -275,5 +239,9 @@
         "歌曲试听"
       ]
     }
+  },
+  "provenance_section": {
+    "enabled": true,
+    "heading": "数据来源"
   }
 }

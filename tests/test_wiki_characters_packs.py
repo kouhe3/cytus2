@@ -26,6 +26,12 @@ CHARACTER_PAGES = {
         "|获取方式=免费\n"
         "}}\n"
         "[[分类:角色]]\n"
+        "\n"
+        "== 数据来源 ==\n"
+        "* 游戏数据：<code>text/bg_movie_info_data[0]</code>\n"
+        "* 游戏数据：<code>text/exptable/exp_data.exp_table_list[0].table</code>\n"
+        "* 游戏数据：<code>text/gallerydata/folder.AvatarId</code>\n"
+        "* 游戏数据：<code>text/song_pack_data/offline_song_pack_list[0]</code>\n"
     ),
     "beta001": (
         "{{角色\n"
@@ -38,6 +44,12 @@ CHARACTER_PAGES = {
         "|获取方式=USD 1.99\n"
         "}}\n"
         "[[分类:角色]]\n"
+        "\n"
+        "== 数据来源 ==\n"
+        "* 游戏数据：<code>text/bg_movie_info_data[1]</code>\n"
+        "* 游戏数据：<code>text/exptable/exp_data.exp_table_list[1].table</code>\n"
+        "* 游戏数据：<code>text/gallerydata/folder.AvatarId</code>\n"
+        "* 游戏数据：<code>text/song_pack_data/offline_song_pack_list[1]</code>\n"
     ),
 }
 
@@ -49,6 +61,9 @@ PACK_PAGES = {
         "|属性=alpha\n"
         "}}\n"
         "[[分类:曲包]]\n"
+        "\n"
+        "== 数据来源 ==\n"
+        "* 游戏数据：<code>text/song_pack_data/offline_song_pack_list[0]</code>\n"
     ),
     "beta001": (
         "{{曲包\n"
@@ -57,6 +72,9 @@ PACK_PAGES = {
         "|属性=beta\n"
         "}}\n"
         "[[分类:曲包]]\n"
+        "\n"
+        "== 数据来源 ==\n"
+        "* 游戏数据：<code>text/song_pack_data/offline_song_pack_list[1]</code>\n"
     ),
 }
 

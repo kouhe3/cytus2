@@ -392,6 +392,26 @@ def test_links_to_redirects_resolve_and_ignored_links_are_counted(
         page_text,
         emitted=("角色名", "拥有系统"),
     )
+    (wiki / "uploads.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "kind": "wiki_uploads",
+                "files": [
+                    {
+                        "name": "Alpha.png",
+                        "site_name": None,
+                        "status": "missing",
+                        "references": ["character/alpha_new"],
+                    }
+                ],
+                "summary": {"files": 1, "existing": 0, "missing": 1},
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     result = run_verify(wiki, snapshot=snapshot)
 
@@ -403,6 +423,9 @@ def test_links_to_redirects_resolve_and_ignored_links_are_counted(
     assert report["counts"]["ignored_category_links"] == 2
     assert report["counts"]["ignored_external_links"] == 1
     assert report["counts"]["ignored_anchor_links"] == 1
+    assert report["counts"]["upload_files"] == 1
+    assert report["counts"]["upload_missing"] == 1
+    assert report["checks"]["uploads"] is True
 
 
 def test_conditional_parameter_omission_reason_is_checked(tmp_path: Path) -> None:
@@ -826,3 +849,39 @@ def test_two_full_pages_with_the_same_title_key_fail(tmp_path: Path) -> None:
         for error in page["checks"]["page_output"]["errors"]
     ]
     assert any("shared by more than one page" in error for error in errors)
+
+
+def test_titles_only_snapshot_degrades_clearly(tmp_path: Path) -> None:
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    shutil.copyfile(SNAPSHOT / "titles.json", snapshot / "titles.json")
+
+    wiki = single_page_wiki(
+        tmp_path,
+        CHARACTER_PAGE,
+        emitted=("角色名", "拥有系统"),
+    )
+
+    result = run_verify(wiki, snapshot=snapshot)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = read_report(wiki)
+    assert report["ok"] is True
+    assert report["report_check"]["details"]["snapshot_pages_available"] is False
+
+
+def test_missing_upload_manifest_fails(tmp_path: Path) -> None:
+    page_text = CHARACTER_PAGE + "[[File:not-listed.png]]\n"
+    wiki = single_page_wiki(
+        tmp_path,
+        page_text,
+        emitted=("角色名", "拥有系统"),
+    )
+
+    result = run_verify(wiki)
+
+    assert result.returncode != 0
+    assert "upload manifest not found" in result.stdout
+    report = read_report(wiki)
+    assert report["checks"]["uploads"] is False
+    assert "not-listed.png" in report["upload_check"]["details"]["missing_from_manifest"]

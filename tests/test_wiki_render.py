@@ -28,6 +28,10 @@ GOLDEN_PAGES = {
         "GLITCH 难度：通过抽奖获得解锁。\n"
         "}}\n"
         "[[分类:歌曲]]\n"
+        "\n"
+        "== 数据来源 ==\n"
+        "* 游戏数据：<code>text/song_pack_data/offline_song_pack_list[0]"
+        ".song_info_list[0]</code>\n"
     ),
     # OS + story unlocks on the same song.
     "alpha001_001": (
@@ -47,6 +51,10 @@ GOLDEN_PAGES = {
         "CRASH 难度：完成剧情 story_alpha01 解锁。\n"
         "}}\n"
         "[[分类:歌曲]]\n"
+        "\n"
+        "== 数据来源 ==\n"
+        "* 游戏数据：<code>text/song_pack_data/offline_song_pack_list[0]"
+        ".song_info_list[1]</code>\n"
     ),
     # Default pack unlock; the Dream/Drop charts have no unlock edges.
     "beta001_000": (
@@ -59,6 +67,10 @@ GOLDEN_PAGES = {
         "|DreamRating=12\n"
         "}}\n"
         "[[分类:歌曲]]\n"
+        "\n"
+        "== 数据来源 ==\n"
+        "* 游戏数据：<code>text/song_pack_data/offline_song_pack_list[1]"
+        ".song_info_list[0]</code>\n"
     ),
 }
 
@@ -193,7 +205,18 @@ def test_every_emitted_parameter_exists_in_the_profile_and_conditionals_hold(
     conditional = {
         name for name, meta in template["params"].items() if meta["conditional"]
     }
-    observed_unknown = set(profile["pages"]["song"]["observed_unknown_params"])
+    # Historical keys existing site pages carry; the renderer must never emit
+    # them as template parameters.
+    observed_unknown = {
+        "1",
+        "2",
+        "3",
+        "中文翻译",
+        "原文",
+        "日文",
+        "曲师家",
+        "歌曲试听",
+    }
 
     for page in read_report(wiki_output)["pages"]:
         page_template = profile["templates"][page["template"]]
@@ -244,3 +267,76 @@ def test_parameter_not_in_the_profile_fails_the_build(
     )
     assert result.returncode == 1
     assert "unknown parameter" in result.stderr
+
+
+# ------------------------------------------------------- provenance and dialect
+def test_provenance_section_is_emitted_and_opt_out(
+    wiki_output: Path,
+) -> None:
+    from dataclasses import replace
+
+    from cytus2db.errors import BuildError
+    from cytus2db.provenance import text_asset
+    from cytus2db.wiki.bili import load_profile, render_page, TitleMatch
+    from cytus2db.wiki.model import (
+        SEMANTIC_TEMPLATE,
+        Field,
+        PageModel,
+        Section,
+        Text,
+    )
+
+    profile = load_profile(ROOT / "wiki" / "profiles" / "bili.json")
+    model = PageModel(
+        entity_id="song/alpha001_000",
+        page_type="song",
+        sections=(Section(SEMANTIC_TEMPLATE, (Field("title", Text.of("First")),)),),
+        categories=("song",),
+        provenance=(text_asset("text/song_pack_data/offline_song_pack_list[0]"),),
+    )
+    rendered = render_page(model, profile, TitleMatch("First", "generated"))
+    assert "== 数据来源 ==" in rendered.wikitext
+    assert (
+        "<code>text/song_pack_data/offline_song_pack_list[0]</code>"
+        in rendered.wikitext
+    )
+
+    disabled = replace(
+        profile,
+        provenance_section=replace(profile.provenance_section, enabled=False),
+    )
+    off = render_page(model, disabled, TitleMatch("First", "generated"))
+    assert "数据来源" not in off.wikitext
+
+    manual_model = PageModel(
+        entity_id="song/alpha001_000",
+        page_type="song",
+        sections=model.sections,
+        categories=("song",),
+        provenance=(
+            {
+                "kind": "manual",
+                "locator": "cytus2db/wiki/overrides.py:EXAMPLE",
+                "note": "manual fact",
+            },
+        ),
+    )
+    manual = render_page(manual_model, profile, TitleMatch("First", "generated"))
+    assert "<ref>cytus2db/wiki/overrides.py:EXAMPLE：manual fact</ref>" in manual.wikitext
+    # Only manual/external facts are cited.
+    assert rendered.wikitext.count("<ref>") == 0
+
+    undeclared = PageModel(
+        entity_id="song/alpha001_000",
+        page_type="song",
+        sections=(
+            Section(
+                SEMANTIC_TEMPLATE,
+                (Field("title", Text.of("{{not-in-profile|x}}")),),
+            ),
+        ),
+        categories=("song",),
+        provenance=model.provenance,
+    )
+    with pytest.raises(BuildError, match="body_templates"):
+        render_page(undeclared, profile, TitleMatch("First", "generated"))

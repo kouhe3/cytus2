@@ -182,7 +182,7 @@ export function storyEntries(
       continue;
     }
     const row = db.readingOrderByEntity.get(node.id) ?? null;
-    if (sort === "level" && row?.chapter === "test01") {
+    if (sort === "level" && row?.chapter_staged) {
       continue;
     }
     const levelOrder = row?.order ?? 100000 + entries.length;

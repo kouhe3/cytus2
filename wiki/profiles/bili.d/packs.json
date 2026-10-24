@@ -12,9 +12,18 @@
         "属性"
       ],
       "params": {
-        "曲包名": {"required": false, "conditional": false, "default": ""},
-        "所属角色": {"required": false, "conditional": false, "default": ""},
-        "属性": {"required": false, "conditional": false, "default": ""}
+        "曲包名": {
+          "required": false,
+          "conditional": false
+        },
+        "所属角色": {
+          "required": false,
+          "conditional": false
+        },
+        "属性": {
+          "required": false,
+          "conditional": false
+        }
       },
       "fields": {
         "pack_name": "曲包名",
@@ -30,9 +39,7 @@
         "field": "page_title",
         "fallback": "game_id",
         "disambiguator": "（{game_id}）"
-      },
-      "preserve_unknown_params": true,
-      "observed_unknown_params": []
+      }
     }
   }
 }

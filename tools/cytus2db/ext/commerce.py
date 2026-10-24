@@ -23,6 +23,7 @@ from urllib.parse import quote
 from ..errors import BuildError, InputError
 from ..keys import chart_key, entity_key, song_key
 from ..sources import InputSource, Table
+from ..provenance import text_asset
 
 # Reward/item ids suffix difficulty indices; the mapping is verified by every
 # expanded chart key resolving in song_pack_data.
@@ -30,11 +31,7 @@ _DIFFICULTIES = ("Easy", "Hard", "Chaos", "Glitch")
 _CHART_ITEM_RE = re.compile(r"^(?P<song>.+)_(?P<indices>\d+(?:,\d+)*)$")
 
 
-def _text_asset(locator: str, note: str | None = None) -> dict[str, str]:
-    entry = {"kind": "text_asset", "locator": locator}
-    if note is not None:
-        entry["note"] = note
-    return entry
+_text_asset = text_asset
 
 
 def _required(raw: dict[str, Any], key: str, where: str) -> Any:

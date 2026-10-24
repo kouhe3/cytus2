@@ -367,7 +367,7 @@ export interface SubtitleLineEntity extends BaseEntity {
   readonly game_id: string;
   readonly character: string;
   readonly voice_asset_id: string;
-  readonly text: LocalizedText;
+  readonly text_ref: string;
   readonly provenance: ProvenanceEntry[];
 }
 

@@ -1,9 +1,12 @@
 import { Link } from "react-router-dom";
 import { capsoGroups, gachaGroups, shopBundles } from "../data/collections";
+import { useI18n } from "../data/i18n";
+import { formatUnit } from "../data/messages";
 import { entityHref } from "../data/selectors";
 import type { Database } from "../types";
 
 export function ShopIndexView({ db }: { db: Database }) {
+  const i18n = useI18n();
   const packs = capsoGroups(db);
   const gacha = gachaGroups(db);
   const bundles = shopBundles(db);
@@ -14,22 +17,22 @@ export function ShopIndexView({ db }: { db: Database }) {
     <>
       <main className="content">
         <header className="page-head">
-          <p className="eyebrow">Commerce</p>
-          <h1>Shop</h1>
-          <p className="lede">
-            CAPSO shop packs, the gacha machine and IAP bundles. Each product keeps
-            its own entity shape; the Black Market is a flag on a bundle, not a
-            separate store.
-          </p>
+          <p className="eyebrow">{i18n.t("shop.eyebrow")}</p>
+          <h1>{i18n.t("shop.title")}</h1>
+          <p className="lede">{i18n.t("shop.lede")}</p>
           <div className="page-stats" data-testid="shop-stats">
-            <strong>{packs.length}</strong> CAPSO packs · {packItems} items ·{" "}
-            {gacha.length} gacha machine · {rewards} rewards · {bundles.length}{" "}
-            bundles
+            {i18n.t("shop.stats", {
+              packs: formatUnit(i18n, "packs", packs.length),
+              items: formatUnit(i18n, "items", packItems),
+              machines: formatUnit(i18n, "machines", gacha.length),
+              rewards: formatUnit(i18n, "rewards", rewards),
+              bundles: formatUnit(i18n, "bundles", bundles.length),
+            })}
           </div>
         </header>
 
         <section className="detail-section" data-testid="shop-capso-packs">
-          <h2>CAPSO shop packs</h2>
+          <h2>{i18n.t("shop.capsoPacks")}</h2>
           <div className="card-grid">
             {packs.map((group) => (
               <Link
@@ -43,8 +46,11 @@ export function ShopIndexView({ db }: { db: Database }) {
                   {group.pack.name.replace(/\s+/g, " ").trim()}
                 </span>
                 <span className="collection-meta">
-                  {group.pack.default_price_string || "—"} ·{" "}
-                  {group.pack.capso_price} CAPSO · {group.items.length} items
+                  {i18n.t("shop.packMeta", {
+                    price: group.pack.default_price_string || "—",
+                    capso: i18n.formatNumber(group.pack.capso_price),
+                    items: formatUnit(i18n, "items", group.items.length),
+                  })}
                 </span>
                 <span className="collection-id">
                   <code>{group.pack.game_id}</code>
@@ -55,7 +61,7 @@ export function ShopIndexView({ db }: { db: Database }) {
         </section>
 
         <section className="detail-section" data-testid="shop-gacha">
-          <h2>Gacha</h2>
+          <h2>{i18n.t("shop.gacha")}</h2>
           <div className="card-grid">
             {gacha.map((group) => (
               <Link
@@ -67,8 +73,11 @@ export function ShopIndexView({ db }: { db: Database }) {
               >
                 <span className="collection-title">{group.machine.name}</span>
                 <span className="collection-meta">
-                  {group.machine.default_price || "—"} · {group.rewards.length}{" "}
-                  rewards · total weight {group.totalWeight}
+                  {i18n.t("shop.gachaMeta", {
+                    price: group.machine.default_price || "—",
+                    rewards: formatUnit(i18n, "rewards", group.rewards.length),
+                    weight: i18n.formatNumber(group.totalWeight),
+                  })}
                 </span>
                 <span className="collection-id">
                   <code>{group.machine.game_id}</code>
@@ -79,7 +88,7 @@ export function ShopIndexView({ db }: { db: Database }) {
         </section>
 
         <section className="detail-section" data-testid="shop-bundles">
-          <h2>Shop bundles</h2>
+          <h2>{i18n.t("shop.bundles")}</h2>
           <div className="card-grid">
             {bundles.map((bundle) => (
               <Link
@@ -92,12 +101,14 @@ export function ShopIndexView({ db }: { db: Database }) {
               >
                 <span className="collection-title">{bundle.game_id}</span>
                 <span className="collection-meta">
-                  {bundle.items.length} items · unlock at Lv{" "}
-                  {bundle.trigger_free_character_level + 1}
+                  {i18n.t("shop.bundleMeta", {
+                    items: formatUnit(i18n, "items", bundle.items.length),
+                    level: bundle.trigger_free_character_level + 1,
+                  })}
                 </span>
                 {bundle.black_market ? (
                   <span className="black-market" data-testid="black-market-badge">
-                    Black Market
+                    {i18n.t("value.blackMarket")}
                   </span>
                 ) : null}
                 <span className="collection-id">
@@ -109,28 +120,20 @@ export function ShopIndexView({ db }: { db: Database }) {
         </section>
       </main>
 
-      <aside className="context" aria-label="Shop details">
+      <aside className="context" aria-label={i18n.t("shop.detailsAria")}>
         <section className="panel">
-          <h2>Models</h2>
-          <p>
-            <strong>CAPSO pack</strong> holds chart or illustration items.
-          </p>
-          <p>
-            <strong>Gacha machine</strong> lists weighted rewards; hidden rewards
-            are marked secret.
-          </p>
-          <p>
-            <strong>Shop bundle</strong> sells characters or expansion packs; the
-            Black Market badge marks the sale state.
-          </p>
+          <h2>{i18n.t("shop.models")}</h2>
+          <p>{i18n.t("shop.capsoModel")}</p>
+          <p>{i18n.t("shop.gachaModel")}</p>
+          <p>{i18n.t("shop.bundleModel")}</p>
         </section>
         <section className="panel">
-          <h2>Reward kinds</h2>
+          <h2>{i18n.t("shop.rewardKinds")}</h2>
           <ul className="plain-list">
-            <li>Charts · unlock chart entities</li>
-            <li>Songs · whole songs</li>
-            <li>Illustrations · character costumes</li>
-            <li>Tap FX · cosmetic effects</li>
+            <li>{i18n.t("shop.rewardCharts")}</li>
+            <li>{i18n.t("shop.rewardSongs")}</li>
+            <li>{i18n.t("shop.rewardIllustrations")}</li>
+            <li>{i18n.t("shop.rewardTapFx")}</li>
           </ul>
         </section>
       </aside>

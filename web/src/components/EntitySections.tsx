@@ -13,6 +13,7 @@ import {
   isOaDocument,
   isStoryNode,
 } from "../data/database";
+import { useI18n } from "../data/i18n";
 import {
   bossStageForGalleryItem,
   bundleItemEntity,
@@ -66,8 +67,9 @@ function EntityById({
   id: string | null | undefined;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   if (!id) {
-    return <span className="muted">None</span>;
+    return <span className="muted">{i18n.t("common.none")}</span>;
   }
   const entity = db.entityById.get(id);
   if (!entity) {
@@ -75,14 +77,15 @@ function EntityById({
   }
   return (
     <Link to={entityHref(id)} className="inline-link">
-      {entityTitle(db, entity, lang)}
+      {entityTitle(db, entity, lang, i18n)}
     </Link>
   );
 }
 
 function StringChips({ values }: { values: readonly string[] }) {
+  const i18n = useI18n();
   if (values.length === 0) {
-    return <span className="muted">None</span>;
+    return <span className="muted">{i18n.t("common.none")}</span>;
   }
   return (
     <span className="chip-row">
@@ -105,50 +108,56 @@ export function OaCharacterDetails({
   entity: OaCharacterEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   const group = oaGroups(db).find((entry) => entry.oa.id === entity.id);
   if (!group) {
     return null;
   }
   return (
     <>
-      <Section title="OA archive" testId="oa-character-summary">
+      <Section title={i18n.t("section.oaArchive")} testId="oa-character-summary">
         <Facts>
-          <Fact label="Character">
+          <Fact label={i18n.t("fact.character")}>
             <EntityById db={db} id={entity.character_id} lang={lang} />
           </Fact>
-          <Fact label="Gallery folder">
+          <Fact label={i18n.t("fact.galleryFolder")}>
             <EntityById db={db} id={entity.gallery_folder_id} lang={lang} />
           </Fact>
-          <Fact label="Objects">{group.objects.length}</Fact>
-          <Fact label="Documents">{group.documents.length}</Fact>
-          <Fact label="Descriptions">{group.descriptions.length}</Fact>
+          <Fact label={i18n.t("fact.objects")}>{group.objects.length}</Fact>
+          <Fact label={i18n.t("fact.documents")}>{group.documents.length}</Fact>
+          <Fact label={i18n.t("fact.descriptions")}>
+            {group.descriptions.length}
+          </Fact>
         </Facts>
       </Section>
-      <Section title="Objects" testId="oa-object-list">
+      <Section title={i18n.t("section.objects")} testId="oa-object-list">
         <EntityList
           db={db}
           entities={group.objects}
           lang={lang}
           testId="oa-object-link"
-          empty="No clickable objects."
+          empty={i18n.t("value.noClickableObjects")}
         />
       </Section>
-      <Section title="Documents" testId="oa-document-list">
+      <Section title={i18n.t("section.documents")} testId="oa-document-list">
         <EntityList
           db={db}
           entities={group.documents}
           lang={lang}
           testId="oa-document-link"
-          empty="No documents."
+          empty={i18n.t("value.noDocuments")}
         />
       </Section>
-      <Section title="Descriptions" testId="oa-description-list">
+      <Section
+        title={i18n.t("section.descriptions")}
+        testId="oa-description-list"
+      >
         <EntityList
           db={db}
           entities={group.descriptions}
           lang={lang}
           testId="oa-description-link"
-          empty="No descriptions."
+          empty={i18n.t("value.noDescriptions")}
         />
       </Section>
     </>
@@ -164,35 +173,39 @@ export function OaObjectDetails({
   entity: OaObjectEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   const documents = (db.entitiesByType.get("oa_document") ?? []).filter(
     (record): record is OaDocumentEntity =>
       isOaDocument(record) && record.object_id === entity.id,
   );
   return (
     <>
-      <Section title="OA object" testId="oa-object-detail">
+      <Section title={i18n.t("section.oaObject")} testId="oa-object-detail">
         <Facts>
-          <Fact label="Character">
+          <Fact label={i18n.t("fact.character")}>
             <EntityById db={db} id={entity.character_id} lang={lang} />
           </Fact>
-          <Fact label="Analyze type">{entity.analyze_type}</Fact>
-          <Fact label="Analyze type ID">
+          <Fact label={i18n.t("fact.analyzeType")}>{entity.analyze_type}</Fact>
+          <Fact label={i18n.t("fact.analyzeTypeId")}>
             <code>{entity.analyze_type_id ?? "—"}</code>
           </Fact>
-          <Fact label="Level locks">
+          <Fact label={i18n.t("fact.levelLocks")}>
             <LevelLockList db={db} locks={entity.level_locks} />
           </Fact>
-          <Fact label="Conditions">
+          <Fact label={i18n.t("fact.conditions")}>
             <ConditionList db={db} conditions={entity.conditions} />
           </Fact>
         </Facts>
       </Section>
-      <Section title="Documents attached" testId="oa-object-documents">
+      <Section
+        title={i18n.t("section.documentsAttached")}
+        testId="oa-object-documents"
+      >
         <EntityList
           db={db}
           entities={documents}
           lang={lang}
-          empty="No document is attached to this object."
+          empty={i18n.t("value.noAttachedDocument")}
         />
       </Section>
     </>
@@ -208,19 +221,22 @@ export function OaDocumentDetails({
   entity: OaDocumentEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   return (
-    <Section title="OA document" testId="oa-document-detail">
+    <Section title={i18n.t("section.oaDocument")} testId="oa-document-detail">
       <Facts>
-        <Fact label="Character">
+        <Fact label={i18n.t("fact.character")}>
           <EntityById db={db} id={entity.character_id} lang={lang} />
         </Fact>
-        <Fact label="Object">
+        <Fact label={i18n.t("fact.object")}>
           <EntityById db={db} id={entity.object_id} lang={lang} />
         </Fact>
-        <Fact label="Mission">
+        <Fact label={i18n.t("fact.mission")}>
           <code>{entity.mission_id ?? "—"}</code>
         </Fact>
-        <Fact label="Digit lock">{entity.digit_lock ?? "none"}</Fact>
+        <Fact label={i18n.t("fact.digitLock")}>
+          {entity.digit_lock ?? i18n.t("common.none")}
+        </Fact>
       </Facts>
     </Section>
   );
@@ -235,27 +251,31 @@ export function OaDescriptionDetails({
   entity: OaDescriptionEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   return (
-    <Section title="OA description" testId="oa-description-detail">
+    <Section
+      title={i18n.t("section.oaDescription")}
+      testId="oa-description-detail"
+    >
       <Facts>
-        <Fact label="Character">
+        <Fact label={i18n.t("fact.character")}>
           <EntityById db={db} id={entity.character_id} lang={lang} />
         </Fact>
-        <Fact label="Description object">
+        <Fact label={i18n.t("fact.descriptionObject")}>
           <code>{entity.description_object_id}</code>
         </Fact>
-        <Fact label="Weight">{entity.weight}</Fact>
-        <Fact label="Event">{entity.event}</Fact>
-        <Fact label="Enable locks">
+        <Fact label={i18n.t("fact.weight")}>{entity.weight}</Fact>
+        <Fact label={i18n.t("fact.event")}>{entity.event}</Fact>
+        <Fact label={i18n.t("fact.enableLocks")}>
           <LevelLockList db={db} locks={entity.enable_level_locks} />
         </Fact>
-        <Fact label="Enable conditions">
+        <Fact label={i18n.t("fact.enableConditions")}>
           <ConditionList db={db} conditions={entity.enable_conditions} />
         </Fact>
-        <Fact label="Disable locks">
+        <Fact label={i18n.t("fact.disableLocks")}>
           <LevelLockList db={db} locks={entity.disable_level_locks} />
         </Fact>
-        <Fact label="Disable conditions">
+        <Fact label={i18n.t("fact.disableConditions")}>
           <ConditionList db={db} conditions={entity.disable_conditions} />
         </Fact>
       </Facts>
@@ -273,6 +293,7 @@ export function GalleryFolderDetails({
   entity: GalleryFolderEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   const items = (db.entitiesByType.get("gallery_item") ?? []).filter(
     (record): record is GalleryItemEntity =>
       isGalleryItem(record) && record.folder_id === entity.id,
@@ -287,22 +308,27 @@ export function GalleryFolderDetails({
   }
   return (
     <>
-      <Section title="Backup folder" testId="gallery-folder-detail">
+      <Section title={i18n.t("section.backupFolder")} testId="gallery-folder-detail">
         <Facts>
-          <Fact label="Avatar">
+          <Fact label={i18n.t("fact.avatar")}>
             <code>{entity.avatar_id ?? "—"}</code>
           </Fact>
-          <Fact label="Items">{items.length}</Fact>
-          <Fact label="Videos">{counts.get("video") ?? 0}</Fact>
-          <Fact label="Images">{counts.get("image") ?? 0}</Fact>
-          <Fact label="Boss stages">{counts.get("boss_stage") ?? 0}</Fact>
+          <Fact label={i18n.t("fact.items")}>{items.length}</Fact>
+          <Fact label={i18n.t("fact.videos")}>{counts.get("video") ?? 0}</Fact>
+          <Fact label={i18n.t("fact.images")}>{counts.get("image") ?? 0}</Fact>
+          <Fact label={i18n.t("fact.bossStages")}>
+            {counts.get("boss_stage") ?? 0}
+          </Fact>
         </Facts>
       </Section>
-      <Section title="Media retrospective" testId="gallery-folder-items">
+      <Section
+        title={i18n.t("section.mediaRetrospective")}
+        testId="gallery-folder-items"
+      >
         <EntityList db={db} entities={items} lang={lang} testId="gallery-item-link" />
       </Section>
       {stages.length > 0 ? (
-        <Section title="Boss stages">
+        <Section title={i18n.t("section.bossStages")}>
           <EntityList db={db} entities={stages} lang={lang} />
         </Section>
       ) : null}
@@ -319,29 +345,34 @@ export function GalleryItemDetails({
   entity: GalleryItemEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   const stage = bossStageForGalleryItem(db, entity.id);
   return (
-    <Section title="Backup item" testId="gallery-item-detail">
+    <Section title={i18n.t("section.backupItem")} testId="gallery-item-detail">
       <Facts>
-        <Fact label="Kind">
+        <Fact label={i18n.t("fact.kind")}>
           <MediaKindBadge kind={entity.kind} />
         </Fact>
-        <Fact label="Folder">
+        <Fact label={i18n.t("fact.folder")}>
           <EntityById db={db} id={entity.folder_id} lang={lang} />
         </Fact>
-        <Fact label="Location">
+        <Fact label={i18n.t("fact.location")}>
           <code>{entity.location}</code>
         </Fact>
-        <Fact label="Format">{entity.format}</Fact>
-        <Fact label="Size">
-          {entity.size ? `${entity.size[0]} × ${entity.size[1]}` : "—"}
+        <Fact label={i18n.t("fact.format")}>{entity.format}</Fact>
+        <Fact label={i18n.t("fact.size")}>
+          {entity.size
+            ? `${i18n.formatNumber(entity.size[0])} × ${i18n.formatNumber(entity.size[1])}`
+            : "—"}
         </Fact>
-        <Fact label="Obtainable">{entity.obtainable ? "Yes" : "No"}</Fact>
-        <Fact label="Conditions">
+        <Fact label={i18n.t("fact.obtainable")}>
+          {entity.obtainable ? i18n.t("common.yes") : i18n.t("common.no")}
+        </Fact>
+        <Fact label={i18n.t("fact.conditions")}>
           <ConditionList db={db} conditions={entity.conditions} />
         </Fact>
         {stage ? (
-          <Fact label="Boss stage">
+          <Fact label={i18n.t("fact.bossStage")}>
             <EntityLink db={db} entity={stage} lang={lang} />
           </Fact>
         ) : null}
@@ -359,20 +390,21 @@ export function BossStageDetails({
   entity: BossStageEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   return (
-    <Section title="Boss stage" testId="boss-stage-detail">
+    <Section title={i18n.t("section.bossStage")} testId="boss-stage-detail">
       <Facts>
-        <Fact label="Display name">{entity.display_name}</Fact>
-        <Fact label="Aliases">
+        <Fact label={i18n.t("fact.displayName")}>{entity.display_name}</Fact>
+        <Fact label={i18n.t("fact.aliases")}>
           <StringChips values={entity.aliases} />
         </Fact>
-        <Fact label="Conditions">
+        <Fact label={i18n.t("fact.conditions")}>
           <ConditionList db={db} conditions={entity.conditions} />
         </Fact>
-        <Fact label="Folder">
+        <Fact label={i18n.t("fact.folder")}>
           <EntityById db={db} id={entity.folder_id} lang={lang} />
         </Fact>
-        <Fact label="Gallery item">
+        <Fact label={i18n.t("fact.galleryItem")}>
           <EntityById db={db} id={entity.gallery_item_id} lang={lang} />
         </Fact>
       </Facts>
@@ -390,6 +422,7 @@ export function StoryNodeDetails({
   entity: StoryNodeEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   if (entity.kind === "branch") {
     const next = (entity.next ?? [])
       .map((id) => db.entityById.get(id))
@@ -399,29 +432,37 @@ export function StoryNodeDetails({
       );
     return (
       <>
-        <Section title="Branching OS node" testId="story-branch-detail">
+        <Section
+          title={i18n.t("section.storyBranch")}
+          testId="story-branch-detail"
+        >
           <Facts>
-            <Fact label="Kind">
+            <Fact label={i18n.t("fact.kind")}>
               <StoryKindBadge kind={entity.kind} />
             </Fact>
-            <Fact label="Order">{entity.order ?? "—"}</Fact>
-            <Fact label="Position">{entity.position ?? "—"}</Fact>
-            <Fact label="Level">{entity.level ?? "—"}</Fact>
-            <Fact label="Source file">
+            <Fact label={i18n.t("fact.order")}>{entity.order ?? "—"}</Fact>
+            <Fact label={i18n.t("fact.position")}>{entity.position ?? "—"}</Fact>
+            <Fact label={i18n.t("fact.level")}>{entity.level ?? "—"}</Fact>
+            <Fact label={i18n.t("fact.sourceFile")}>
               <code>{entity.source_file ?? "—"}</code>
             </Fact>
-            <Fact label="State">
+            <Fact label={i18n.t("fact.state")}>
               <code>
                 {entity.state_id ?? "—"} / {entity.state_value ?? "—"}
               </code>
             </Fact>
-            <Fact label="Level locks">
+            <Fact label={i18n.t("fact.levelLocks")}>
               <LevelLockList db={db} locks={entity.level_locks} />
             </Fact>
           </Facts>
         </Section>
-        <Section title="Next nodes" testId="story-next">
-          <EntityList db={db} entities={next} lang={lang} empty="No next node." />
+        <Section title={i18n.t("section.nextNodes")} testId="story-next">
+          <EntityList
+            db={db}
+            entities={next}
+            lang={lang}
+            empty={i18n.t("value.noNextNode")}
+          />
         </Section>
       </>
     );
@@ -429,44 +470,44 @@ export function StoryNodeDetails({
   const bossStages = entity.boss_stages ?? [];
   const movies = entity.movie_files ?? [];
   return (
-    <Section title="Story event" testId="story-event-detail">
+    <Section title={i18n.t("section.storyEvent")} testId="story-event-detail">
       <Facts>
-        <Fact label="Kind">
+        <Fact label={i18n.t("fact.kind")}>
           <StoryKindBadge kind={entity.kind} />
         </Fact>
-        <Fact label="Class">
+        <Fact label={i18n.t("fact.className")}>
           <code>{entity.class_name ?? "—"}</code>
         </Fact>
-        <Fact label="Topic ids">
+        <Fact label={i18n.t("fact.topicIds")}>
           <StringChips values={entity.topic_ids ?? []} />
         </Fact>
-        <Fact label="Start topic">
+        <Fact label={i18n.t("fact.startTopic")}>
           <code>{entity.start_topic_id ?? "—"}</code>
         </Fact>
-        <Fact label="End topic">
+        <Fact label={i18n.t("fact.endTopic")}>
           <code>{entity.end_topic_id ?? "—"}</code>
         </Fact>
-        <Fact label="Trigger topics">
+        <Fact label={i18n.t("fact.triggerTopics")}>
           <StringChips values={entity.trigger_topics ?? []} />
         </Fact>
-        <Fact label="Trigger OS">
+        <Fact label={i18n.t("fact.triggerOs")}>
           <code>{entity.trigger_os_id ?? "—"}</code>
         </Fact>
-        <Fact label="Actions">
+        <Fact label={i18n.t("fact.actions")}>
           <StringChips values={entity.actions ?? []} />
         </Fact>
-        <Fact label="Steps">
+        <Fact label={i18n.t("fact.steps")}>
           <StringChips values={entity.steps ?? []} />
         </Fact>
-        <Fact label="Movies">
+        <Fact label={i18n.t("fact.movies")}>
           <StringChips values={movies} />
         </Fact>
-        <Fact label="Gallery">
+        <Fact label={i18n.t("fact.gallery")}>
           <EntityById db={db} id={entity.gallery_ref} lang={lang} />
         </Fact>
-        <Fact label="Boss stages">
+        <Fact label={i18n.t("fact.bossStages")}>
           {bossStages.length === 0 ? (
-            <span className="muted">None</span>
+            <span className="muted">{i18n.t("common.none")}</span>
           ) : (
             <span className="chip-row">
               {bossStages.map((stage) => {
@@ -505,34 +546,44 @@ export function CapsoPackDetails({
   entity: CapsoShopPackEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   const items = (db.entitiesByType.get("capso_shop_item") ?? []).filter(
     (record): record is CapsoShopItemEntity =>
       isCapsoShopItem(record) && record.pack_id === entity.id,
   );
   return (
     <>
-      <Section title="CAPSO shop pack" testId="capso-pack-detail">
+      <Section title={i18n.t("section.capsoPack")} testId="capso-pack-detail">
         <Facts>
-          <Fact label="Price">{entity.default_price_string || "—"}</Fact>
-          <Fact label="CAPSO price">{entity.capso_price}</Fact>
-          <Fact label="CAPSO available">
-            {entity.available_for_capso ? "Yes" : "No"}
+          <Fact label={i18n.t("fact.price")}>
+            {entity.default_price_string || "—"}
           </Fact>
-          <Fact label="IAP available">
-            {entity.available_for_iap ? "Yes" : "No"}
+          <Fact label={i18n.t("fact.capsoPrice")}>{entity.capso_price}</Fact>
+          <Fact label={i18n.t("fact.capsoAvailable")}>
+            {entity.available_for_capso
+              ? i18n.t("common.yes")
+              : i18n.t("common.no")}
           </Fact>
-          <Fact label="Icon">
+          <Fact label={i18n.t("fact.iapAvailable")}>
+            {entity.available_for_iap
+              ? i18n.t("common.yes")
+              : i18n.t("common.no")}
+          </Fact>
+          <Fact label={i18n.t("fact.icon")}>
             <code>{entity.icon_path || "—"}</code>
           </Fact>
         </Facts>
       </Section>
-      <Section title={`Items (${items.length})`} testId="capso-pack-items">
+      <Section
+        title={i18n.t("section.capsoItems", { count: items.length })}
+        testId="capso-pack-items"
+      >
         <EntityList
           db={db}
           entities={items}
           lang={lang}
           testId="capso-item-link"
-          empty="No items in this pack."
+          empty={i18n.t("value.noItemsInPack")}
         />
       </Section>
     </>
@@ -548,24 +599,25 @@ export function CapsoItemDetails({
   entity: CapsoShopItemEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   return (
-    <Section title="CAPSO item" testId="capso-item-detail">
+    <Section title={i18n.t("section.capsoItem")} testId="capso-item-detail">
       <Facts>
-        <Fact label="Pack">
+        <Fact label={i18n.t("fact.pack")}>
           <EntityById db={db} id={entity.pack_id} lang={lang} />
         </Fact>
-        <Fact label="Kind">{entity.kind}</Fact>
-        <Fact label="Item ID">
+        <Fact label={i18n.t("fact.kind")}>{entity.kind}</Fact>
+        <Fact label={i18n.t("fact.itemId")}>
           <code>{entity.item_id}</code>
         </Fact>
-        <Fact label="Position">{entity.position}</Fact>
-        <Fact label="Illustration">
+        <Fact label={i18n.t("fact.position")}>{entity.position}</Fact>
+        <Fact label={i18n.t("fact.illustration")}>
           <EntityById db={db} id={entity.illustration_id} lang={lang} />
         </Fact>
-        <Fact label="Song">
+        <Fact label={i18n.t("fact.song")}>
           <EntityById db={db} id={entity.song_id} lang={lang} />
         </Fact>
-        <Fact label="Tap FX">
+        <Fact label={i18n.t("fact.tapFx")}>
           <code>{entity.tap_fx_id ?? "—"}</code>
         </Fact>
       </Facts>
@@ -582,6 +634,7 @@ export function GachaMachineDetails({
   entity: GachaMachineEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   const rewards = (db.entitiesByType.get("gacha_reward") ?? []).filter(
     (record): record is GachaRewardEntity =>
       isGachaReward(record) && record.machine_id === entity.id,
@@ -589,24 +642,26 @@ export function GachaMachineDetails({
   const totalWeight = rewards.reduce((sum, reward) => sum + reward.weight, 0);
   return (
     <>
-      <Section title="Gacha machine" testId="gacha-machine-detail">
+      <Section title={i18n.t("section.gachaMachine")} testId="gacha-machine-detail">
         <Facts>
-          <Fact label="Price">{entity.default_price || "—"}</Fact>
-          <Fact label="Icon">
+          <Fact label={i18n.t("fact.price")}>
+            {entity.default_price || "—"}
+          </Fact>
+          <Fact label={i18n.t("fact.icon")}>
             <code>{entity.icon_path || "—"}</code>
           </Fact>
-          <Fact label="Rewards">{rewards.length}</Fact>
-          <Fact label="Total weight">{totalWeight}</Fact>
+          <Fact label={i18n.t("fact.rewards")}>{rewards.length}</Fact>
+          <Fact label={i18n.t("fact.totalWeight")}>{totalWeight}</Fact>
         </Facts>
       </Section>
-      <Section title="Rewards" testId="gacha-rewards">
+      <Section title={i18n.t("section.rewards")} testId="gacha-rewards">
         <table className="data-table">
           <thead>
             <tr>
-              <th>Reward</th>
-              <th>Kind</th>
-              <th>Weight</th>
-              <th>Secret</th>
+              <th>{i18n.t("table.reward")}</th>
+              <th>{i18n.t("table.kind")}</th>
+              <th>{i18n.t("table.weight")}</th>
+              <th>{i18n.t("table.secret")}</th>
             </tr>
           </thead>
           <tbody>
@@ -617,7 +672,9 @@ export function GachaMachineDetails({
                 </td>
                 <td>{reward.kind}</td>
                 <td>{reward.weight}</td>
-                <td>{reward.secret ? "Yes" : "No"}</td>
+                <td>
+                  {reward.secret ? i18n.t("common.yes") : i18n.t("common.no")}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -636,31 +693,34 @@ export function GachaRewardDetails({
   entity: GachaRewardEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   return (
-    <Section title="Gacha reward" testId="gacha-reward-detail">
+    <Section title={i18n.t("section.gachaReward")} testId="gacha-reward-detail">
       <Facts>
-        <Fact label="Machine">
+        <Fact label={i18n.t("fact.machine")}>
           <EntityById db={db} id={entity.machine_id} lang={lang} />
         </Fact>
-        <Fact label="Kind">{entity.kind}</Fact>
-        <Fact label="Weight">{entity.weight}</Fact>
-        <Fact label="Secret">{entity.secret ? "Yes" : "No"}</Fact>
-        <Fact label="Illustration">
+        <Fact label={i18n.t("fact.kind")}>{entity.kind}</Fact>
+        <Fact label={i18n.t("fact.weight")}>{entity.weight}</Fact>
+        <Fact label={i18n.t("fact.secret")}>
+          {entity.secret ? i18n.t("common.yes") : i18n.t("common.no")}
+        </Fact>
+        <Fact label={i18n.t("fact.illustration")}>
           <EntityById db={db} id={entity.illustration_id} lang={lang} />
         </Fact>
-        <Fact label="Song">
+        <Fact label={i18n.t("fact.song")}>
           <EntityById db={db} id={entity.song_id} lang={lang} />
         </Fact>
-        <Fact label="Tap FX">
+        <Fact label={i18n.t("fact.tapFx")}>
           <code>{entity.tap_fx_id ?? "—"}</code>
         </Fact>
-        <Fact label="IM lock">
+        <Fact label={i18n.t("fact.imLock")}>
           <code>{entity.reward_locks.im_topic_id || "—"}</code>
         </Fact>
-        <Fact label="OS lock">
+        <Fact label={i18n.t("fact.osLock")}>
           <code>{entity.reward_locks.os_file_id || "—"}</code>
         </Fact>
-        <Fact label="Story lock">
+        <Fact label={i18n.t("fact.storyLock")}>
           <code>{entity.reward_locks.story_lock_id || "—"}</code>
         </Fact>
       </Facts>
@@ -677,32 +737,38 @@ export function ShopBundleDetails({
   entity: ShopBundleEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   return (
     <>
-      <Section title="Shop bundle" testId="shop-bundle-detail">
+      <Section title={i18n.t("section.shopBundle")} testId="shop-bundle-detail">
         <Facts>
-          <Fact label="Sale">
+          <Fact label={i18n.t("fact.sale")}>
             {entity.black_market ? (
               <span className="black-market" data-testid="black-market-badge">
-                Black Market
+                {i18n.t("value.blackMarket")}
               </span>
             ) : (
-              "Standard"
+              i18n.t("value.standard")
             )}
           </Fact>
-          <Fact label="Milestone">
+          <Fact label={i18n.t("fact.milestone")}>
             <code>{entity.milestone_key || "—"}</code>
           </Fact>
-          <Fact label="Free character level">
-            Lv {entity.trigger_free_character_level + 1}
+          <Fact label={i18n.t("fact.freeCharacterLevel")}>
+            {i18n.t("common.level", {
+              level: entity.trigger_free_character_level + 1,
+            })}
           </Fact>
-          <Fact label="Items">{entity.items.length}</Fact>
+          <Fact label={i18n.t("fact.items")}>{entity.items.length}</Fact>
         </Facts>
       </Section>
-      <Section title="Bundle items" testId="shop-bundle-items">
+      <Section title={i18n.t("section.bundleItems")} testId="shop-bundle-items">
         <ul className="link-list">
           {entity.items.map((item) => {
             const target = bundleItemEntity(db, item);
+            const meta = `${item.item_type} · ${i18n.t("value.weightMeta", {
+              weight: item.weight,
+            })}`;
             return (
               <li key={`${item.item_type}:${item.product_id}`}>
                 {target ? (
@@ -710,14 +776,12 @@ export function ShopBundleDetails({
                     db={db}
                     entity={target}
                     lang={lang}
-                    meta={`${item.item_type} · weight ${item.weight}`}
+                    meta={meta}
                   />
                 ) : (
                   <span className="entity-link">
                     <span className="entity-link-title">{item.product_id}</span>
-                    <span className="entity-link-meta">
-                      {item.item_type} · weight {item.weight}
-                    </span>
+                    <span className="entity-link-meta">{meta}</span>
                   </span>
                 )}
               </li>
@@ -725,12 +789,12 @@ export function ShopBundleDetails({
           })}
         </ul>
       </Section>
-      <Section title="IAP tiers" testId="shop-bundle-tiers">
+      <Section title={i18n.t("section.iapTiers")} testId="shop-bundle-tiers">
         <table className="data-table">
           <thead>
             <tr>
-              <th>IAP id</th>
-              <th>Remaining weight</th>
+              <th>{i18n.t("table.iapId")}</th>
+              <th>{i18n.t("table.remainingWeight")}</th>
             </tr>
           </thead>
           <tbody>
@@ -759,17 +823,18 @@ export function SubtitleLineDetails({
   entity: SubtitleLineEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   const voice = db.entityById.get(entity.voice_asset_id);
   return (
     <>
-      <Section title="Subtitle line" testId="subtitle-detail">
+      <Section title={i18n.t("section.subtitleLine")} testId="subtitle-detail">
         <TextBody textRef={entity.text_ref} lang={lang} />
         <Facts>
-          <Fact label="Character">{entity.character || "—"}</Fact>
-          <Fact label="Game ID">
+          <Fact label={i18n.t("fact.character")}>{entity.character || "—"}</Fact>
+          <Fact label={i18n.t("fact.gameId")}>
             <code>{entity.game_id}</code>
           </Fact>
-          <Fact label="Voice asset">
+          <Fact label={i18n.t("fact.voiceAsset")}>
             {voice ? (
               <EntityLink db={db} entity={voice} lang={lang} />
             ) : (
@@ -791,20 +856,24 @@ export function IllustrationDetails({
   entity: IllustrationEntity;
   lang: Lang;
 }) {
+  const i18n = useI18n();
   return (
-    <Section title="Illustration" testId="illustration-detail">
+    <Section title={i18n.t("section.illustration")} testId="illustration-detail">
       <Facts>
-        <Fact label="Character">
+        <Fact label={i18n.t("fact.character")}>
           <EntityById db={db} id={entity.character_id} lang={lang} />
         </Fact>
-        <Fact label="Costume">{entity.costume}</Fact>
-        <Fact label="Available">{entity.available ? "Yes" : "No"}</Fact>
-        <Fact label="Asset">
+        <Fact label={i18n.t("fact.costume")}>{entity.costume}</Fact>
+        <Fact label={i18n.t("fact.available")}>
+          {entity.available ? i18n.t("common.yes") : i18n.t("common.no")}
+        </Fact>
+        <Fact label={i18n.t("fact.asset")}>
           <EntityById db={db} id={entity.asset_id} lang={lang} />
         </Fact>
-        <Fact label="Description">{entity.description || "—"}</Fact>
+        <Fact label={i18n.t("fact.description")}>
+          {entity.description || "—"}
+        </Fact>
       </Facts>
     </Section>
   );
 }
-

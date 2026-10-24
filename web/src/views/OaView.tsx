@@ -5,29 +5,55 @@ import { EntityLink } from "../components/EntityLink";
 import { TextBody } from "../components/TextBody";
 import { Avatar } from "../components/ui";
 import { oaGroups, findOaGroup } from "../data/collections";
+import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
+import { formatUnit } from "../data/messages";
 import { entityHref } from "../data/selectors";
+import type { I18n } from "../data/messages";
+import type { OaGroup } from "../data/collections";
 import type { Database } from "../types";
 
+function oaStats(
+  i18n: I18n,
+  group: {
+    objects: readonly unknown[];
+    documents: readonly unknown[];
+    descriptions: readonly unknown[];
+  },
+): string {
+  return i18n.t("oa.meta", {
+    objects: formatUnit(i18n, "objects", group.objects.length),
+    documents: formatUnit(i18n, "documents", group.documents.length),
+    descriptions: formatUnit(i18n, "descriptions", group.descriptions.length),
+  });
+}
+
 export function OaIndexView({ db }: { db: Database }) {
+  const i18n = useI18n();
   const groups = oaGroups(db);
+  const objects = groups.reduce((sum, group) => sum + group.objects.length, 0);
+  const documents = groups.reduce(
+    (sum, group) => sum + group.documents.length,
+    0,
+  );
+  const descriptions = groups.reduce(
+    (sum, group) => sum + group.descriptions.length,
+    0,
+  );
   return (
     <>
       <main className="content">
         <header className="page-head">
-          <p className="eyebrow">Open Archive</p>
-          <h1>OA</h1>
-          <p className="lede">
-            Every explorable OA archive, ordered by character. Objects open their
-            own text; documents and hotspot descriptions stay attached to the
-            character that owns them.
-          </p>
+          <p className="eyebrow">{i18n.t("oa.eyebrow")}</p>
+          <h1>{i18n.t("oa.title")}</h1>
+          <p className="lede">{i18n.t("oa.lede")}</p>
           <div className="page-stats" data-testid="oa-stats">
-            <strong>{groups.length}</strong> characters ·{" "}
-            {groups.reduce((sum, group) => sum + group.objects.length, 0)} objects ·{" "}
-            {groups.reduce((sum, group) => sum + group.documents.length, 0)} documents ·{" "}
-            {groups.reduce((sum, group) => sum + group.descriptions.length, 0)}{" "}
-            descriptions
+            {i18n.t("oa.stats", {
+              characters: formatUnit(i18n, "characters", groups.length),
+              objects: formatUnit(i18n, "objects", objects),
+              documents: formatUnit(i18n, "documents", documents),
+              descriptions: formatUnit(i18n, "descriptions", descriptions),
+            })}
           </div>
         </header>
 
@@ -43,8 +69,9 @@ export function OaIndexView({ db }: { db: Database }) {
               <Avatar name={group.oa.name} />
               <span className="collection-title">{group.oa.name}</span>
               <span className="collection-meta">
-                {group.objects.length} objects · {group.documents.length} documents
-                · {group.descriptions.length} descriptions
+                {formatUnit(i18n, "objects", group.objects.length)} ·{" "}
+                {formatUnit(i18n, "documents", group.documents.length)} ·{" "}
+                {formatUnit(i18n, "descriptions", group.descriptions.length)}
               </span>
               <span className="collection-id">
                 <code>{group.oa.game_id}</code>
@@ -54,38 +81,30 @@ export function OaIndexView({ db }: { db: Database }) {
         </div>
       </main>
 
-      <aside className="context" aria-label="OA details">
+      <aside className="context" aria-label={i18n.t("oa.sideAria")}>
         <section className="panel">
-          <h2>OA archive</h2>
-          <p>
-            OA has its own unlock conditions and is never merged into the iM/OS
-            timeline.
-          </p>
-          <p className="hint">
-            An archive groups one character's clickable objects, the files
-            attached to them, and condition-driven hotspot descriptions.
-          </p>
+          <h2>{i18n.t("oa.archive")}</h2>
+          <p>{i18n.t("oa.archiveText")}</p>
+          <p className="hint">{i18n.t("oa.archiveHint")}</p>
         </section>
         <section className="panel">
-          <h2>Counts</h2>
+          <h2>{i18n.t("oa.counts")}</h2>
           <dl className="facts">
             <div className="fact">
-              <dt>Characters</dt>
-              <dd>{groups.length}</dd>
+              <dt>{i18n.t("fact.character")}</dt>
+              <dd>{i18n.formatNumber(groups.length)}</dd>
             </div>
             <div className="fact">
-              <dt>Objects</dt>
-              <dd>{groups.reduce((sum, group) => sum + group.objects.length, 0)}</dd>
+              <dt>{i18n.t("fact.objects")}</dt>
+              <dd>{i18n.formatNumber(objects)}</dd>
             </div>
             <div className="fact">
-              <dt>Documents</dt>
-              <dd>{groups.reduce((sum, group) => sum + group.documents.length, 0)}</dd>
+              <dt>{i18n.t("fact.documents")}</dt>
+              <dd>{i18n.formatNumber(documents)}</dd>
             </div>
             <div className="fact">
-              <dt>Descriptions</dt>
-              <dd>
-                {groups.reduce((sum, group) => sum + group.descriptions.length, 0)}
-              </dd>
+              <dt>{i18n.t("fact.descriptions")}</dt>
+              <dd>{i18n.formatNumber(descriptions)}</dd>
             </div>
           </dl>
         </section>
@@ -102,7 +121,8 @@ export function OaCharacterView({
   gameId: string;
 }) {
   const { lang } = useLanguage();
-  const group = findOaGroup(db, gameId);
+  const i18n = useI18n();
+  const group: OaGroup | null = findOaGroup(db, gameId);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -113,12 +133,12 @@ export function OaCharacterView({
     return (
       <main className="content">
         <div className="empty-state">
-          <h1>OA archive not found</h1>
+          <h1>{i18n.t("oa.notFoundTitle")}</h1>
           <p>
-            No character has the OA archive <code>{gameId}</code>.
+            {i18n.t("oa.notFoundText", { gameId })}
           </p>
           <Link to="/oa" className="inline-link">
-            ← All OA archives
+            ← {i18n.t("oa.all")}
           </Link>
         </div>
       </main>
@@ -141,7 +161,7 @@ export function OaCharacterView({
       <main className="content">
         <div className="back-row">
           <Link to="/oa" className="backlink" data-testid="back-to-oa">
-            ← OA
+            ← {i18n.t("nav.oa")}
           </Link>
           <BackButton />
         </div>
@@ -149,16 +169,17 @@ export function OaCharacterView({
         <article className="detail" data-testid="oa-workspace" data-oa-id={group.oa.id}>
           <header className="detail-head">
             <p className="eyebrow">
-              OA archive · <code>{group.oa.game_id}</code>
+              {i18n.t("oa.archive")} · <code>{group.oa.game_id}</code>
             </p>
             <h1>{group.oa.name}</h1>
-            <p className="byline">
-              {group.objects.length} objects · {group.documents.length} documents ·{" "}
-              {group.descriptions.length} descriptions
-            </p>
+            <p className="byline">{oaStats(i18n, group)}</p>
           </header>
 
-          <nav className="tab-strip" aria-label="OA objects" data-testid="oa-object-tabs">
+          <nav
+            className="tab-strip"
+            aria-label={i18n.t("oa.objectsAria")}
+            data-testid="oa-object-tabs"
+          >
             {group.objects.map((object) => (
               <button
                 key={object.id}
@@ -175,7 +196,7 @@ export function OaCharacterView({
               </button>
             ))}
             {group.objects.length === 0 ? (
-              <span className="muted">No clickable objects.</span>
+              <span className="muted">{i18n.t("value.noClickableObjects")}</span>
             ) : null}
           </nav>
 
@@ -188,13 +209,17 @@ export function OaCharacterView({
                   className="inline-link"
                   data-testid="oa-object-entity-link"
                 >
-                  Object detail →
+                  {i18n.t("oa.objectDetail")}
                 </Link>
               </header>
               <TextBody textRef={activeObject.text_ref} lang={lang} />
-              <h3>Documents ({attachedDocuments.length})</h3>
+              <h3>
+                {i18n.t("oa.documentsHeading", {
+                  count: i18n.formatNumber(attachedDocuments.length),
+                })}
+              </h3>
               {attachedDocuments.length === 0 ? (
-                <p className="muted">No document is attached to this object.</p>
+                <p className="muted">{i18n.t("value.noAttachedDocument")}</p>
               ) : (
                 <ul className="link-list">
                   {attachedDocuments.map((document) => (
@@ -214,7 +239,11 @@ export function OaCharacterView({
           ) : null}
 
           <section className="detail-section" data-testid="oa-descriptions">
-            <h2>Descriptions ({group.descriptions.length})</h2>
+            <h2>
+              {i18n.t("oa.descriptionsHeading", {
+                count: i18n.formatNumber(group.descriptions.length),
+              })}
+            </h2>
             <ul className="link-list">
               {group.descriptions.map((description) => (
                 <li key={description.id}>
@@ -223,7 +252,9 @@ export function OaCharacterView({
                     entity={description}
                     lang={lang}
                     testId="oa-description-link"
-                    meta={`weight ${description.weight}`}
+                    meta={i18n.t("value.weightMeta", {
+                      weight: description.weight,
+                    })}
                   />
                 </li>
               ))}
@@ -232,36 +263,36 @@ export function OaCharacterView({
         </article>
       </main>
 
-      <aside className="context" aria-label="OA character details">
+      <aside className="context" aria-label={i18n.t("oa.workspaceAria")}>
         <section className="panel">
-          <h2>Character</h2>
+          <h2>{i18n.t("oa.panelCharacter")}</h2>
           <dl className="facts">
             <div className="fact">
-              <dt>Name</dt>
+              <dt>{i18n.t("fact.name")}</dt>
               <dd>{group.oa.name}</dd>
             </div>
             <div className="fact">
-              <dt>Game ID</dt>
+              <dt>{i18n.t("entity.fact.gameId")}</dt>
               <dd>
                 <code>{group.oa.game_id}</code>
               </dd>
             </div>
             <div className="fact">
-              <dt>Objects</dt>
-              <dd>{group.objects.length}</dd>
+              <dt>{i18n.t("fact.objects")}</dt>
+              <dd>{i18n.formatNumber(group.objects.length)}</dd>
             </div>
             <div className="fact">
-              <dt>Documents</dt>
-              <dd>{group.documents.length}</dd>
+              <dt>{i18n.t("fact.documents")}</dt>
+              <dd>{i18n.formatNumber(group.documents.length)}</dd>
             </div>
             <div className="fact">
-              <dt>Descriptions</dt>
-              <dd>{group.descriptions.length}</dd>
+              <dt>{i18n.t("fact.descriptions")}</dt>
+              <dd>{i18n.formatNumber(group.descriptions.length)}</dd>
             </div>
           </dl>
         </section>
         <section className="panel">
-          <h2>Links</h2>
+          <h2>{i18n.t("oa.panelLinks")}</h2>
           <ul className="link-list">
             {galleryFolder ? (
               <li>

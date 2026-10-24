@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useI18n } from "../data/i18n";
 import { chartLabel, entityHref } from "../data/selectors";
 import type { ChartEntity, Database } from "../types";
 
@@ -13,6 +14,7 @@ export function ChartLinks({
   testId?: string;
   empty?: string;
 }) {
+  const i18n = useI18n();
   if (charts.length === 0) {
     return empty ? <p className="muted">{empty}</p> : null;
   }
@@ -34,7 +36,9 @@ export function ChartLinks({
             data-testid={testId}
             data-chart-id={chart.id}
           >
-            <span className="entity-link-title">{chartLabel(db, chart)}</span>
+            <span className="entity-link-title">
+              {chartLabel(db, chart, i18n)}
+            </span>
             <span className="entity-link-meta">{chart.id}</span>
           </Link>
         </li>

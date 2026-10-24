@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { TextBody } from "../components/TextBody";
 import { TypeBadge } from "../components/ui";
 import { isAssistantDialogue, isTitleScreen } from "../data/database";
+import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
+import { formatUnit } from "../data/messages";
 import { conditionLink, entityHref } from "../data/selectors";
 import type {
   AssistantDialogueEntity,
@@ -41,6 +43,7 @@ function targetHref(db: Database, target: string): string | null {
 }
 
 export function ExtrasIndexView({ db }: { db: Database }) {
+  const i18n = useI18n();
   const assistants = assistantEntities(db);
   const titles = titleEntities(db);
   const pages = assistants.reduce((sum, group) => sum + group.page_count, 0);
@@ -50,16 +53,16 @@ export function ExtrasIndexView({ db }: { db: Database }) {
     <>
       <main className="content">
         <header className="page-head">
-          <p className="eyebrow">Appendix</p>
-          <h1>Extras</h1>
-          <p className="lede">
-            Two appendix families that are not part of the timeline: the iM
-            assistant dialogues and the title-screen evolution. Both read the
-            canonical projection and the shared text store.
-          </p>
+          <p className="eyebrow">{i18n.t("extras.eyebrow")}</p>
+          <h1>{i18n.t("extras.title")}</h1>
+          <p className="lede">{i18n.t("extras.lede")}</p>
           <div className="page-stats" data-testid="extras-stats">
-            <strong>{assistants.length}</strong> assistant groups · {pages} pages ·{" "}
-            {titles.length} titles · {clips} title clips
+            {i18n.t("extras.stats", {
+              groups: formatUnit(i18n, "groups", assistants.length),
+              pages: formatUnit(i18n, "pages", pages),
+              titles: formatUnit(i18n, "titles", titles.length),
+              clips: formatUnit(i18n, "clips", clips),
+            })}
           </div>
         </header>
 
@@ -69,9 +72,14 @@ export function ExtrasIndexView({ db }: { db: Database }) {
             className="collection-card"
             data-testid="extras-assistants-card"
           >
-            <span className="collection-title">iM assistant dialogues</span>
+            <span className="collection-title">
+              {i18n.t("extras.assistantsCard")}
+            </span>
             <span className="collection-meta">
-              {assistants.length} groups · {pages} pages · five languages
+              {i18n.t("extras.assistantsMeta", {
+                groups: formatUnit(i18n, "groups", assistants.length),
+                pages: formatUnit(i18n, "pages", pages),
+              })}
             </span>
             <span className="collection-id">
               <code>im_assistant_data</code>
@@ -82,9 +90,12 @@ export function ExtrasIndexView({ db }: { db: Database }) {
             className="collection-card"
             data-testid="extras-titles-card"
           >
-            <span className="collection-title">Title-screen evolution</span>
+            <span className="collection-title">{i18n.t("extras.titlesCard")}</span>
             <span className="collection-meta">
-              {titles.length} titles · {clips} video_title_* clips · story unlocks
+              {i18n.t("extras.titlesMeta", {
+                titles: formatUnit(i18n, "titles", titles.length),
+                clips: formatUnit(i18n, "clips", clips),
+              })}
             </span>
             <span className="collection-id">
               <code>titleinfodata</code>
@@ -93,18 +104,11 @@ export function ExtrasIndexView({ db }: { db: Database }) {
         </div>
       </main>
 
-      <aside className="context" aria-label="Extras details">
+      <aside className="context" aria-label={i18n.t("extras.detailsAria")}>
         <section className="panel">
-          <h2>Sources</h2>
-          <p>
-            Assistant groups come from <code>im_assistant_data</code>; title
-            entries come from <code>titleinfodata/title_info</code>. Page bodies
-            and title names live in <code>build/text/extras.jsonl</code>.
-          </p>
-          <p>
-            Title clips are served from the local media export; when a clip is
-            not present the page marks it as not exported instead of failing.
-          </p>
+          <h2>{i18n.t("extras.sources")}</h2>
+          <p>{i18n.t("extras.sourcesText")}</p>
+          <p>{i18n.t("extras.sourcesHint")}</p>
         </section>
       </aside>
     </>
@@ -113,6 +117,7 @@ export function ExtrasIndexView({ db }: { db: Database }) {
 
 export function AssistantsView({ db }: { db: Database }) {
   const { lang } = useLanguage();
+  const i18n = useI18n();
   const assistants = assistantEntities(db);
   const pages = assistants.reduce((sum, group) => sum + group.page_count, 0);
 
@@ -120,16 +125,17 @@ export function AssistantsView({ db }: { db: Database }) {
     <>
       <main className="content" data-testid="assistants-view">
         <header className="page-head">
-          <p className="eyebrow">iM · Appendix</p>
-          <h1>iM assistant dialogues</h1>
-          <p className="lede">
-            Assistant messages grouped by the game&apos;s own dialogue id. Pages
-            are read from the canonical text store in the selected language; a
-            missing translation falls back explicitly.
+          <p className="eyebrow">
+            iM · {i18n.t("extras.eyebrow")}
           </p>
+          <h1>{i18n.t("extras.assistantsTitle")}</h1>
+          <p className="lede">{i18n.t("extras.assistantsLede")}</p>
           <div className="page-stats">
-            <strong>{assistants.length}</strong> groups · {pages} pages ·{" "}
-            {lang}
+            {i18n.t("extras.assistantsStats", {
+              groups: formatUnit(i18n, "groups", assistants.length),
+              pages: formatUnit(i18n, "pages", pages),
+              lang,
+            })}
           </div>
         </header>
 
@@ -149,7 +155,8 @@ export function AssistantsView({ db }: { db: Database }) {
                       <code>{group.game_id}</code>
                     </h2>
                     <p className="assistant-meta">
-                      trigger {group.trigger} · target{" "}
+                      {i18n.t("value.trigger", { value: group.trigger })} ·{" "}
+                      {i18n.t("value.target")}{" "}
                       {group.target ? (
                         href ? (
                           <Link to={href} data-testid="assistant-target">
@@ -161,7 +168,8 @@ export function AssistantsView({ db }: { db: Database }) {
                       ) : (
                         "—"
                       )}{" "}
-                      · {group.page_count} pages · v{group.version || "—"}
+                      · {formatUnit(i18n, "pages", group.page_count)} · v
+                      {group.version || "—"}
                     </p>
                   </div>
                   <TypeBadge type={group.type} />
@@ -175,19 +183,11 @@ export function AssistantsView({ db }: { db: Database }) {
         </div>
       </main>
 
-      <aside className="context" aria-label="Assistant details">
+      <aside className="context" aria-label={i18n.t("extras.detailsAria")}>
         <section className="panel">
-          <h2>Reading</h2>
-          <p>
-            Each group keeps the raw trigger, target and progress fields. Page
-            blocks preserve the raw page number plus its assistant, image and
-            sound ids.
-          </p>
-          <p>
-            The language switch in the sidebar applies to every group. A group
-            with no text in the selected language shows the same explicit
-            fallback note as the timeline.
-          </p>
+          <h2>{i18n.t("extras.reading")}</h2>
+          <p>{i18n.t("extras.readingText")}</p>
+          <p>{i18n.t("extras.readingHint")}</p>
         </section>
       </aside>
     </>
@@ -195,6 +195,7 @@ export function AssistantsView({ db }: { db: Database }) {
 }
 
 function TitleClip({ clip }: { clip: string }) {
+  const i18n = useI18n();
   const [missing, setMissing] = useState(false);
   const file = `${MEDIA_BASE}/titles/${encodeURIComponent(clip)}.mp4`;
   if (missing) {
@@ -203,9 +204,9 @@ function TitleClip({ clip }: { clip: string }) {
         className="chip chip--warn"
         data-testid="title-video-missing"
         data-clip={clip}
-        title={`expected ${file}`}
+        title={i18n.t("extras.expected", { file })}
       >
-        {clip} · video not exported
+        {i18n.t("extras.videoMissing", { clip })}
       </span>
     );
   }
@@ -221,7 +222,7 @@ function TitleClip({ clip }: { clip: string }) {
         onError={() => setMissing(true)}
       />
       <figcaption>
-        <code>{clip}</code> · <a href={file}>open</a>
+        <code>{clip}</code> · <a href={file}>{i18n.t("common.open")}</a>
       </figcaption>
     </figure>
   );
@@ -229,6 +230,7 @@ function TitleClip({ clip }: { clip: string }) {
 
 export function TitlesView({ db }: { db: Database }) {
   const { lang } = useLanguage();
+  const i18n = useI18n();
   const titles = titleEntities(db);
   const clips = titles.reduce((sum, title) => sum + title.video_clips.length, 0);
 
@@ -236,15 +238,16 @@ export function TitlesView({ db }: { db: Database }) {
     <>
       <main className="content" data-testid="titles-view">
         <header className="page-head">
-          <p className="eyebrow">Title · Appendix</p>
-          <h1>Title-screen evolution</h1>
-          <p className="lede">
-            Every title screen in release order, with the story node that
-            unlocks it and the <code>video_title_*</code> clip that animates it.
-            Clips missing from the local media export are marked explicitly.
+          <p className="eyebrow">
+            {i18n.t("fact.title")} · {i18n.t("extras.eyebrow")}
           </p>
+          <h1>{i18n.t("extras.titlesTitle")}</h1>
+          <p className="lede">{i18n.t("extras.titlesLede")}</p>
           <div className="page-stats">
-            <strong>{titles.length}</strong> titles · {clips} clips
+            {i18n.t("extras.titlesStats", {
+              titles: formatUnit(i18n, "titles", titles.length),
+              clips: formatUnit(i18n, "clips", clips),
+            })}
           </div>
         </header>
 
@@ -257,17 +260,21 @@ export function TitlesView({ db }: { db: Database }) {
               data-title-number={title.number}
             >
               <header className="title-head">
-                <span className="title-number mono">Type {title.number}</span>
+                <span className="title-number mono">
+                  {i18n.t("extras.titleNumber", { number: title.number })}
+                </span>
                 <div className="title-name" data-testid="title-name">
                   <TextBody textRef={title.text_ref} lang={lang} />
                 </div>
                 <div className="title-conditions" data-testid="title-conditions">
-                  <span className="muted">Unlock</span>
+                  <span className="muted">{i18n.t("extras.unlock")}</span>
                   {title.unlock_conditions.length === 0 ? (
-                    <span className="chip">Unlocked from the start</span>
+                    <span className="chip">
+                      {i18n.t("value.unlockedFromStart")}
+                    </span>
                   ) : (
                     title.unlock_conditions.map((condition) => {
-                      const link = conditionLink(db, condition);
+                      const link = conditionLink(db, condition, i18n);
                       return link.href ? (
                         <Link
                           key={`${condition.kind}:${condition.value}`}
@@ -300,18 +307,11 @@ export function TitlesView({ db }: { db: Database }) {
         </div>
       </main>
 
-      <aside className="context" aria-label="Title details">
+      <aside className="context" aria-label={i18n.t("extras.titleAria")}>
         <section className="panel">
-          <h2>Playback</h2>
-          <p>
-            Clips are read from <code>titles/&lt;clip&gt;.mp4</code> under the
-            local media export. Set <code>CYTUS2_MEDIA_DIR</code> when the media
-            lives outside <code>viewer/public/media</code>.
-          </p>
-          <p>
-            The type-to-clip mapping is the frozen viewer&apos;s documented
-            inference; it is carried as manual provenance on every title.
-          </p>
+          <h2>{i18n.t("extras.playback")}</h2>
+          <p>{i18n.t("extras.playbackText")}</p>
+          <p>{i18n.t("extras.playbackHint")}</p>
         </section>
       </aside>
     </>

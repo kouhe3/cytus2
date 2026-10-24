@@ -2,20 +2,6 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { Lang, LocalizedText } from "../types";
 
-export interface LanguageOption {
-  readonly code: Lang;
-  readonly label: string;
-  readonly title: string;
-}
-
-export const LANGUAGES: LanguageOption[] = [
-  { code: "en", label: "EN", title: "English" },
-  { code: "ja", label: "JA", title: "日本語" },
-  { code: "zh-Hant", label: "繁中", title: "繁體中文" },
-  { code: "ko", label: "KO", title: "한국어" },
-  { code: "zh-Hans", label: "简中", title: "简体中文" },
-];
-
 export const DEFAULT_LANG: Lang = "zh-Hans";
 
 /**
@@ -42,7 +28,13 @@ export interface LocalizedPick {
 }
 
 export function isLang(value: unknown): value is Lang {
-  return LANGUAGES.some((option) => option.code === value);
+  return (
+    value === "en" ||
+    value === "ja" ||
+    value === "zh-Hant" ||
+    value === "ko" ||
+    value === "zh-Hans"
+  );
 }
 
 export function pickLocalized(
@@ -72,16 +64,6 @@ export function localizedValue(
   requested: Lang,
 ): string {
   return pickLocalized(map, requested).value;
-}
-
-export function fallbackLabel(
-  requested: Lang,
-  actual: Lang | null,
-): string {
-  if (actual === null) {
-    return `No text in ${requested} or any fallback language`;
-  }
-  return `${requested} missing · showing ${actual}`;
 }
 
 interface LanguageContextValue {

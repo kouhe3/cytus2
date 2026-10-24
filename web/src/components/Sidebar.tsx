@@ -1,16 +1,23 @@
 import { Link, NavLink } from "react-router-dom";
+import { useI18n } from "../data/i18n";
+import { formatUnit } from "../data/messages";
+import type { MessageKey } from "../data/messages";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import type { Database } from "../types";
 
-const NAV_ITEMS = [
-  { to: "/timeline", label: "Timeline", testId: "nav-timeline" },
-  { to: "/search", label: "Search", testId: "nav-search" },
-  { to: "/oa", label: "OA", testId: "nav-oa" },
-  { to: "/backup", label: "Backup Database", testId: "nav-backup" },
-  { to: "/story", label: "Story", testId: "nav-story" },
-  { to: "/shop", label: "Shop", testId: "nav-shop" },
-  { to: "/extras", label: "Extras", testId: "nav-extras" },
-] as const;
+const NAV_ITEMS: readonly {
+  to: string;
+  labelKey: MessageKey;
+  testId: string;
+}[] = [
+  { to: "/timeline", labelKey: "nav.timeline", testId: "nav-timeline" },
+  { to: "/search", labelKey: "nav.search", testId: "nav-search" },
+  { to: "/oa", labelKey: "nav.oa", testId: "nav-oa" },
+  { to: "/backup", labelKey: "nav.backup", testId: "nav-backup" },
+  { to: "/story", labelKey: "nav.story", testId: "nav-story" },
+  { to: "/shop", labelKey: "nav.shop", testId: "nav-shop" },
+  { to: "/extras", labelKey: "nav.extras", testId: "nav-extras" },
+];
 
 export function Sidebar({
   db,
@@ -19,20 +26,29 @@ export function Sidebar({
   db: Database;
   onOpenSearch: () => void;
 }) {
+  const i18n = useI18n();
   const counts = db.projection.counts;
   const total =
     (counts["im_post"] ?? 0) +
     (counts["os_log"] ?? 0) +
     (counts["oa_document"] ?? 0) +
     (counts["story_node"] ?? 0);
+  const stats: readonly { labelKey: MessageKey; value: number }[] = [
+    { labelKey: "sidebar.stats.timeline", value: db.timelineOrders.length },
+    { labelKey: "sidebar.stats.imPosts", value: counts["im_post"] ?? 0 },
+    { labelKey: "sidebar.stats.osLogs", value: counts["os_log"] ?? 0 },
+    { labelKey: "sidebar.stats.oaDocuments", value: counts["oa_document"] ?? 0 },
+    { labelKey: "sidebar.stats.backupItems", value: counts["gallery_item"] ?? 0 },
+    { labelKey: "sidebar.stats.charts", value: counts["chart"] ?? 0 },
+  ];
   return (
-    <aside className="rail rail-left" aria-label="Primary">
+    <aside className="rail rail-left" aria-label={i18n.t("sidebar.primaryAria")}>
       <Link to="/timeline" className="brand">
         <span className="brand-name">Cytus II</span>
-        <span className="brand-sub">Story DB</span>
+        <span className="brand-sub">{i18n.t("brand.sub")}</span>
       </Link>
 
-      <nav className="nav" aria-label="Views">
+      <nav className="nav" aria-label={i18n.t("sidebar.viewsAria")}>
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
@@ -41,7 +57,7 @@ export function Sidebar({
             data-testid={item.testId}
           >
             <span className="nav-dot" aria-hidden="true" />
-            {item.label}
+            {i18n.t(item.labelKey)}
           </NavLink>
         ))}
       </nav>
@@ -52,46 +68,31 @@ export function Sidebar({
         onClick={onOpenSearch}
         data-testid="open-search"
       >
-        <span>Search entities</span>
+        <span>{i18n.t("sidebar.searchTrigger")}</span>
         <kbd>Ctrl K</kbd>
       </button>
 
       <LanguageSwitcher compact />
 
       <dl className="stats">
-        <div>
-          <dt>Timeline</dt>
-          <dd>{db.timelineOrders.length.toLocaleString()}</dd>
-        </div>
-        <div>
-          <dt>iM posts</dt>
-          <dd>{(counts["im_post"] ?? 0).toLocaleString()}</dd>
-        </div>
-        <div>
-          <dt>OS logs</dt>
-          <dd>{(counts["os_log"] ?? 0).toLocaleString()}</dd>
-        </div>
-        <div>
-          <dt>OA documents</dt>
-          <dd>{(counts["oa_document"] ?? 0).toLocaleString()}</dd>
-        </div>
-        <div>
-          <dt>Backup items</dt>
-          <dd>{(counts["gallery_item"] ?? 0).toLocaleString()}</dd>
-        </div>
-        <div>
-          <dt>Charts</dt>
-          <dd>{(counts["chart"] ?? 0).toLocaleString()}</dd>
-        </div>
+        {stats.map((stat) => (
+          <div key={stat.labelKey}>
+            <dt>{i18n.t(stat.labelKey)}</dt>
+            <dd>{i18n.formatNumber(stat.value)}</dd>
+          </div>
+        ))}
       </dl>
 
       <p className="rail-note">
-        {total.toLocaleString()} addressable story entities read from the canonical
-        DB projection.
+        {i18n.t("sidebar.note", { total: i18n.formatNumber(total) })}
       </p>
       <footer className="rail-foot">
-        <span>schema v{db.projection.schemaVersion}</span>
-        <span>{db.projection.difficulties.length} difficulties</span>
+        <span>
+          {i18n.t("sidebar.schema", { version: db.projection.schemaVersion })}
+        </span>
+        <span>
+          {formatUnit(i18n, "difficulties", db.projection.difficulties.length)}
+        </span>
       </footer>
     </aside>
   );

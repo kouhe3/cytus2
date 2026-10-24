@@ -47,9 +47,18 @@ palette, which searches the same full-text index and groups hits by entity type;
 `/search` is the keyboard-navigable full page for the same query.
 
 The sidebar language switch covers `en`, `ja`, `zh-Hant`, `ko` and `zh-Hans`
-and persists to `localStorage`. Text records come from the canonical store in
-the selected language; when it has no body the server returns an explicit
-fallback (or a 404) and the page shows which language is being displayed.
+and persists to `localStorage`. It drives both halves of the interface from one
+state: UI copy comes from `src/data/messages.ts` through `useI18n()`, while
+text records come from the canonical store in the same language. When a record
+has no body the server returns an explicit fallback (or a 404) and the page
+shows which language is being displayed.
+
+`messages.ts` is the only source of UI copy. `zh-Hans` defines the key union,
+every other dictionary is typed as `Messages`, and labels for entity types,
+relations and units live beside it. Missing keys fall back to `zh-Hans` and log
+a development warning; the raw key is never rendered. `useI18n()` also exposes
+`Intl`-backed `formatNumber` / `formatDate`, so counts and dates follow the
+active locale. Entity titles and bodies are not translated by this dictionary.
 
 ## Served artifacts
 
@@ -78,8 +87,12 @@ back to a hard-coded name.
 ```bash
 pnpm typecheck
 pnpm build
-pnpm smoke     # app must be running; Edge CDP at 127.0.0.1:9333
+pnpm check:i18n  # dictionary key/placeholder parity + no CJK outside messages.ts
+pnpm smoke       # app must be running; Edge CDP at 127.0.0.1:9333
 ```
+
+`pnpm check:i18n` and `pnpm smoke` import `src/data/messages.ts` directly;
+Node 24 strips the types, so no test runner or build step is involved.
 
 `pnpm smoke` drives a real Edge tab over the DevTools protocol and asserts the
 home feed order, slider/filter behaviour, the Ctrl+K palette, a chart opened
@@ -89,7 +102,10 @@ document views, a backup gallery item, a Branching OS node, a CAPSO pack and
 the Black Market bundle, the extras hub, all 19 assistant groups / 30 pages
 with their language switch, the 10 title screens and 13 video clips (or their
 missing-export notes), grouped search hits opened with the keyboard, and the
-five-language switch including the explicit missing-language fallback.
+five-language switch including the explicit missing-language fallback. The
+switch checks assert the sidebar label, timeline heading, timeline filter,
+level-gate heading and search placeholder in each of the five languages, plus
+that the canonical text language changes with the UI.
 Screenshots land in `web/.shots/` (git-ignored).
 
 ## Scope

@@ -9,6 +9,8 @@ import {
 import { CommandPalette } from "./components/CommandPalette";
 import { Sidebar } from "./components/Sidebar";
 import { isChart } from "./data/database";
+import { useI18n } from "./data/i18n";
+import type { MessageKey } from "./data/messages";
 import { decodeEntityPath } from "./data/selectors";
 import { useDatabase } from "./data/useDatabase";
 import type { Database } from "./types";
@@ -27,16 +29,16 @@ import { ShopIndexView } from "./views/ShopView";
 import { StoryIndexView } from "./views/StoryView";
 import { TimelineView } from "./views/TimelineView";
 
-const PAGE_TITLES: Record<string, string> = {
-  "/timeline": "Timeline",
-  "/search": "Search",
-  "/oa": "OA",
-  "/backup": "Backup Database",
-  "/story": "Story",
-  "/shop": "Shop",
-  "/extras": "Extras",
-  "/extras/assistants": "iM assistant dialogues",
-  "/extras/titles": "Title screens",
+const PAGE_TITLES: Record<string, MessageKey> = {
+  "/timeline": "nav.timeline",
+  "/search": "nav.search",
+  "/oa": "nav.oa",
+  "/backup": "nav.backup",
+  "/story": "nav.story",
+  "/shop": "nav.shop",
+  "/extras": "nav.extras",
+  "/extras/assistants": "extras.assistantsTitle",
+  "/extras/titles": "extras.titlesTitle",
 };
 
 function ScrollToTop() {
@@ -92,6 +94,7 @@ function BootScreen({ message }: { message: string }) {
 
 export default function App() {
   const state = useDatabase();
+  const i18n = useI18n();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
 
@@ -107,17 +110,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const fixed = PAGE_TITLES[location.pathname];
-    if (fixed) {
-      document.title = `${fixed} · Cytus II`;
+    const fixedKey = PAGE_TITLES[location.pathname];
+    if (fixedKey) {
+      document.title = `${i18n.t(fixedKey)} · Cytus II`;
       return;
     }
     if (location.pathname.startsWith("/oa/")) {
-      document.title = "OA archive · Cytus II";
+      document.title = i18n.t("app.oaArchiveTitle");
       return;
     }
     if (location.pathname.startsWith("/backup/")) {
-      document.title = "Backup folder · Cytus II";
+      document.title = i18n.t("app.backupFolderTitle");
       return;
     }
     if (state.status === "ready") {
@@ -126,22 +129,20 @@ export default function App() {
       if (entity) {
         document.title = `${path} · Cytus II`;
       } else {
-        document.title = "Cytus II Story DB";
+        document.title = i18n.t("app.defaultTitle");
       }
     }
-  }, [location.pathname, state]);
+  }, [location.pathname, state, i18n]);
 
   if (state.status === "loading") {
-    return <BootScreen message="Loading canonical DB projection…" />;
+    return <BootScreen message={i18n.t("app.loading")} />;
   }
   if (state.status === "error") {
     return (
       <div className="boot error">
-        <h1>Canonical projection unavailable</h1>
+        <h1>{i18n.t("app.errorTitle")}</h1>
         <p>{state.error.message}</p>
-        <p className="hint">
-          Build the DB from the repository root, then run the SPA again:
-        </p>
+        <p className="hint">{i18n.t("app.errorHint")}</p>
         <pre>{`python -m cytus2db build --out build/
 cd web && pnpm dev`}</pre>
       </div>

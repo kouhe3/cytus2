@@ -1,18 +1,26 @@
 import { Link } from "react-router-dom";
+import { useI18n } from "../data/i18n";
 import { entityHref } from "../data/selectors";
 import type { TimelineEntry } from "../data/selectors";
 import { Avatar, LevelBadge, SpoilerChip, TierChip, TypeBadge } from "./ui";
 
 export function TimelineCard({ entry }: { entry: TimelineEntry }) {
+  const i18n = useI18n();
   const { row, entity } = entry;
   const detail = [
-    `reading order #${row.order}`,
-    row.read_index === null ? null : `iM read index #${row.read_index}`,
-    `cost ${row.cost}`,
-    `lane ${entry.laneName} (${row.lane})`,
-    row.lock_level ? `stage ≤ Lv ${row.lock_level + 1}` : null,
-    row.branch ? `branch ${row.branch}` : null,
-    row.external ? `external ${row.external}` : null,
+    i18n.t("card.tooltipOrder", { order: row.order }),
+    row.read_index === null
+      ? null
+      : i18n.t("card.tooltipReadIndex", { index: row.read_index }),
+    i18n.t("card.tooltipCost", { cost: row.cost }),
+    i18n.t("card.tooltipLane", { name: entry.laneName, lane: row.lane }),
+    row.lock_level
+      ? i18n.t("card.tooltipStage", { level: row.lock_level + 1 })
+      : null,
+    row.branch ? i18n.t("card.tooltipBranch", { branch: row.branch }) : null,
+    row.external
+      ? i18n.t("card.tooltipExternal", { detail: row.external })
+      : null,
   ]
     .filter((part): part is string => Boolean(part))
     .join(" · ");
@@ -50,32 +58,32 @@ export function TimelineCard({ entry }: { entry: TimelineEntry }) {
       {entry.snippet ? (
         <p className="card-snippet">{entry.snippet}</p>
       ) : (
-        <p className="card-snippet muted">No text record for this language.</p>
+        <p className="card-snippet muted">{i18n.t("card.noText")}</p>
       )}
       <footer className="card-foot">
         <TypeBadge type={entity.type} />
         <LevelBadge gate={row.level_gate} />
         <TierChip tier={row.tier} />
-        <span className="meta-chip cost-chip" title="Unlock cost (sum of level locks)">
-          Cost {row.cost}
+        <span className="meta-chip cost-chip" title={i18n.t("card.costTitle")}>
+          {i18n.t("card.cost", { cost: i18n.formatNumber(row.cost) })}
         </span>
         <span
           className="meta-chip lane-chip"
-          title={`Account lane ${row.lane}`}
+          title={i18n.t("card.laneTitle", { lane: row.lane })}
         >
           {entry.laneName}
         </span>
         {row.branch ? (
-          <span className="meta-chip branch-chip" title="Ending branch">
+          <span className="meta-chip branch-chip" title={i18n.t("card.branchTitle")}>
             {row.branch}
           </span>
         ) : null}
         {row.external ? (
           <span
             className="meta-chip external-chip"
-            title={`Outside the model: ${row.external}`}
+            title={i18n.t("card.externalTitle", { detail: row.external })}
           >
-            External
+            {i18n.t("card.external")}
           </span>
         ) : null}
         {row.spoiler_alert ? (

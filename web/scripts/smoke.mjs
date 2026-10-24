@@ -19,6 +19,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  createI18n,
+  formatUnit,
+  translate,
+} from "../src/data/messages.ts";
 
 const appBase = (process.argv[2] ?? "http://127.0.0.1:5190").replace(/\/+$/, "");
 const cdpBase = (process.env.CDP_ENDPOINT ?? "http://127.0.0.1:9333").replace(
@@ -33,6 +38,7 @@ const shotsDir = path.resolve(
 
 const checks = [];
 const screenshots = [];
+const zhHans = createI18n("zh-Hans");
 
 function check(condition, message) {
   if (!condition) {
@@ -290,13 +296,17 @@ try {
   check(Boolean(home.firstAuthor), "first card shows an author");
   check(Boolean(home.firstCharacter), "first card shows a character");
   check(home.firstLevel === "Lv 1", "first card shows its level gate");
-  check(home.firstTier === "Free", "first card shows its tier");
+  check(home.firstTier === translate("zh-Hans", "tier.free"), "first card shows its tier");
   check(home.costChips === home.count, "every card shows its unlock cost");
   check(home.laneChips === home.count, "every card shows its account lane");
-  check(home.firstCost === "Cost 0", "the first card has cost 0");
+  check(
+    home.firstCost === translate("zh-Hans", "card.cost", { cost: "0" }),
+    "the first card has cost 0",
+  );
   check(Boolean(home.firstLane), "the first card names its lane");
   check(
-    home.firstTooltip.includes("cost") && home.firstTooltip.includes("lane"),
+    home.firstTooltip.includes(translate("zh-Hans", "timeline.legendCostBadge")) &&
+      home.firstTooltip.includes(translate("zh-Hans", "timeline.lane")),
     "the card tooltip exposes cost and lane",
   );
   check(
@@ -309,7 +319,7 @@ try {
     return card?.getAttribute('title') ?? '';
   })()`);
   check(
-    branchTooltip.includes("branch"),
+    branchTooltip.includes(translate("zh-Hans", "timeline.legendBranchBadge")),
     "the branch card tooltip names its branch",
   );
   check(
@@ -495,7 +505,8 @@ try {
   check(chartState.level !== "", "chart page shows a level");
   check(chartState.difficulty !== "", "chart page shows a difficulty");
   check(
-    chartState.needUnlock === "Yes" || chartState.needUnlock === "No",
+    chartState.needUnlock === translate("zh-Hans", "common.yes") ||
+      chartState.needUnlock === translate("zh-Hans", "common.no"),
     "chart page shows NeedUnlock",
   );
   check(chartState.sources > 0, "chart page lists unlock sources from edges");
@@ -629,7 +640,10 @@ try {
   }))()`);
   check(oaIndex.characters === 12, `OA index lists 12 characters (got ${oaIndex.characters})`);
   check(oaIndex.firstHref === "/oa/alice001", "OA index links a character archive");
-  check(oaIndex.stats.includes("101 documents"), "OA index counts 101 documents");
+  check(
+    oaIndex.stats.includes(formatUnit(zhHans, "documents", 101)),
+    "OA index counts 101 documents",
+  );
   await cdp.evaluate(`document.querySelector('[data-testid="oa-character-card"]').click()`);
   await cdp.waitFor(
     `location.pathname === '/oa/alice001' && Boolean(document.querySelector('[data-testid="oa-workspace"]'))`,
@@ -701,7 +715,10 @@ try {
     firstHref: document.querySelector('[data-testid="backup-folder-card"]')?.getAttribute('href'),
   }))()`);
   check(backupIndex.folders === 25, `Backup index lists 25 folders (got ${backupIndex.folders})`);
-  check(backupIndex.stats.includes("84 entries"), "Backup index counts 84 media entries");
+  check(
+    backupIndex.stats.includes(formatUnit(zhHans, "entries", 84)),
+    "Backup index counts 84 media entries",
+  );
   check(backupIndex.firstHref === "/backup/alice001", "Backup index links a folder");
   await cdp.evaluate(`document.querySelector('[data-testid="backup-folder-card"]').click()`);
   await cdp.waitFor(
@@ -735,7 +752,10 @@ try {
     folderHref: [...document.querySelectorAll('[data-testid="gallery-item-detail"] a')].map(a => a.getAttribute('href')).find(href => href?.startsWith('/gallery_folder/')) ?? '',
     backCollection: document.querySelector('[data-testid="back-to-collection"]')?.getAttribute('href') ?? '',
   }))()`);
-  check(galleryItem.kind === "Boss stage", "Gallery item shows its media kind");
+  check(
+    galleryItem.kind === translate("zh-Hans", "mediaKind.boss_stage"),
+    "Gallery item shows its media kind",
+  );
   check(galleryItem.conditionHref === "/os/alos023", "Gallery item links its unlock condition");
   check(
     galleryItem.folderHref === "/gallery_folder/alice001",
@@ -769,8 +789,13 @@ try {
     "story index contains events and Branching OS nodes",
   );
   await cdp.evaluate(`document.querySelector('[data-testid="story-sort-version"]').click()`);
+  const versionNote = translate("zh-Hans", "story.sortMeta", {
+    meta: "4",
+    total: "91",
+    sort: translate("zh-Hans", "story.sort.version"),
+  });
   await cdp.waitFor(
-    `(document.querySelector('[data-testid="story-sort-note"]')?.textContent ?? '').includes('4 of 91')`,
+    `(document.querySelector('[data-testid="story-sort-note"]')?.textContent ?? '').includes(${JSON.stringify(versionNote)})`,
     "version sort notes annotated nodes",
   );
   check(true, "version sort explains its reading-order fallback");
@@ -847,7 +872,9 @@ try {
   check(capsoPack.title.trim().length > 0, "CAPSO pack shows its name");
   check(capsoPack.items === 4, `CAPSO pack lists its 4 items (got ${capsoPack.items})`);
   check(
-    capsoPack.facts.some((fact) => fact.includes("CAPSO price")),
+    capsoPack.facts.some((fact) =>
+      fact.includes(translate("zh-Hans", "fact.capsoPrice")),
+    ),
     "CAPSO pack shows its CAPSO price",
   );
   await cdp.screenshot("capso-pack.png");
@@ -861,7 +888,10 @@ try {
     items: document.querySelectorAll('[data-testid="shop-bundle-items"] [data-entity-id]').length,
     tiers: document.querySelectorAll('[data-testid="shop-bundle-tiers"] tbody tr').length,
   }))()`);
-  check(bundle.badge === "Black Market", "VOL2 detail shows the Black Market badge");
+  check(
+    bundle.badge === translate("zh-Hans", "value.blackMarket"),
+    "VOL2 detail shows the Black Market badge",
+  );
   check(bundle.items > 0, "bundle detail links its character items");
   check(bundle.tiers === 20, `bundle detail lists its 20 IAP tiers (got ${bundle.tiers})`);
 
@@ -887,8 +917,8 @@ try {
     "extras hub links the title screens",
   );
   check(
-    extrasIndex.stats.includes("19 assistant groups") &&
-      extrasIndex.stats.includes("10 titles"),
+    extrasIndex.stats.includes(formatUnit(zhHans, "groups", 19)) &&
+      extrasIndex.stats.includes(formatUnit(zhHans, "titles", 10)),
     "extras hub reports the canonical assistant and title counts",
   );
   await cdp.screenshot("extras-hub.png");
@@ -1032,7 +1062,12 @@ try {
     "Diary search finds OA documents",
   );
   check(searchState.marks > 0, "search results highlight the query");
-  check(searchState.summary.includes("matches"), "search summary reports the match count");
+  const matchUnit = formatUnit(zhHans, "matches", 1).replace(/\d+/g, "").trim();
+  check(
+    searchState.summary.includes(matchUnit) &&
+      searchState.summary.includes("zh-Hans"),
+    "search summary reports the match count",
+  );
   await cdp.evaluate(
     `document.querySelector('[data-testid="search-input"]').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))`,
   );
@@ -1116,13 +1151,18 @@ try {
     body: Boolean(document.querySelector('[data-testid="entity-body"]')),
   }))()`);
   check(
-    missingLanguage.notice.includes("No text in ja"),
+    missingLanguage.notice.includes(
+      translate("ja", "common.fallbackNone", { lang: "ja" }),
+    ),
     "missing language shows an explicit fallback notice",
   );
   check(!missingLanguage.body, "missing-language entity renders no body");
   await cdp.evaluate(SET_LANGUAGE("zh-Hans"));
+  const zhFallback = translate("zh-Hans", "common.fallbackNone", {
+    lang: "zh-Hans",
+  });
   await cdp.waitFor(
-    `(document.querySelector('[data-testid="language-fallback"]')?.textContent ?? '').includes('No text in zh-Hans')`,
+    `(document.querySelector('[data-testid="language-fallback"]')?.textContent ?? '').includes(${JSON.stringify(zhFallback)})`,
     "fallback notice follows the switched language",
   );
   check(true, "fallback notice is recomputed for the selected language");
@@ -1135,6 +1175,103 @@ try {
     `document.querySelector('[data-testid="timeline-card"] .card-snippet')?.textContent ?? ''`,
   );
   check(resetSnippet.length > 0, "timeline snippets render after resetting to zh-Hans");
+  await cdp.evaluate(`localStorage.setItem('cytus2.language', 'zh-Hans')`);
+
+  // ------------------------------------------------ five-language UI switch
+  const LANGUAGES = ["en", "ja", "zh-Hant", "ko", "zh-Hans"];
+  const bodyByLanguage = new Map();
+  const bodyLanguages = new Set();
+  for (const code of LANGUAGES) {
+    await cdp.navigate(`${appBase}/timeline`);
+    await cdp.waitFor(
+      `document.querySelectorAll('[data-testid="timeline-card"]').length > 0`,
+      `timeline for ${code}`,
+    );
+    await cdp.evaluate(SET_LANGUAGE(code));
+    await cdp.waitFor(
+      `document.documentElement.lang === ${JSON.stringify(code)} &&
+       (document.querySelector('.page-head h1')?.textContent ?? '').trim() === ${JSON.stringify(translate(code, "timeline.title"))}`,
+      `UI language ${code}`,
+    );
+    const uiState = await cdp.evaluate(`(() => ({
+      nav: document.querySelector('[data-testid="nav-backup"]')?.textContent?.trim() ?? '',
+      title: document.querySelector('.page-head h1')?.textContent?.trim() ?? '',
+      filter: document.querySelector('[data-testid="type-all"]')?.textContent?.trim() ?? '',
+      levelGate: document.querySelector('.context .panel h2')?.textContent?.trim() ?? '',
+      stored: localStorage.getItem('cytus2.language'),
+      htmlLang: document.documentElement.lang,
+      snippet: document.querySelector('[data-testid="timeline-card"] .card-snippet')?.textContent ?? '',
+    }))()`);
+    check(
+      uiState.nav === translate(code, "nav.backup"),
+      `${code}: sidebar navigation follows the UI language`,
+    );
+    check(
+      uiState.title === translate(code, "timeline.title"),
+      `${code}: timeline heading follows the UI language`,
+    );
+    check(
+      uiState.filter === translate(code, "common.all"),
+      `${code}: timeline filter follows the UI language`,
+    );
+    check(
+      uiState.levelGate === translate(code, "timeline.levelGate"),
+      `${code}: timeline level gate heading follows the UI language`,
+    );
+    check(
+      uiState.stored === code && uiState.htmlLang === code,
+      `${code}: UI language persists in localStorage and <html lang>`,
+    );
+    await cdp.screenshot(`language-ui-${code}.png`);
+    check(uiState.snippet.length > 0, `${code}: timeline snippets still render`);
+
+    await cdp.navigate(`${appBase}/search`);
+    await cdp.waitFor(
+      `Boolean(document.querySelector('[data-testid="search-view"]'))`,
+      `search view for ${code}`,
+    );
+    const placeholder = await cdp.evaluate(
+      `document.querySelector('[data-testid="search-input"]')?.getAttribute('placeholder') ?? ''`,
+    );
+    check(
+      placeholder === translate(code, "search.placeholder"),
+      `${code}: search placeholder follows the UI language`,
+    );
+
+    await cdp.navigate(`${appBase}/os/aios001`);
+    await cdp.waitFor(
+      `Boolean(document.querySelector('[data-testid="entity-body"], [data-testid="language-fallback"]'))`,
+      `content for ${code}`,
+    );
+    const contentState = await cdp.evaluate(`(() => ({
+      lang: document.querySelector('[data-testid="entity-body"]')?.dataset.lang ?? null,
+      fallback: document.querySelector('[data-testid="language-fallback"]')?.textContent ?? '',
+      body: document.querySelector('[data-testid="entity-body"]')?.textContent ?? '',
+    }))()`);
+    check(
+      contentState.lang === code || contentState.fallback.includes(code),
+      `${code}: canonical text follows the same language state`,
+    );
+    if (contentState.lang) {
+      bodyLanguages.add(contentState.lang);
+    }
+    if (contentState.body) {
+      bodyByLanguage.set(code, contentState.body);
+    }
+  }
+  check(
+    bodyLanguages.size >= 3,
+    `canonical text switches across languages (saw ${[...bodyLanguages].join(", ") || "none"})`,
+  );
+  check(
+    new Set([...bodyByLanguage.values()]).size >= 3,
+    `canonical bodies differ per language (${bodyByLanguage.size} bodies sampled)`,
+  );
+  await cdp.navigate(`${appBase}/timeline`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="timeline-card"]').length > 0`,
+    "timeline reloads after the five-language check",
+  );
   await cdp.evaluate(`localStorage.setItem('cytus2.language', 'zh-Hans')`);
 
   check(

@@ -24,6 +24,7 @@ import { Fact, Facts } from "../components/Facts";
 import { RelationsSection } from "../components/Relations";
 import { TextBody } from "../components/TextBody";
 import { TypeBadge } from "../components/ui";
+import { useI18n } from "../data/i18n";
 import {
   isBossStage,
   isCapsoShopItem,
@@ -46,16 +47,22 @@ import {
 } from "../data/database";
 import { pickLocalized, useLanguage } from "../data/language";
 import {
+  entityTypeLabel,
+  fallbackNotice,
+  tierLabel,
+} from "../data/labels";
+import { formatUnit } from "../data/messages";
+import {
   characterName,
   entityHome,
   entityTitle,
-  entityTypeLabel,
   formatFieldValue,
   formatLevelLocks,
   incomingEdges,
   outgoingEdges,
   unlockedCharts,
 } from "../data/selectors";
+import type { I18n } from "../data/messages";
 import type {
   BaseEntity,
   ChartEntity,
@@ -140,6 +147,7 @@ function titlePick(
   db: Database,
   entity: BaseEntity,
   lang: Lang,
+  i18n: I18n,
 ): { title: string; fallback: boolean; actual: Lang | null } {
   const data = recordOf(entity);
   const map = (data["titles"] ?? data["names"]) as LocalizedText | undefined;
@@ -174,7 +182,7 @@ function titlePick(
     }
   }
   return {
-    title: entityTitle(db, entity, lang),
+    title: entityTitle(db, entity, lang, i18n),
     fallback: false,
     actual: null,
   };
@@ -245,9 +253,10 @@ export function EntityView({
   entity: BaseEntity;
 }) {
   const { lang } = useLanguage();
+  const i18n = useI18n();
   const order = db.readingOrderByEntity.get(entity.id);
   const textRef = textRefOf(entity);
-  const picked = titlePick(db, entity, lang);
+  const picked = titlePick(db, entity, lang, i18n);
   const home = entityHome(entity);
 
   const charts = useMemo(() => {
@@ -267,9 +276,9 @@ export function EntityView({
   const data = recordOf(entity);
   const genericFacts = GENERIC_FIELDS.map((field) => ({
     field,
-    value: formatFieldValue(data[field]),
+    value: formatFieldValue(data[field], i18n),
   })).filter((fact) => fact.value !== "");
-  const levelLocks = formatLevelLocks(db, data["level_locks"]);
+  const levelLocks = formatLevelLocks(db, data["level_locks"], i18n);
   const provenance = data["provenance"];
   const spoiler = order?.spoiler_alert
     ? db.spoilerById.get(order.spoiler_alert)
@@ -287,7 +296,7 @@ export function EntityView({
                 home.href === "/timeline" ? "back-to-timeline" : "back-to-collection"
               }
             >
-              ← {home.label}
+              ← {i18n.t(home.labelKey)}
             </Link>
           ) : null}
           <BackButton />
@@ -301,25 +310,29 @@ export function EntityView({
         >
           <header className="detail-head">
             <p className="eyebrow">
-              {entityTypeLabel(entity.type)} · <code>{entity.id}</code>
+              {entityTypeLabel(i18n, entity.type)} · <code>{entity.id}</code>
             </p>
             <h1>{picked.title}</h1>
             {picked.fallback ? (
               <div className="fallback-note" data-testid="language-fallback">
-                {lang} missing · showing {picked.actual}
+                {fallbackNotice(i18n, lang, picked.actual)}
               </div>
             ) : null}
             {isImPost(entity) ? (
               <p className="byline">
                 {entity.author}
                 {order?.thread ? ` · ${characterName(db, order.thread)}` : ""} ·{" "}
-                {entity.likes} likes · {entity.reply_count} replies
+                {formatUnit(i18n, "likes", entity.likes)} ·{" "}
+                {formatUnit(i18n, "replies", entity.reply_count)}
               </p>
             ) : null}
             {isOsLog(entity) ? (
               <p className="byline">
-                {entity.date || "No date"} · file {entity.file} · index{" "}
-                {entity.index}
+                {entity.date
+                  ? i18n.formatDate(entity.date)
+                  : i18n.t("entity.noDate")}{" "}
+                · {i18n.t("entity.fileMeta", { file: entity.file })} ·{" "}
+                {i18n.t("entity.indexMeta", { index: entity.index })}
               </p>
             ) : null}
             {!isImPost(entity) && !isOsLog(entity) ? (
@@ -345,13 +358,19 @@ export function EntityView({
                 </Fact>
               ))}
               {levelLocks.length > 0 ? (
-                <Fact label="Level locks">{levelLocks.join(" · ")}</Fact>
+                <Fact label={i18n.t("fact.levelLocks")}>
+                  {levelLocks.join(" · ")}
+                </Fact>
               ) : null}
             </dl>
           ) : null}
 
           {isImPost(entity) && levelLocks.length > 0 ? (
-            <p className="hint">Level locks: {levelLocks.join(" · ")}</p>
+            <p className="hint">
+              {i18n.t("entity.levelLocks", {
+                locks: levelLocks.join(" · "),
+              })}
+            </p>
           ) : null}
 
           <TypeDetails db={db} entity={entity} lang={lang} />
@@ -359,7 +378,9 @@ export function EntityView({
           {charts.length > 0 ? (
             <section className="detail-section" data-testid="charts-section">
               <h2>
-                {isImPost(entity) || isOsLog(entity) ? "Unlocks charts" : "Charts"}
+                {isImPost(entity) || isOsLog(entity)
+                  ? i18n.t("entity.chartsUnlocked")
+                  : i18n.t("entity.charts")}
               </h2>
               <ChartLinks db={db} charts={charts} />
             </section>
@@ -374,43 +395,60 @@ export function EntityView({
         </article>
       </main>
 
-      <aside className="context" aria-label="Entity details">
+      <aside className="context" aria-label={i18n.t("entity.detailsAria")}>
         <section className="panel">
-          <h2>Entity</h2>
+          <h2>{i18n.t("entity.panel.entity")}</h2>
           <Facts>
-            <Fact label="Type">{entityTypeLabel(entity.type)}</Fact>
-            <Fact label="ID">
+            <Fact label={i18n.t("entity.fact.type")}>
+              {entityTypeLabel(i18n, entity.type)}
+            </Fact>
+            <Fact label={i18n.t("entity.fact.id")}>
               <code>{entity.id}</code>
             </Fact>
             {typeof data["game_id"] === "string" ? (
-              <Fact label="Game ID">
+              <Fact label={i18n.t("entity.fact.gameId")}>
                 <code>{data["game_id"]}</code>
               </Fact>
             ) : null}
             {order ? (
               <>
-                <Fact label="Reading order" testId="entity-order">
+                <Fact
+                  label={i18n.t("entity.fact.readingOrder")}
+                  testId="entity-order"
+                >
                   #{order.order}
                 </Fact>
-                <Fact label="Level gate" testId="entity-level">
-                  Lv {order.level_gate + 1}
+                <Fact
+                  label={i18n.t("entity.fact.levelGate")}
+                  testId="entity-level"
+                >
+                  {i18n.t("common.level", { level: order.level_gate + 1 })}
                 </Fact>
-                <Fact label="Tier" testId="entity-tier">
-                  {order.tier}
+                <Fact label={i18n.t("entity.fact.tier")} testId="entity-tier">
+                  {tierLabel(i18n, order.tier)}
                 </Fact>
-                <Fact label="Stage">{order.stage}</Fact>
+                <Fact label={i18n.t("entity.fact.stage")}>{order.stage}</Fact>
                 {order.thread ? (
-                  <Fact label="Thread">{characterName(db, order.thread)}</Fact>
+                  <Fact label={i18n.t("entity.fact.thread")}>
+                    {characterName(db, order.thread)}
+                  </Fact>
                 ) : null}
                 {order.chapter ? (
-                  <Fact label="Chapter">{order.chapter}</Fact>
+                  <Fact label={i18n.t("entity.fact.chapter")}>
+                    {order.chapter}
+                  </Fact>
                 ) : null}
-                <Fact label="Spoiler" testId="entity-spoiler">
+                <Fact
+                  label={i18n.t("entity.fact.spoiler")}
+                  testId="entity-spoiler"
+                >
                   {spoiler
-                    ? `Lv ${spoiler.threshold + 1}`
+                    ? i18n.t("common.level", {
+                        level: spoiler.threshold + 1,
+                      })
                     : order.spoiler_alert
                       ? order.spoiler_alert
-                      : "none"}
+                      : i18n.t("common.none")}
                 </Fact>
               </>
             ) : null}
@@ -419,18 +457,24 @@ export function EntityView({
 
         {isImPost(entity) ? (
           <section className="panel">
-            <h2>iM post</h2>
+            <h2>{i18n.t("entity.panel.imPost")}</h2>
             <Facts>
-              <Fact label="Author">{entity.author}</Fact>
-              <Fact label="iM order">{entity.order}</Fact>
-              <Fact label="Likes">{entity.likes}</Fact>
-              <Fact label="Replies">{entity.reply_count}</Fact>
-              <Fact label="Story gate">{entity.story_gate ?? "none"}</Fact>
-              <Fact label="Topic gate">{entity.topic_gate ?? "none"}</Fact>
-              <Fact label="Attachments">
+              <Fact label={i18n.t("entity.fact.author")}>{entity.author}</Fact>
+              <Fact label={i18n.t("entity.fact.imOrder")}>{entity.order}</Fact>
+              <Fact label={i18n.t("entity.fact.likes")}>{entity.likes}</Fact>
+              <Fact label={i18n.t("entity.fact.replies")}>
+                {entity.reply_count}
+              </Fact>
+              <Fact label={i18n.t("entity.fact.storyGate")}>
+                {entity.story_gate ?? i18n.t("common.none")}
+              </Fact>
+              <Fact label={i18n.t("entity.fact.topicGate")}>
+                {entity.topic_gate ?? i18n.t("common.none")}
+              </Fact>
+              <Fact label={i18n.t("entity.fact.attachments")}>
                 {entity.attachments.length > 0
                   ? entity.attachments.join(", ")
-                  : "none"}
+                  : i18n.t("common.none")}
               </Fact>
             </Facts>
           </section>
@@ -438,16 +482,26 @@ export function EntityView({
 
         {isOsLog(entity) ? (
           <section className="panel">
-            <h2>OS log</h2>
+            <h2>{i18n.t("entity.panel.osLog")}</h2>
             <Facts>
-              <Fact label="File">{entity.file}</Fact>
-              <Fact label="Index">{entity.index}</Fact>
-              <Fact label="Date">{entity.date || "—"}</Fact>
-              <Fact label="Category">{entity.category || "—"}</Fact>
-              <Fact label="Chapter">{entity.chapter_id}</Fact>
-              <Fact label="File lock">{entity.file_lock ?? "none"}</Fact>
-              <Fact label="Movies">
-                {entity.movies.length > 0 ? entity.movies.join(", ") : "none"}
+              <Fact label={i18n.t("entity.fact.file")}>{entity.file}</Fact>
+              <Fact label={i18n.t("entity.fact.index")}>{entity.index}</Fact>
+              <Fact label={i18n.t("entity.fact.date")}>
+                {entity.date ? i18n.formatDate(entity.date) : "—"}
+              </Fact>
+              <Fact label={i18n.t("entity.fact.category")}>
+                {entity.category || "—"}
+              </Fact>
+              <Fact label={i18n.t("entity.fact.chapter")}>
+                {entity.chapter_id}
+              </Fact>
+              <Fact label={i18n.t("entity.fact.fileLock")}>
+                {entity.file_lock ?? i18n.t("common.none")}
+              </Fact>
+              <Fact label={i18n.t("entity.fact.movies")}>
+                {entity.movies.length > 0
+                  ? entity.movies.join(", ")
+                  : i18n.t("common.none")}
               </Fact>
             </Facts>
           </section>
@@ -455,7 +509,7 @@ export function EntityView({
 
         {Array.isArray(provenance) && provenance.length > 0 ? (
           <section className="panel">
-            <h2>Provenance</h2>
+            <h2>{i18n.t("entity.panel.provenance")}</h2>
             <ul className="prov">
               {provenance.map((entry, index) => {
                 if (typeof entry !== "object" || entry === null) {
@@ -464,8 +518,10 @@ export function EntityView({
                 const record = entry as Record<string, unknown>;
                 return (
                   <li key={index}>
-                    <code>{formatFieldValue(record["locator"])}</code>
-                    <span>{formatFieldValue(record["kind"])}</span>
+                    <code>
+                      {formatFieldValue(record["locator"], i18n)}
+                    </code>
+                    <span>{formatFieldValue(record["kind"], i18n)}</span>
                   </li>
                 );
               })}
@@ -474,12 +530,18 @@ export function EntityView({
         ) : null}
 
         <section className="panel">
-          <h2>Edges</h2>
+          <h2>{i18n.t("entity.panel.edges")}</h2>
           <Facts>
-            <Fact label="Outgoing">{outgoingCount}</Fact>
-            <Fact label="Incoming">{incomingCount}</Fact>
-            <Fact label="Charts">{charts.length}</Fact>
-            <Fact label="Language">{lang}</Fact>
+            <Fact label={i18n.t("entity.fact.outgoing")}>
+              {i18n.formatNumber(outgoingCount)}
+            </Fact>
+            <Fact label={i18n.t("entity.fact.incoming")}>
+              {i18n.formatNumber(incomingCount)}
+            </Fact>
+            <Fact label={i18n.t("entity.fact.charts")}>
+              {i18n.formatNumber(charts.length)}
+            </Fact>
+            <Fact label={i18n.t("entity.fact.language")}>{lang}</Fact>
           </Facts>
         </section>
       </aside>

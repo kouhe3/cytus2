@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useI18n } from "../data/i18n";
 import { TypeBadge } from "./ui";
 import { entityHref, entityTitle } from "../data/selectors";
 import type { BaseEntity, Database, Lang } from "../types";
@@ -16,6 +17,7 @@ export function EntityLink({
   testId?: string;
   meta?: string;
 }) {
+  const i18n = useI18n();
   return (
     <Link
       to={entityHref(entity.id)}
@@ -24,7 +26,7 @@ export function EntityLink({
       data-entity-id={entity.id}
       data-entity-type={entity.type}
     >
-      <span className="entity-link-title">{entityTitle(db, entity, lang)}</span>
+      <span className="entity-link-title">{entityTitle(db, entity, lang, i18n)}</span>
       <span className="entity-link-meta">
         <TypeBadge type={entity.type} />
         <code>{entity.id}</code>
@@ -39,7 +41,7 @@ export function EntityList({
   entities,
   lang,
   testId,
-  empty = "None recorded.",
+  empty,
   meta,
 }: {
   db: Database;
@@ -49,8 +51,9 @@ export function EntityList({
   empty?: string;
   meta?: string;
 }) {
+  const i18n = useI18n();
   if (entities.length === 0) {
-    return <p className="muted">{empty}</p>;
+    return <p className="muted">{empty ?? i18n.t("common.notRecorded")}</p>;
   }
   return (
     <ul className="link-list">

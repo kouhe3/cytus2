@@ -8,6 +8,10 @@ type MediaProps = {
   readonly className?: string;
 };
 
+/** Game inline images use a 240x160 (3:2) frame scaled by the texture ratio. */
+const INLINE_BASE_RATIO = 1.5;
+const INLINE_MAX_HEIGHT = 560;
+
 function useImage(id: string, kind: NonNullable<MediaProps["kind"]>): MediaAsset | null {
   const [asset, setAsset] = useState<MediaAsset | null>(null);
   useEffect(() => {
@@ -35,13 +39,23 @@ export function MediaImage({ id, kind = "auto", alt, className }: MediaProps) {
   if (!asset) {
     return null;
   }
+  const stretch = kind !== "avatar" && asset.w && asset.h;
+  const aspect = stretch ? INLINE_BASE_RATIO * (asset.w! / asset.h!) : null;
   return (
     <img
-      className={className ?? "media-image"}
+      className={`${className ?? "media-image"}${stretch ? " media-stretched" : ""}`}
       src={mediaUrl(asset.file)}
       alt={alt ?? id}
       loading="lazy"
       decoding="async"
+      style={
+        aspect
+          ? {
+              aspectRatio: String(Number(aspect.toFixed(4))),
+              width: `min(100%, ${Math.round(INLINE_MAX_HEIGHT * aspect)}px)`,
+            }
+          : undefined
+      }
     />
   );
 }

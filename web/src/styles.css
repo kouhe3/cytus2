@@ -1853,3 +1853,10 @@ kbd {
   border-radius: 50%;
   object-fit: cover;
 }
+
+.media-stretched {
+  display: block;
+  object-fit: fill;
+  height: auto;
+  max-width: 100%;
+}

@@ -24,14 +24,10 @@ GOLDEN_OS = (
     "|内容={{os/对话|Alpha|Hello there}}\n"
     "{{os/声音|Beep,Beep sound}}\n"
     "[[File:img001.png|thumb]]\n"
-    "<poem>\n"
     "Alpha narration line.\n"
-    "</poem>\n"
     "{{os/对话|Beta|Second line}}\n"
     "{{邮件抬头|主题=Title|发件人=From|收件人=To}}\n"
-    "<poem>\n"
     "Mail body\n"
-    "</poem>\n"
     "}}\n"
     "[[分类:Os剧情目录]]\n"
     "\n"
@@ -48,9 +44,7 @@ GOLDEN_OA = (
     "|剧情排序=1\n"
     "|内容={{oa/对话|Alpha|Hello OA}}\n"
     "{{oa/声音|Beep,Beep sound}}\n"
-    "<poem>\n"
     "OA document body.\n"
-    "</poem>\n"
     "}}\n"
     "[[分类:Oa剧情]]\n"
     "\n"
@@ -289,3 +283,38 @@ def test_os_ver_is_emitted_empty_when_category_is_missing(
     page = report_page(out, "os/aos001")
     assert "ver" in page["emitted"]
     assert {"kind": "missing_ver", "detail": "aos001"} in page["conflicts"]
+
+
+def test_single_line_narration_stays_plain() -> None:
+    from cytus2db.wiki.pages._content import render_blocks
+
+    text, conflicts = render_blocks(
+        [{"kind": "narration", "text": "<i>[讯号中断]</i>"}],
+        dialogue_template="os/对话",
+        sound_template="os/声音",
+    )
+    assert text == "<i>[讯号中断]</i>"
+    assert conflicts == []
+
+
+def test_multiline_narration_stays_plain() -> None:
+    from cytus2db.wiki.pages._content import render_blocks
+
+    text, _ = render_blocks(
+        [{"kind": "narration", "text": "Line one.\nLine two."}],
+        dialogue_template="os/对话",
+        sound_template="os/声音",
+    )
+    assert text == "Line one.\nLine two."
+
+
+def test_oa_prose_joins_paragraphs_for_one_poem() -> None:
+    from cytus2db.wiki.pages._content import render_prose
+
+    body = render_prose(
+        [
+            {"kind": "narration", "text": "First paragraph."},
+            {"kind": "narration", "text": "Second paragraph.\nStill second."},
+        ]
+    )
+    assert body == "First paragraph.\n\nSecond paragraph.\nStill second."

@@ -264,12 +264,12 @@ def test_review_reports_title_entity_and_changed_parameters(
 
     assert "# Wikitext 审阅批次：example-5" in text
     assert "| 1 | Alpha | `character` | `character/alpha001` | 5 | 补丁 |" in text
-    assert "| 2 | First | `song` | `song/alpha001_000` | 9 | 补丁 |" in text
-    assert "| 3 | 第一篇贴文 | `im_post` | `im/P0101` | 7 | 补丁 |" in text
-    assert "| 4 | 第一个OS（Alpha） | `os_log` | `os/gos001` | 4 | 补丁 |" in text
+    assert "| 2 | First | `song` | `song/alpha001_000` | 8 | 补丁 |" in text
+    assert "| 3 | 第一篇贴文 | `im_post` | `im/P0101` | 6 | 补丁 |" in text
+    assert "| 4 | 第一个OS（Alpha） | `os_log` | `os/gos001` | 3 | 补丁 |" in text
     assert (
         "| 5 | Alpha Doc（Alpha） | `oa_document` "
-        "| `oa_document/alpha001_obj001_oa001` | 2 | 补丁 |"
+        "| `oa_document/alpha001_obj001_oa001` | 1 | 补丁 |"
     ) in text
 
     # Only changed parameters appear in the diff table.

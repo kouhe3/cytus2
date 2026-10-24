@@ -460,3 +460,49 @@ def test_patch_render_requires_the_local_pages_cache(
     )
     assert result.returncode != 0
     assert "pages.json" in result.stderr
+
+
+def test_existing_narrative_body_is_preserved() -> None:
+    snapshot = Snapshot(
+        articles=frozenset({"Log"}),
+        pages=(
+            SnapshotPage(
+                "Log",
+                "Os/文件",
+                {"文件名": "Log", "内容": "站内正文\n<poem>带标签</poem>"},
+            ),
+        ),
+    )
+    page = PatchPage(
+        "os_log/x",
+        "os_log",
+        "Os/文件",
+        "Log",
+        {"文件名": "Log", "内容": "数据库正文"},
+    )
+
+    entry = plan_patches([page], snapshot)["os_log/x"]
+
+    assert entry.patch is not None
+    assert entry.patch["params"] == {}
+    assert entry.preserved == {"内容": "kept_existing_verbatim"}
+
+
+def test_empty_narrative_body_is_filled() -> None:
+    snapshot = Snapshot(
+        articles=frozenset({"Log"}),
+        pages=(SnapshotPage("Log", "Os/文件", {"文件名": "Log", "内容": ""}),),
+    )
+    page = PatchPage(
+        "os_log/x",
+        "os_log",
+        "Os/文件",
+        "Log",
+        {"文件名": "Log", "内容": "数据库正文"},
+    )
+
+    entry = plan_patches([page], snapshot)["os_log/x"]
+
+    assert entry.patch is not None
+    assert entry.patch["params"]["内容"] == "数据库正文"
+    assert entry.preserved == {}

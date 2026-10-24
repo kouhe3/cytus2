@@ -57,6 +57,7 @@ def build_song_pages(db: Database) -> list[PageModel]:
     songs = sorted(db.records("song"), key=lambda record: record["id"])
     sort_keys = _pack_sort_keys(songs)
     oa_names = _oa_object_names(db)
+    capso_songs = _capso_only_songs(db, charts_by_song)
 
     pages: list[PageModel] = []
     for song in songs:
@@ -78,10 +79,15 @@ def build_song_pages(db: Database) -> list[PageModel]:
             conflicts.append(
                 Conflict("missing_pack", f"{song['id']} -> {song.get('pack_id')!r}")
             )
+        elif song["id"] in capso_songs:
+            # Bili `所属曲包`: CAPSO-only songs that are not part of a DLC
+            # collection must say CAPSO; an empty value means free.
+            fields.append(Field("pack", Text.of("CAPSO")))
         else:
-            pack_name = _text(pack.get("name")) or _text(pack.get("game_id"))
-            if pack_name:
-                fields.append(Field("pack", Text.of(pack_name)))
+            # The character pack is not a commercial song pack.  DLC
+            # collections are not in the APK catalog, so leave the parameter
+            # empty (the template's "free" default) rather than inventing one.
+            omitted["pack"] = "not_in_dlc_pack"
 
         characters = sorted(
             characters_by_pack.get(song.get("pack_id") or "", []),
@@ -133,6 +139,23 @@ def build_song_pages(db: Database) -> list[PageModel]:
 
 
 # ------------------------------------------------------------------ helpers
+def _capso_only_songs(
+    db: Database, charts_by_song: dict[str, list[dict[str, Any]]]
+) -> set[str]:
+    """Songs whose every chart is granted only by CAPSO gacha rewards."""
+    result: set[str] = set()
+    for song_id, charts in charts_by_song.items():
+        if not charts:
+            continue
+        if all(
+            (sources := [edge.source for edge in db.incoming("unlocks_chart", chart["id"])])
+            and all(source.startswith("gacha_reward/") for source in sources)
+            for chart in charts
+        ):
+            result.add(song_id)
+    return result
+
+
 def _text(value: Any) -> str:
     return " ".join(str(value or "").split())
 

@@ -18,7 +18,6 @@ GOLDEN_PAGES = {
         "|曲名=First\n"
         "|所属角色=Alpha\n"
         "|曲师=Artist A\n"
-        "|所属曲包=Alpha\n"
         "|EasyRating=1\n"
         "|HardRating=5\n"
         "|ChaosRating=9\n"
@@ -40,7 +39,6 @@ GOLDEN_PAGES = {
         "|曲名=Second\n"
         "|所属角色=Alpha\n"
         "|曲师=Artist B\n"
-        "|所属曲包=Alpha\n"
         "|EasyRating=2\n"
         "|HardRating=6\n"
         "|ChaosRating=11\n"
@@ -62,7 +60,6 @@ GOLDEN_PAGES = {
         "|歌曲排序=1\n"
         "|曲名=Third\n"
         "|所属角色=Beta\n"
-        "|所属曲包=Beta\n"
         "|EasyRating=3\n"
         "|DreamRating=12\n"
         "}}\n"
@@ -340,3 +337,65 @@ def test_provenance_section_is_emitted_and_opt_out(
     )
     with pytest.raises(BuildError, match="body_templates"):
         render_page(undeclared, profile, TitleMatch("First", "generated"))
+
+
+def test_capso_only_song_sets_capso_pack() -> None:
+    from cytus2db.wiki.db import Database, Edge
+    from cytus2db.wiki.songs import build_song_pages
+
+    song = {"id": "song/cap001_001", "name": "Capsule", "pack_id": "pack/cap001"}
+    pack = {"id": "pack/cap001", "game_id": "cap001", "name": "Capsule", "is_iap": False}
+    charts = {
+        "chart/cap001_001@Easy": {
+            "id": "chart/cap001_001@Easy",
+            "song_id": song["id"],
+            "difficulty": "Easy",
+            "level": "3",
+            "need_unlock": False,
+        },
+        "chart/cap001_001@Hard": {
+            "id": "chart/cap001_001@Hard",
+            "song_id": song["id"],
+            "difficulty": "Hard",
+            "level": "7",
+            "need_unlock": False,
+        },
+    }
+    db = Database(
+        {"song": {song["id"]: song}, "pack": {pack["id"]: pack}, "chart": charts},
+        [
+            Edge("gacha_reward/cap001_001_0,1", "unlocks_chart", "chart/cap001_001@Easy"),
+            Edge("gacha_reward/cap001_001_2", "unlocks_chart", "chart/cap001_001@Hard"),
+        ],
+        {},
+    )
+
+    page = build_song_pages(db)[0]
+    fields = {field.name: field.value.plain() for field in page.fields()}
+    assert fields["pack"] == "CAPSO"
+    assert "pack" not in page.omitted
+
+
+def test_free_song_omits_pack() -> None:
+    from cytus2db.wiki.db import Database
+    from cytus2db.wiki.songs import build_song_pages
+
+    song = {"id": "song/free001_001", "name": "Free", "pack_id": "pack/free001"}
+    pack = {"id": "pack/free001", "game_id": "free001", "name": "Free", "is_iap": False}
+    chart = {
+        "id": "chart/free001_001@Easy",
+        "song_id": song["id"],
+        "difficulty": "Easy",
+        "level": "2",
+        "need_unlock": False,
+    }
+    db = Database(
+        {"song": {song["id"]: song}, "pack": {pack["id"]: pack}, "chart": {chart["id"]: chart}},
+        [],
+        {},
+    )
+
+    page = build_song_pages(db)[0]
+    fields = {field.name: field.value.plain() for field in page.fields()}
+    assert "pack" not in fields
+    assert page.omitted["pack"] == "not_in_dlc_pack"

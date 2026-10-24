@@ -191,6 +191,16 @@ def _booklet(block: dict[str, Any]) -> str:
     return "{{小册子" + "".join(parts) + "}}" if parts else ""
 
 
+def render_prose(blocks: Iterable[dict[str, Any]]) -> str:
+    """Join narration paragraphs for a pure-prose document."""
+    return "\n\n".join(
+        text
+        for block in blocks
+        if block.get("kind") == "narration"
+        and (text := str(block.get("text") or "").strip("\n"))
+    )
+
+
 def render_blocks(
     blocks: Iterable[dict[str, Any]],
     *,
@@ -210,7 +220,7 @@ def render_blocks(
         elif kind == "narration":
             text = str(block.get("text") or "").strip("\n")
             if text:
-                lines.append(f"<poem>\n{text}\n</poem>")
+                lines.append(text)
         elif kind == "sound":
             value = _sound_value(block)
             if value:
@@ -225,7 +235,7 @@ def render_blocks(
                 lines.append(header)
             body = str(block.get("body") or "").strip("\n")
             if body:
-                lines.append(f"<poem>\n{body}\n</poem>")
+                lines.append(body)
         elif kind == "booklet":
             booklet = _booklet(block)
             if booklet:

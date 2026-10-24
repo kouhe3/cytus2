@@ -47,7 +47,7 @@ _Avoid_: 把 pack 当作等级拥有者
 ## 音乐
 
 **Song** (`song`):
-一首曲目：曲名、曲师、所属曲包。
+一首曲目：曲名、曲师、所属角色。`所属曲包` 是商业曲包，不是角色包；见「Wiki 渲染约定」。
 _Avoid_: 曲子、track
 
 **Chart** (`chart`):
@@ -160,3 +160,13 @@ _Avoid_: 用 `casefold` 比较整个标题（`NEKO` 与 `Neko` 是两页）
 `wiki/snapshot/known_missing.json` 中人工列出的、确实没有页面的红链目标；每条都带原因。
 校验把它们单独报告，不算失败；未列入的目标仍是错误。
 _Avoid_: 把「未匹配」静默当缺页
+
+## Wiki 渲染约定
+
+**所属曲包** (`song.pack`):
+Bili `歌曲` 模板的商业曲包参数，不是角色包。黑市曲填曲包名；CAPSO 抽奖独占、且不属于任何商业曲包的曲目填 `CAPSO`；其余留空（模板默认免费）。角色包名（PAFF、Xenon 等）禁止写入。
+_Avoid_: 把 `pack` / 角色包当所属曲包
+
+**POEM** (`<poem>`):
+MediaWiki 的换行保留标签。OS 档案正文**不使用**（Bili 的 `Os/文件` 文档示例即普通文本）；OA 纯散文文档在正文开头和结尾各放一次，模板与对话混排的 OA 不使用。
+_Avoid_: 给每条 OS narration 套 `<poem>`、给每个 OA narration 单独套 `<poem>`

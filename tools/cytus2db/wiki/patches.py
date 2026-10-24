@@ -35,7 +35,7 @@ from __future__ import annotations
 import json
 import re
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -121,6 +121,7 @@ class PatchEntry:
     match: PageMatch
     patch: dict[str, Any] | None
     keep_page: bool
+    preserved: dict[str, str] = field(default_factory=dict)
 
 
 # ------------------------------------------------------------------ snapshot
@@ -400,6 +401,8 @@ class _Rule:
     # first letter (``NEKO`` and ``Neko`` are different pages).
     strict_only: bool = False
 
+
+VERBATIM_PARAMS = frozenset({"内容"})
 
 _RULES = {
     "歌曲": _Rule(("曲名",)),
@@ -693,6 +696,7 @@ def plan_patches(
     for page in ordered:
         match = matches[page.entity_id]
         patch = None
+        preserved: dict[str, str] = {}
         if match.matched and match.existing is not None:
             changed: dict[str, str] = {}
             rule = _RULES.get(page.template)
@@ -717,6 +721,13 @@ def plan_patches(
                     # Same identity under the matching normalisation (case,
                     # underscores, template markup): keep the site spelling.
                     continue
+                if current.strip() and name in VERBATIM_PARAMS:
+                    # Narrative bodies carry manual formatting, poem choices
+                    # and extra links.  Keep the site copy; only fill an empty
+                    # parameter.  Rewriting it is not a parameter-level patch.
+                    if current.strip() != value.strip():
+                        preserved[name] = "kept_existing_verbatim"
+                    continue
                 if current.strip() != value.strip():
                     changed[name] = value
             patch = {
@@ -730,6 +741,7 @@ def plan_patches(
             match=match,
             patch=patch,
             keep_page=match.keep_page,
+            preserved=preserved,
         )
     return entries
 

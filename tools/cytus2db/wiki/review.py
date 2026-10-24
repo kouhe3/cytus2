@@ -746,6 +746,8 @@ def _preservation_items(
             raw = existing.params[name]
             shown = f"（{_preview(raw, limit=80)}）" if raw else "（空）"
             items.append(f"`|{name}`：人工维护参数，保留站内原值{shown}")
+    for name in sorted(entry.preserved):
+        items.append(f"`|{name}`：站内已有正文，保留原样（未改写）")
     omitted = list(page.omitted)
     if omitted:
         items.append(

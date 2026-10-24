@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Navigate,
   Route,
   Routes,
   useLocation,
+  useNavigationType,
   useParams,
 } from "react-router-dom";
 import { CommandPalette } from "./components/CommandPalette";
@@ -45,9 +46,31 @@ const PAGE_TITLES: Record<string, MessageKey> = {
 
 function ScrollToTop() {
   const location = useLocation();
+  const navigationType = useNavigationType();
+  const lastScroll = useRef(0);
+
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [location.pathname]);
+    const storageKey = `scroll:${location.key}`;
+    lastScroll.current = 0;
+    const stored =
+      navigationType === "POP" ? sessionStorage.getItem(storageKey) : null;
+    if (stored !== null) {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, Number(stored));
+        lastScroll.current = Number(stored);
+      });
+    } else {
+      window.scrollTo(0, 0);
+    }
+    const onScroll = () => {
+      lastScroll.current = window.scrollY;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      sessionStorage.setItem(storageKey, String(lastScroll.current));
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [location.key, navigationType]);
   return null;
 }
 

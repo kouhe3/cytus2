@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { EntityLink } from "../components/EntityLink";
 import { useI18n } from "../data/i18n";
@@ -22,9 +22,24 @@ function versionGroups(entries: CharacterOsEntry[]): [string, CharacterOsEntry[]
   return [...grouped.entries()];
 }
 
+const OPEN_STORAGE = "os-index-open";
+
+function initialOpen(): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(OPEN_STORAGE);
+    if (raw) {
+      return new Set(JSON.parse(raw) as string[]);
+    }
+  } catch {
+    // ignore malformed storage
+  }
+  return new Set();
+}
+
 export function OsIndexView({ db }: { readonly db: Database }) {
   const { lang } = useLanguage();
   const i18n = useI18n();
+  const [openCharacters, setOpenCharacters] = useState(initialOpen);
   const characters = useMemo(
     () =>
       (db.entitiesByType.get("character") ?? [])
@@ -59,7 +74,27 @@ export function OsIndexView({ db }: { readonly db: Database }) {
             <details
               key={character.id}
               className="os-character-group"
-              open={index === 0}
+              open={
+                openCharacters.size > 0
+                  ? openCharacters.has(character.id)
+                  : index === 0
+              }
+              onToggle={(event) => {
+                const isOpen = event.currentTarget.open;
+                setOpenCharacters((current) => {
+                  const next = new Set(current);
+                  if (isOpen) {
+                    next.add(character.id);
+                  } else {
+                    next.delete(character.id);
+                  }
+                  sessionStorage.setItem(
+                    OPEN_STORAGE,
+                    JSON.stringify([...next]),
+                  );
+                  return next;
+                });
+              }}
               data-testid="os-character-group"
               data-character-id={character.id}
             >

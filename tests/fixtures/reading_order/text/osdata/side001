@@ -1,0 +1,17 @@
+[
+  {
+    "Id": "gos001",
+    "Type": 3,
+    "Names": ["Side OS", "Side OS", "Side OS", "Side OS", "Side OS", "Side OS"],
+    "Contents": ["##conversation=Side\nSide", "", "", "", "", ""],
+    "TimelineChapter": {"Folder": "N/A", "Chapter": "Side Stories", "Index": 3},
+    "Date": "690_03_03",
+    "OSLockCondition": {
+      "FileLockId": "",
+      "LevelLocks": [{"SongPackId": "side001", "Level": 1, "IsLevelLocked": false}]
+    },
+    "UnlockCharts": [],
+    "DigitLock": null,
+    "Category": "3.0"
+  }
+]

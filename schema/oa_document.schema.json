@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "oa_document.schema.json",
+  "title": "oa_document",
+  "description": "An OA file attached to an object through its mission. Its name/body text lives under text_ref.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "character_id",
+    "object_id",
+    "mission_id",
+    "text_ref",
+    "digit_lock",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^oa_document/[^\\s]+$"
+    },
+    "type": {
+      "const": "oa_document"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "character_id": {
+      "type": "string",
+      "pattern": "^character/[^\\s]+$"
+    },
+    "object_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^oa_object/[^\\s]+$"}
+      ]
+    },
+    "mission_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "text_ref": {
+      "type": "string",
+      "pattern": "^oa_document/[^\\s]+$"
+    },
+    "digit_lock": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

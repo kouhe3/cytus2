@@ -1,0 +1,31 @@
+[
+  {
+    "Id": "alpha001",
+    "Name": "Default",
+    "CharacterId": "alpha001",
+    "OSFileId": "aos001",
+    "IMFileId": "",
+    "StoryId": "story01",
+    "LevelLockCharacterId": "",
+    "LevelLockLevel": 0,
+    "NeedCapso": false,
+    "BGMoviePrefabPairs": [
+      {"BGMoviePrefix": "alpha001", "BGPrefabName": "alpha001", "Weight": 100}
+    ]
+  },
+  {
+    "Id": "beta001",
+    "Name": "Default",
+    "CharacterId": "beta001",
+    "OSFileId": "",
+    "IMFileId": "",
+    "StoryId": "",
+    "LevelLockCharacterId": "alpha001",
+    "LevelLockLevel": 9,
+    "NeedCapso": true,
+    "BGMoviePrefabPairs": [
+      {"BGMoviePrefix": "beta001", "BGPrefabName": "beta001", "Weight": 100},
+      {"BGMoviePrefix": "beta001_alt", "BGPrefabName": "beta001_alt", "Weight": 50}
+    ]
+  }
+]

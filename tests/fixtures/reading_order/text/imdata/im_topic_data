@@ -1,0 +1,152 @@
+[
+  {
+    "Id": "AL0101",
+    "AvatarId": "alpha_01",
+    "CharacterName": "Alpha-Official",
+    "Titles": ["Story trigger", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "AL0201",
+    "AvatarId": "alpha_01",
+    "CharacterName": "Alpha-Official",
+    "Titles": ["After the story", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "P0101",
+    "AvatarId": "alpha_01",
+    "CharacterName": "Alpha-Official",
+    "Titles": ["Level three", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "P0201",
+    "AvatarId": "alpha_01",
+    "CharacterName": "Alpha-Official",
+    "Titles": ["After P0101", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "P0301",
+    "AvatarId": "beta_01",
+    "CharacterName": "Beta",
+    "Titles": ["Three locks", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "B0101",
+    "AvatarId": "beta_01",
+    "CharacterName": "Beta",
+    "Titles": ["Paid post", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "B0201",
+    "AvatarId": "beta_01",
+    "CharacterName": "Beta",
+    "Titles": ["Paid account, free lock", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "G0101",
+    "AvatarId": "side_01",
+    "CharacterName": "Side",
+    "Titles": ["Side post", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "I0101",
+    "AvatarId": "ivy_01",
+    "CharacterName": "Ivy",
+    "Titles": ["Ivy post", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "Q0101",
+    "AvatarId": "alpha_01",
+    "CharacterName": "Alpha-Official",
+    "Titles": ["Branch one", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "X0101",
+    "AvatarId": "xenon_01",
+    "CharacterName": "Xenon",
+    "Titles": ["Xenon ambient", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "Q6501",
+    "AvatarId": "xenon_01",
+    "CharacterName": "Xenon",
+    "Titles": ["Xenon branch", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "ZCAP1",
+    "AvatarId": "default_08",
+    "CharacterName": "System",
+    "Titles": ["Level cap row", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "B0901",
+    "AvatarId": "alpha_01",
+    "CharacterName": "Alpha-Official",
+    "Titles": ["Outside the model", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "Q0201",
+    "AvatarId": "alpha_01",
+    "CharacterName": "Alpha-Official",
+    "Titles": ["Branch four", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  }
+]

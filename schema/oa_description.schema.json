@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "oa_description.schema.json",
+  "title": "oa_description",
+  "description": "An OA hotspot description with enable/disable conditions. Text lives under text_ref.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "character_id",
+    "description_object_id",
+    "weight",
+    "event",
+    "text_ref",
+    "enable_level_locks",
+    "enable_conditions",
+    "disable_level_locks",
+    "disable_conditions",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^oa_description/[^\\s]+$"
+    },
+    "type": {
+      "const": "oa_description"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "character_id": {
+      "type": "string",
+      "pattern": "^character/[^\\s]+$"
+    },
+    "description_object_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "weight": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "event": {
+      "type": "integer"
+    },
+    "text_ref": {
+      "type": "string",
+      "pattern": "^oa_description/[^\\s]+$"
+    },
+    "enable_level_locks": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/level_lock"
+      }
+    },
+    "enable_conditions": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/condition"
+      }
+    },
+    "disable_level_locks": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/level_lock"
+      }
+    },
+    "disable_conditions": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/condition"
+      }
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "title_screen.schema.json",
+  "title": "title_screen",
+  "description": "One title-screen evolution entry from text/titleinfodata/title_info, with its story unlock conditions and video_title_* clips.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "number",
+    "name",
+    "unlock_conditions",
+    "video_clips",
+    "text_ref",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^title_screen/[0-9]+$"
+    },
+    "type": {
+      "const": "title_screen"
+    },
+    "game_id": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "number": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Raw Type value, also the display order."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unlock_conditions": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/condition"
+      }
+    },
+    "video_clips": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_]+$"
+      },
+      "description": "video_title_* clip names; the media export stores them as titles/<clip>.mp4."
+    },
+    "text_ref": {
+      "type": "string",
+      "pattern": "^title_screen/[0-9]+$"
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

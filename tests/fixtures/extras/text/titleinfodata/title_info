@@ -1,0 +1,27 @@
+[
+  {
+    "Type": 0,
+    "Name": "Wake Up",
+    "Conditions": []
+  },
+  {
+    "Type": 2,
+    "Name": "Can You Hear Me",
+    "Conditions": [
+      {
+        "$type": "Rayark.Cytus2.Title.StoryLockCondition, Assembly-CSharp",
+        "storyId": "story_alpha01"
+      }
+    ]
+  },
+  {
+    "Type": 9,
+    "Name": "Together, Forever",
+    "Conditions": [
+      {
+        "$type": "Rayark.Cytus2.Title.StoryLockCondition, Assembly-CSharp",
+        "storyId": "story_ending03_main"
+      }
+    ]
+  }
+]

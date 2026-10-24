@@ -1,0 +1,59 @@
+[
+  {
+    "Id": "assistant_tutorial",
+    "TargetId": "P0201",
+    "Version": "1.0.0",
+    "Progress": 1,
+    "Trigger": 0,
+    "Pages": [
+      {
+        "Id": "assistant_tutorial",
+        "Page": 1,
+        "AssistantId": 2,
+        "ImageId": "",
+        "SoundId": "AI_001_F",
+        "ContentTw": "歡迎使用 iM",
+        "ContentCht": "歡迎使用 iM",
+        "ContentChs": "欢迎使用 iM",
+        "ContentEn": "Welcome to iM",
+        "ContentJp": "iMへようこそ",
+        "ContentKr": "iM에 오신 것을 환영합니다"
+      },
+      {
+        "Id": "assistant_tutorial",
+        "Page": 2,
+        "AssistantId": 2,
+        "ImageId": "",
+        "SoundId": "",
+        "ContentTw": "第二頁",
+        "ContentCht": "第二頁",
+        "ContentChs": "第二页",
+        "ContentEn": "Second page",
+        "ContentJp": "二ページ目",
+        "ContentKr": "두 번째 페이지"
+      }
+    ]
+  },
+  {
+    "Id": "assistant_missing_en",
+    "TargetId": "story_alpha01",
+    "Version": "1.1.0",
+    "Progress": 2,
+    "Trigger": 1,
+    "Pages": [
+      {
+        "Id": "assistant_missing_en",
+        "Page": 1,
+        "AssistantId": 7,
+        "ImageId": "p0501",
+        "SoundId": "AI_004_F",
+        "ContentTw": "只有中文",
+        "ContentCht": "只有中文",
+        "ContentChs": "只有中文",
+        "ContentEn": "",
+        "ContentJp": "中国語だけ",
+        "ContentKr": "중국어만"
+      }
+    ]
+  }
+]

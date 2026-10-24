@@ -1,0 +1,38 @@
+[
+  {
+    "Id": "aos001",
+    "Type": 3,
+    "Names": ["Alpha_File", "Alpha_File", "Alpha_File", "Alpha_File", "Alpha_File", "Alpha_File"],
+    "TimelineChapter": {"Folder": "Alpha", "Chapter": "Architects", "Index": 1},
+    "OSLockCondition": {},
+    "UnlockCharts": [{"Difficulty": 2, "SongId": "alpha001_001"}],
+    "Date": "687_06_30\n18:01",
+    "Category": "1.4",
+    "Contents": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "##bgm=alpha_bgm\n##conversation=Alpha\nHello there\n##sound=Beep,Beep sound\n##image=img001\n##text\nAlpha narration line.\n##conversation=Beta\nSecond line\n##movie=mov001\n##mail=Title,From,To\nMail body"
+    ]
+  },
+  {
+    "Id": "aos002",
+    "Type": 0,
+    "Names": ["Alpha_File", "Alpha_File", "Alpha_File", "Alpha_File", "Alpha_File", "Alpha_File"],
+    "TimelineChapter": {"Folder": "Alpha", "Chapter": "Architects", "Index": 2},
+    "OSLockCondition": {},
+    "UnlockCharts": [],
+    "Date": "687_07_01\n09:00",
+    "Category": "1.5",
+    "Contents": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "##text\nSecond file."
+    ]
+  }
+]

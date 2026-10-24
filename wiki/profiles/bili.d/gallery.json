@@ -1,0 +1,56 @@
+{
+  "categories": {
+    "gallery": "分类:Gallery"
+  },
+  "templates": {
+    "Gallery文件": {
+      "template": "Gallery文件",
+      "param_order": [
+        "文件名",
+        "剧情排序",
+        "所属角色",
+        "文件类型",
+        "文件内容"
+      ],
+      "params": {
+        "文件名": {
+          "required": false,
+          "conditional": false
+        },
+        "剧情排序": {
+          "required": false,
+          "conditional": false
+        },
+        "所属角色": {
+          "required": false,
+          "conditional": false
+        },
+        "文件类型": {
+          "required": false,
+          "conditional": false
+        },
+        "文件内容": {
+          "required": false,
+          "conditional": false
+        }
+      },
+      "fields": {
+        "filename": "文件名",
+        "sort_key": "剧情排序",
+        "character": "所属角色",
+        "file_type": "文件类型",
+        "content": "文件内容"
+      }
+    }
+  },
+  "pages": {
+    "gallery_item": {
+      "template": "Gallery文件",
+      "title": {
+        "field": "title",
+        "fallback": "none",
+        "disambiguator": "（{game_id}）"
+      }
+    }
+  }
+}

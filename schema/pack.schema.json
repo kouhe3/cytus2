@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pack.schema.json",
+  "title": "pack",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "name",
+    "category",
+    "theme_color",
+    "is_iap",
+    "has_im",
+    "price",
+    "text_ref",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^pack/[^\\s]+$"
+    },
+    "type": {
+      "const": "pack"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "theme_color": {
+      "type": "string"
+    },
+    "is_iap": {
+      "type": "boolean"
+    },
+    "has_im": {
+      "type": "boolean"
+    },
+    "price": {
+      "type": "string"
+    },
+    "text_ref": {
+      "type": "string",
+      "pattern": "^pack/[^\\s]+$",
+      "description": "Reference into build/text/packs.jsonl (one record per language)."
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

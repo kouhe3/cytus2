@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reading_order.schema.json",
+  "title": "reading_order",
+  "description": "A derived unlocking/reading position for a content entity. stage is the simulation round, level_gate the effective level after spoiler deferral; order is the global 1-based position. cost/lane/lock_level expose the legacy iM ordering metric; read_index is the legacy iM readIndex.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "entity_id",
+    "entity_type",
+    "timeline_scope",
+    "stage",
+    "level_gate",
+    "original_level",
+    "tier",
+    "thread",
+    "level_locks",
+    "version",
+    "version_order",
+    "chapter",
+    "chapter_id",
+    "chapter_order",
+    "chapter_staged",
+    "spoiler_alert",
+    "spoiler_conditions",
+    "in_game_order",
+    "cost",
+    "lane",
+    "lane_character",
+    "lock_level",
+    "branch",
+    "external",
+    "read_index",
+    "order",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^reading_order/[^\\s]+$"
+    },
+    "type": {
+      "const": "reading_order"
+    },
+    "entity_id": {
+      "type": "string",
+      "pattern": "^(im|os|oa_document|story_node)/[^\\s]+$"
+    },
+    "entity_type": {
+      "enum": ["im_post", "os_log", "oa_document", "story_node"]
+    },
+    "timeline_scope": {
+      "enum": ["timeline", "character", "none"],
+      "description": "Where the row is read: timeline for every iM post and for the seven main characters' OS logs; character for every other OS log, which is listed on its character page by version; none for OA documents and story nodes, which belong to neither list."
+    },
+    "stage": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Reading round. iM posts use the legacy global iM fixpoint (1..N) so their (stage, cost, lane, in_game_order) sequence is the legacy readIndex; other entities use the tier-phased simulation round. 98 is the blocked (outside the model) bucket and 99 an unstaged row."
+    },
+    "level_gate": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Effective level: max(original_level, spoiler gate threshold)."
+    },
+    "original_level": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Highest own level lock (0-based); story events inherit their trigger or dependent level."
+    },
+    "tier": {
+      "enum": ["free", "paid", "side"]
+    },
+    "thread": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^character/[^\\s]+$"}
+      ]
+    },
+    "level_locks": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/level_lock"
+      }
+    },
+    "version": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ],
+      "description": "OS Category value; null when the entity has no version field."
+    },
+    "version_order": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0},
+      "description": "Numeric parts of version for release-order sorting."
+    },
+    "chapter": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ],
+      "description": "OS timeline chapter name."
+    },
+    "chapter_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^chapter/[0-9]+$"}
+      ]
+    },
+    "chapter_order": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "integer", "minimum": 0}
+      ]
+    },
+    "chapter_staged": {
+      "type": "boolean",
+      "description": "True for test01/test02, the staging chapters a chapter sort pushes last."
+    },
+    "spoiler_alert": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^spoiler_alert/[^\\s]+$"}
+      ]
+    },
+    "spoiler_conditions": {
+      "type": "array",
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/level_lock"
+      }
+    },
+    "in_game_order": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Stable tie-breaker from the game table order."
+    },
+    "cost": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unlock cost: the sum of every level lock; a multi-character lock costs the sum of the characters' levels."
+    },
+    "lane": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Account lane: free 0.., paid 100.., side 200.., plot/other 300. Within-stage ordering uses it after cost."
+    },
+    "lane_character": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^character/[^\\s]+$"}
+      ],
+      "description": "Character whose account the lane belongs to."
+    },
+    "lock_level": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Highest PAFF/NEKO/ROBO level reached at the row's reading stage."
+    },
+    "branch": {
+      "anyOf": [
+        {"type": "null"},
+        {"enum": ["good_ending1", "good_ending2", "ending04"]}
+      ],
+      "description": "Ending branch semantic code mapped from the story lock (manual provenance); the SPA localizes the display label."
+    },
+    "external": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ],
+      "description": "Why a blocked row sits outside the model (story lock, topic lock, or level/prerequisite)."
+    },
+    "read_index": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "integer", "minimum": 1}
+      ],
+      "description": "Legacy iM readIndex (global iM-only sequence); null for non-iM entities."
+    },
+    "order": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Global position in the default (free -> paid -> side) reading order."
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

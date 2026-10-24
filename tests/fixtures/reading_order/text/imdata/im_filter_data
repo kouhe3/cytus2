@@ -1,0 +1,14 @@
+{
+  "Items": [
+    {
+      "DisplayAvatarId": "ivy_01",
+      "FilterAvatarIds": ["ivy_01"]
+    },
+    {
+      "DisplayAvatarId": "paff_01",
+      "FilterAvatarIds": ["paff_01", "paff_02"]
+    }
+  ],
+  "OtherItemDisplayAvatarId": "default_01",
+  "LikeItemDisplayAvatarId": "like_01"
+}

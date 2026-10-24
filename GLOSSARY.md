@@ -98,6 +98,40 @@ _Avoid_: 把按章节或按版本当成默认顺序
 **Derived artifact**:
 任何可由管线重建的产物：正文、边、索引、wiki 页面、SPA 数据。
 
+## 阅读顺序（`reading_order`）
+
+**Stage**:
+阅读轮次。iM 帖用 legacy 全局 fixpoint（1..N），其他实体用分档模拟轮次；`98` 是模型外（blocked）桶，`99` 是无法定位的行。
+_Avoid_: 与 `read_index`（legacy iM 序号）或 `order`（默认全序）混用
+
+**Cost** (`reading_order.cost`):
+一行的解锁成本：`level_locks` 所有等级之和；多角色锁按各角色等级相加。同一 `stage` 内先按成本排序。
+_Avoid_: 货币价格；与 `level_gate`（有效门槛）混用
+
+**Lane** (`reading_order.lane`):
+账户排序车道：free `0..`、paid `100..`、side `200..`、剧情/其他 `300`。同一 `stage` 内成本相同时按 `lane` 排序，表示读者跟随哪个账号，不代表解锁难度。
+_Avoid_: 路线、章节；与 `thread`（行所属角色线程）混用
+
+**Lock level** (`reading_order.lock_level`):
+该行阅读阶段到达时，PAFF / NEKO / ROBO 三人已达到的最高等级（0-based）。iM 帖沿用 legacy fixpoint 的轮次等级；其他实体用模拟轮次。
+_Avoid_: `level_gate`（含剧透延后后的有效门槛）、`original_level`（实体自身锁）
+
+**Read index** (`reading_order.read_index`):
+legacy iM 全序编号，仅 iM 帖有值且连续为 `1..N`；用于与冻结 viewer 的 `readIndex` 对齐。非 iM 行恒为 `null`。
+_Avoid_: `order`（默认 free → paid → side 的全局位置）、`stage`
+
+**External** (`reading_order.external`):
+被排除在模拟之外的行的原因：story 锁、topic 锁，或无法建模的等级/前置条件；blocked（`stage=98`）或无法定位的行才有值。
+_Avoid_: 把原因当成实体；与 `unlock_condition`（实体自身字段）混用
+
+**Branch** (`reading_order.branch`):
+由 `StoryLockId` 人工映射的结局分支语义码之一：`good_ending1`、`good_ending2`、`ending04`，附 manual provenance（locator + 理由）。DB 只存语义码，显示标签由 SPA 本地化。
+_Avoid_: 与 `story_node.kind=branch`（Branching OS 节点）混用；不要把显示文本写进 DB
+
+**Timeline scope** (`reading_order.timeline_scope`):
+一条阅读顺序记录属于哪里：`timeline` = 全局解锁时间线（全部 iM 帖 + 主线 7 人的 OS），`character` = 只在角色页按版本阅读的 OS，`none` = OA 文档与故事节点。角色页的 iM 页签只对 PAFF / NEKO / ROBO 开放；这是游戏的角色页导航结构，不由 `imFilters`（iM feed 的账号过滤维度）推导。PΛFF 没有 iM 账号入口。
+_Avoid_: 把 `character` 当成「角色实体」；把 `imFilters` 的账户当成角色页 iM 页签的依据
+
 ## Wiki 导出
 
 **Page model**:
@@ -111,3 +145,18 @@ _Avoid_: 把按章节或按版本当成默认顺序
 
 **Red link check**:
 用目标站 `allpages`（区分条目与重定向）判定输出中的 `[[链接]]` 是否有对应页面。
+
+**Title normalisation**:
+跨导出器、补丁匹配与校验共用的标题等价规则（`cytus2db.wiki.titles`）：NFKC、
+`_`↔空格、空白折叠、仅首字母大小写不敏感，另加全角/半角括号、破折号族、冒号、
+括号前空格与 CJK 邻接空格的显式折叠。整页输出与已有标题同键即视为覆盖，必须改走补丁。
+_Avoid_: 用 `casefold` 比较整个标题（`NEKO` 与 `Neko` 是两页）
+
+**Canonical link target**:
+输出链接时用快照中的规范拼写回写目标；目标只在宽松键下唯一命中时才回写，
+多义时不猜，留给红链报告。
+
+**Known-missing title**:
+`wiki/snapshot/known_missing.json` 中人工列出的、确实没有页面的红链目标；每条都带原因。
+校验把它们单独报告，不算失败；未列入的目标仍是错误。
+_Avoid_: 把「未匹配」静默当缺页

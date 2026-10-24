@@ -1,0 +1,9 @@
+[
+  {
+    "ID": "capso",
+    "Name": "The CAPSO!",
+    "CreateOrder": 0,
+    "IconPath": "machine_icon_001",
+    "DefaultPrice": "$9.99"
+  }
+]

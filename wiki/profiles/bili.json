@@ -1,0 +1,247 @@
+{
+  "site": "bili",
+  "site_name": "BiliGame Cytus II",
+  "generated_from": "wiki/snapshot/template_params.json (模板:歌曲; fetched from wiki.biligame.com/cytus2 on 2026-10-23)",
+  "notes": {
+    "semantics": "required = source uses {{{name}}} with no default; conditional = template guards the parameter with #if and also has a default; optional = every occurrence has a default.",
+    "unknown_params": "Existing 歌曲 pages use historical keys outside the 37 template parameters; parameter patches must preserve them.",
+    "drop_rating": "The template defines six *Rating parameters (Easy/Hard/Chaos/Glitch/Crash/Dream). Drop charts have no parameter and must be reported, never emitted.",
+    "body_templates": "Helper templates page bodies may invoke. render_page rejects an undeclared {{name}} in any parameter value."
+  },
+  "categories": {
+    "song": "分类:歌曲"
+  },
+  "templates": {
+    "歌曲": {
+      "template": "歌曲",
+      "param_order": [
+        "歌曲排序",
+        "曲名",
+        "作曲",
+        "作词",
+        "演唱",
+        "编曲",
+        "谱师",
+        "曲绘",
+        "曲绘版本",
+        "版本",
+        "曲绘备注",
+        "曲绘文件",
+        "所属角色",
+        "曲师",
+        "曲师备注",
+        "所属曲包",
+        "BPM",
+        "时长",
+        "EasyRating",
+        "HardRating",
+        "ChaosRating",
+        "GlitchRating",
+        "CrashRating",
+        "DreamRating",
+        "是否被移除",
+        "获取方式",
+        "EasyNote",
+        "HardNote",
+        "ChaosNote",
+        "GlitchNote",
+        "CrashNote",
+        "DreamNote",
+        "歌词",
+        "轶事",
+        "其他",
+        "相关图片",
+        "注释与外部链接"
+      ],
+      "params": {
+        "歌曲排序": {
+          "required": false,
+          "conditional": false
+        },
+        "曲名": {
+          "required": false,
+          "conditional": true
+        },
+        "作曲": {
+          "required": false,
+          "conditional": false
+        },
+        "作词": {
+          "required": false,
+          "conditional": false
+        },
+        "演唱": {
+          "required": false,
+          "conditional": false
+        },
+        "编曲": {
+          "required": false,
+          "conditional": false
+        },
+        "谱师": {
+          "required": false,
+          "conditional": false
+        },
+        "曲绘": {
+          "required": false,
+          "conditional": true
+        },
+        "曲绘版本": {
+          "required": false,
+          "conditional": true
+        },
+        "版本": {
+          "required": false,
+          "conditional": false
+        },
+        "曲绘备注": {
+          "required": false,
+          "conditional": false
+        },
+        "曲绘文件": {
+          "required": false,
+          "conditional": true
+        },
+        "所属角色": {
+          "required": false,
+          "conditional": false
+        },
+        "曲师": {
+          "required": false,
+          "conditional": false
+        },
+        "曲师备注": {
+          "required": false,
+          "conditional": false
+        },
+        "所属曲包": {
+          "required": false,
+          "conditional": false
+        },
+        "BPM": {
+          "required": false,
+          "conditional": false
+        },
+        "时长": {
+          "required": false,
+          "conditional": false
+        },
+        "EasyRating": {
+          "required": false,
+          "conditional": false
+        },
+        "HardRating": {
+          "required": false,
+          "conditional": false
+        },
+        "ChaosRating": {
+          "required": false,
+          "conditional": false
+        },
+        "GlitchRating": {
+          "required": false,
+          "conditional": false
+        },
+        "CrashRating": {
+          "required": false,
+          "conditional": false
+        },
+        "DreamRating": {
+          "required": false,
+          "conditional": false
+        },
+        "是否被移除": {
+          "required": false,
+          "conditional": false
+        },
+        "获取方式": {
+          "required": false,
+          "conditional": false
+        },
+        "EasyNote": {
+          "required": false,
+          "conditional": false
+        },
+        "HardNote": {
+          "required": false,
+          "conditional": false
+        },
+        "ChaosNote": {
+          "required": false,
+          "conditional": false
+        },
+        "GlitchNote": {
+          "required": false,
+          "conditional": false
+        },
+        "CrashNote": {
+          "required": false,
+          "conditional": false
+        },
+        "DreamNote": {
+          "required": false,
+          "conditional": false
+        },
+        "歌词": {
+          "required": false,
+          "conditional": false
+        },
+        "轶事": {
+          "required": false,
+          "conditional": false
+        },
+        "其他": {
+          "required": false,
+          "conditional": false
+        },
+        "相关图片": {
+          "required": false,
+          "conditional": false
+        },
+        "注释与外部链接": {
+          "required": false,
+          "conditional": false
+        }
+      },
+      "fields": {
+        "title": "曲名",
+        "artist": "曲师",
+        "character": "所属角色",
+        "pack": "所属曲包",
+        "rating.Easy": "EasyRating",
+        "rating.Hard": "HardRating",
+        "rating.Chaos": "ChaosRating",
+        "rating.Glitch": "GlitchRating",
+        "rating.Crash": "CrashRating",
+        "rating.Dream": "DreamRating",
+        "unlock_method": "获取方式",
+        "sort_key": "歌曲排序"
+      }
+    }
+  },
+  "pages": {
+    "song": {
+      "template": "歌曲",
+      "title": {
+        "field": "title",
+        "fallback": "game_id",
+        "disambiguator": "（{game_id}）"
+      },
+      "preserve_unknown_params": true,
+      "observed_unknown_params": [
+        "1",
+        "2",
+        "3",
+        "中文翻译",
+        "原文",
+        "日文",
+        "曲师家",
+        "歌曲试听"
+      ]
+    }
+  },
+  "provenance_section": {
+    "enabled": true,
+    "heading": "数据来源"
+  }
+}

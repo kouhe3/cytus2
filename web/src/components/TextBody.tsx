@@ -1,0 +1,215 @@
+import { useEffect, useState } from "react";
+import { useI18n } from "../data/i18n";
+import { fallbackNotice } from "../data/labels";
+import { formatFieldValue } from "../data/selectors";
+import { loadTextRecord } from "../data/text";
+import type { Lang, TextBlock, TextRecord } from "../types";
+
+type TextState =
+  | { readonly status: "idle" }
+  | { readonly status: "loading" }
+  | { readonly status: "ready"; readonly record: TextRecord | null }
+  | { readonly status: "error"; readonly error: Error };
+
+function readString(block: TextBlock, key: string): string {
+  const value = block[key];
+  return typeof value === "string"
+    ? value.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ")
+    : "";
+}
+
+function Block({ block }: { block: TextBlock }) {
+  const i18n = useI18n();
+  switch (block.kind) {
+    case "dialogue": {
+      const speaker = readString(block, "speaker");
+      return (
+        <p className="block dialogue">
+          {speaker ? <span className="speaker">{speaker}</span> : null}
+          {readString(block, "text")}
+        </p>
+      );
+    }
+    case "narration":
+      return <p className="block narration">{readString(block, "text")}</p>;
+    case "page": {
+      const page = typeof block["page"] === "number" ? block["page"] : null;
+      return (
+        <div className="block assistant-page" data-testid="assistant-page">
+          {page === null ? null : (
+            <span className="page-index">
+              {i18n.t("text.page", { page })}
+            </span>
+          )}
+          <p>{readString(block, "text")}</p>
+        </div>
+      );
+    }
+    case "mail":
+      return (
+        <div className="block mail">
+          <p className="mail-route">
+            {readString(block, "from")} → {readString(block, "to")}
+          </p>
+          <h4>{readString(block, "title")}</h4>
+          <p>{readString(block, "body")}</p>
+        </div>
+      );
+    case "image":
+      return (
+        <div className="block media-note">
+          {i18n.t("text.image", { id: readString(block, "id") })}
+        </div>
+      );
+    case "imageviewer":
+      return (
+        <div className="block media-note">
+          {i18n.t("text.imageViewer", { id: readString(block, "id") })}
+        </div>
+      );
+    case "movie":
+      return (
+        <div className="block media-note">
+          {i18n.t("text.movie", { id: readString(block, "id") })}
+        </div>
+      );
+    case "sound":
+      return (
+        <div className="block media-note">
+          {i18n.t("text.sound", { name: readString(block, "name") })}
+        </div>
+      );
+    case "bgm":
+      return (
+        <div className="block media-note">
+          {i18n.t("text.bgm", { name: readString(block, "name") })}
+        </div>
+      );
+    case "booklet":
+      return (
+        <div className="block media-note">
+          {i18n.t("text.booklet", { id: readString(block, "id") })}
+        </div>
+      );
+    case "note":
+      return (
+        <div className="block note">
+          <span className="block-kind">{block.kind}</span>
+          {formatFieldValue(block["value"], i18n)}
+        </div>
+      );
+    default:
+      return (
+        <div className="block note">
+          <span className="block-kind">{block.kind}</span>
+          {readString(block, "text") || readString(block, "id")}
+        </div>
+      );
+  }
+}
+
+function bodyParagraphs(text: string): string[] {
+  const cleaned = text
+    .replace(/^\s*##\w+.*$/gm, "")
+    .replace(/<\s*br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+  return cleaned.split(/\n{2,}/).filter((paragraph) => paragraph.trim() !== "");
+}
+
+export function TextBody({
+  textRef,
+  lang,
+}: {
+  textRef: string | null;
+  lang: Lang;
+}) {
+  const i18n = useI18n();
+  const [state, setState] = useState<TextState>({ status: "idle" });
+
+  useEffect(() => {
+    if (!textRef) {
+      setState({ status: "idle" });
+      return;
+    }
+    let active = true;
+    setState({ status: "loading" });
+    loadTextRecord(textRef, lang)
+      .then((record) => {
+        if (active) {
+          setState({ status: "ready", record });
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setState({
+            status: "error",
+            error: error instanceof Error ? error : new Error(String(error)),
+          });
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [textRef, lang]);
+
+  if (!textRef) {
+    return <p className="muted">{i18n.t("text.noText")}</p>;
+  }
+  if (state.status === "loading" || state.status === "idle") {
+    return <p className="muted">{i18n.t("text.loading")}</p>;
+  }
+  if (state.status === "error") {
+    return (
+      <p className="error-text">
+        {i18n.t("text.error", { message: state.error.message })}
+      </p>
+    );
+  }
+  const record = state.record;
+  if (!record) {
+    return (
+      <div className="fallback-note" data-testid="language-fallback" data-lang="none">
+        {fallbackNotice(i18n, lang, null)}.
+      </div>
+    );
+  }
+  const fallbackNote = record.fallback ? (
+    <div className="fallback-note" data-testid="language-fallback">
+      {fallbackNotice(i18n, record.requested_lang ?? lang, record.lang)}
+    </div>
+  ) : null;
+  if (record.text) {
+    const paragraphs = bodyParagraphs(record.text);
+    return (
+      <>
+        {fallbackNote}
+        <div className="prose" data-testid="entity-body" data-lang={record.lang}>
+          {paragraphs.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
+        </div>
+      </>
+    );
+  }
+  if (record.blocks && record.blocks.length > 0) {
+    return (
+      <>
+        {fallbackNote}
+        <div className="prose blocks" data-testid="entity-body" data-lang={record.lang}>
+          {record.blocks.map((block, index) => (
+            <Block key={index} block={block} />
+          ))}
+        </div>
+      </>
+    );
+  }
+  return (
+    <>
+      {fallbackNote}
+      <p className="muted">{i18n.t("text.noBody")}</p>
+    </>
+  );
+}

@@ -1,0 +1,284 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gacha_reward.schema.json",
+  "title": "gacha_reward",
+  "type": "object",
+  "oneOf": [
+    {"$ref": "#/$defs/chart_reward"},
+    {"$ref": "#/$defs/illustration_reward"},
+    {"$ref": "#/$defs/tap_fx_reward"},
+    {"$ref": "#/$defs/song_reward"}
+  ],
+  "$defs": {
+    "reward_locks": {
+      "type": "object",
+      "required": ["im_topic_id", "os_file_id", "story_lock_id"],
+      "additionalProperties": false,
+      "properties": {
+        "im_topic_id": {
+          "type": "string"
+        },
+        "os_file_id": {
+          "type": "string"
+        },
+        "story_lock_id": {
+          "type": "string"
+        }
+      }
+    },
+    "chart_reward": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "game_id",
+        "machine_id",
+        "reward_type",
+        "kind",
+        "weight",
+        "create_order",
+        "secret",
+        "reward_locks",
+        "song_id",
+        "chart_ids",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^gacha_reward/[^\\s]+$"
+        },
+        "type": {
+          "const": "gacha_reward"
+        },
+        "game_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "pattern": "^gacha_machine/[^\\s]+$"
+        },
+        "reward_type": {
+          "const": 0
+        },
+        "kind": {
+          "const": "chart"
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "create_order": {
+          "type": "integer"
+        },
+        "secret": {
+          "type": "boolean"
+        },
+        "reward_locks": {
+          "$ref": "#/$defs/reward_locks"
+        },
+        "song_id": {
+          "type": "string",
+          "pattern": "^song/[^@\\s]+$"
+        },
+        "chart_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^song/[^@\\s]+@(Easy|Hard|Chaos|Glitch|Crash|Dream|Drop)$"
+          }
+        },
+        "provenance": {
+          "$ref": "common.schema.json#/$defs/provenance"
+        }
+      }
+    },
+    "illustration_reward": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "game_id",
+        "machine_id",
+        "reward_type",
+        "kind",
+        "weight",
+        "create_order",
+        "secret",
+        "reward_locks",
+        "illustration_id",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^gacha_reward/[^\\s]+$"
+        },
+        "type": {
+          "const": "gacha_reward"
+        },
+        "game_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "pattern": "^gacha_machine/[^\\s]+$"
+        },
+        "reward_type": {
+          "const": 1
+        },
+        "kind": {
+          "const": "illustration"
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "create_order": {
+          "type": "integer"
+        },
+        "secret": {
+          "type": "boolean"
+        },
+        "reward_locks": {
+          "$ref": "#/$defs/reward_locks"
+        },
+        "illustration_id": {
+          "type": "string",
+          "pattern": "^illustration/[^\\s]+$"
+        },
+        "provenance": {
+          "$ref": "common.schema.json#/$defs/provenance"
+        }
+      }
+    },
+    "tap_fx_reward": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "game_id",
+        "machine_id",
+        "reward_type",
+        "kind",
+        "weight",
+        "create_order",
+        "secret",
+        "reward_locks",
+        "tap_fx_id",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^gacha_reward/[^\\s]+$"
+        },
+        "type": {
+          "const": "gacha_reward"
+        },
+        "game_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "pattern": "^gacha_machine/[^\\s]+$"
+        },
+        "reward_type": {
+          "const": 2
+        },
+        "kind": {
+          "const": "tap_fx"
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "create_order": {
+          "type": "integer"
+        },
+        "secret": {
+          "type": "boolean"
+        },
+        "reward_locks": {
+          "$ref": "#/$defs/reward_locks"
+        },
+        "tap_fx_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provenance": {
+          "$ref": "common.schema.json#/$defs/provenance"
+        }
+      }
+    },
+    "song_reward": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "game_id",
+        "machine_id",
+        "reward_type",
+        "kind",
+        "weight",
+        "create_order",
+        "secret",
+        "reward_locks",
+        "song_id",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^gacha_reward/[^\\s]+$"
+        },
+        "type": {
+          "const": "gacha_reward"
+        },
+        "game_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine_id": {
+          "type": "string",
+          "pattern": "^gacha_machine/[^\\s]+$"
+        },
+        "reward_type": {
+          "const": 3
+        },
+        "kind": {
+          "const": "song"
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "create_order": {
+          "type": "integer"
+        },
+        "secret": {
+          "type": "boolean"
+        },
+        "reward_locks": {
+          "$ref": "#/$defs/reward_locks"
+        },
+        "song_id": {
+          "type": "string",
+          "pattern": "^song/[^@\\s]+$"
+        },
+        "provenance": {
+          "$ref": "common.schema.json#/$defs/provenance"
+        }
+      }
+    }
+  }
+}

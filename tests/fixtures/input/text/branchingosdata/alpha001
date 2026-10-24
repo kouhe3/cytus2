@@ -1,0 +1,53 @@
+[
+  {
+    "Id": "taos001a",
+    "Type": 0,
+    "Names": ["Cam_Alpha", "Cam_Alpha", "Cam_Alpha", "Cam_Alpha", "Cam_Alpha", "Cam_Alpha"],
+    "Contents": [
+      "##text\nAlpha branch start.\n",
+      "##text\nアルファ分岐の開始。\n",
+      "##text\n阿爾法分支開始。\n",
+      "##text\n알파 분기 시작.\n",
+      "##text\n阿爾法分支開始。\n",
+      "##text\n阿尔法分支开始。\n"
+    ],
+    "UnlockedCharts": [
+      {"Difficulty": 0, "SongId": "alpha001_000"},
+      {"Difficulty": 1, "SongId": "alpha001_000"}
+    ],
+    "UnlockCondition": {"Level": 1, "StateId": 0, "StateValue": "0"},
+    "ViewSetting": {
+      "Position": 1,
+      "Order": 1,
+      "LinkedFileIds": ["taos002a"],
+      "ShouldHideLine": false,
+      "LineOffsets": [0.0],
+      "HasLineIn": false,
+      "AlignmentSetting": 0
+    }
+  },
+  {
+    "Id": "taos002a",
+    "Type": 9,
+    "Names": ["Audio_Alpha", "Audio_Alpha", "Audio_Alpha", "Audio_Alpha", "Audio_Alpha", "Audio_Alpha"],
+    "Contents": [
+      "##text\nAlpha branch end.\n",
+      "##text\nアルファ分岐の終了。\n",
+      "##text\n阿爾法分支結束。\n",
+      "##text\n알파 분기 끝.\n",
+      "##text\n阿爾法分支結束。\n",
+      "##text\n阿尔法分支结束。\n"
+    ],
+    "UnlockedCharts": [],
+    "UnlockCondition": {"Level": 2, "StateId": 1, "StateValue": "1"},
+    "ViewSetting": {
+      "Position": 2,
+      "Order": 2,
+      "LinkedFileIds": [""],
+      "ShouldHideLine": false,
+      "LineOffsets": [0.0, 12.5],
+      "HasLineIn": true,
+      "AlignmentSetting": 1
+    }
+  }
+]

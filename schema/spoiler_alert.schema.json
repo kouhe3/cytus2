@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "spoiler_alert.schema.json",
+  "title": "spoiler_alert",
+  "description": "A SpoilerAlertTable gate: content for character is deferred until the listed characters reach their levels. A deferral, not a lock.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "character",
+    "conditions",
+    "threshold",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^spoiler_alert/[A-Za-z0-9_]+$"
+    },
+    "type": {
+      "const": "spoiler_alert"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "character": {
+      "type": "string",
+      "pattern": "^character/[^\\s]+$",
+      "description": "The character whose content this gate defers."
+    },
+    "conditions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "oa_story_defs.schema.json#/$defs/level_lock"
+      }
+    },
+    "threshold": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Highest condition level; the effective deferral level."
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

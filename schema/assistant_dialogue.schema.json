@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "assistant_dialogue.schema.json",
+  "title": "assistant_dialogue",
+  "description": "One iM assistant dialogue group from text/imdata/im_assistant_data. Page bodies live in build/text/extras.jsonl blocks under text_ref.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "trigger",
+    "target",
+    "version",
+    "progress",
+    "page_count",
+    "pages",
+    "text_ref",
+    "missing_languages",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^assistant_dialogue/[A-Za-z0-9_]+$"
+    },
+    "type": {
+      "const": "assistant_dialogue"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trigger": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Raw Trigger value from im_assistant_data."
+    },
+    "target": {
+      "type": ["string", "null"],
+      "description": "Raw TargetId: an iM post id or a story id."
+    },
+    "version": {
+      "type": "string"
+    },
+    "progress": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Raw Progress value; the display order of the groups."
+    },
+    "page_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Structural page metadata; localized page bodies are text-store blocks.",
+      "items": {
+        "type": "object",
+        "required": ["page", "assistant_id", "image_id", "sound_id"],
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "assistant_id": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "image_id": {
+            "type": "string"
+          },
+          "sound_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "text_ref": {
+      "type": "string",
+      "pattern": "^assistant_dialogue/[A-Za-z0-9_]+$"
+    },
+    "missing_languages": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/language"
+      }
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  },
+  "$defs": {
+    "language": {
+      "enum": ["en", "ja", "zh-Hant", "ko", "zh-Hans"]
+    }
+  }
+}

@@ -180,7 +180,14 @@ def test_chapter_alternate_puts_test01_last(rows: list[dict], entities: dict[str
 
 def test_version_alternate_orders_by_numeric_parts(rows: list[dict]) -> None:
     with_version = [row for row in rows if row["version"] is not None]
-    assert {row["version"] for row in with_version} == {"1.0", "1.1", "2.0", "3.0", "9.0"}
+    assert {row["version"] for row in with_version} == {
+        "1.0",
+        "1.1",
+        "2.0",
+        "3.0",
+        "5.3",
+        "9.0",
+    }
     version_sort = sorted(
         with_version,
         key=lambda row: (row["version_order"], row["entity_id"]),
@@ -192,6 +199,7 @@ def test_version_alternate_orders_by_numeric_parts(rows: list[dict]) -> None:
         "1.1",
         "2.0",
         "3.0",
+        "5.3",
         "9.0",
     ]
     assert {tuple(row["version_order"]) for row in with_version} == {
@@ -199,8 +207,74 @@ def test_version_alternate_orders_by_numeric_parts(rows: list[dict]) -> None:
         (1, 1),
         (2, 0),
         (3, 0),
+        (5, 3),
         (9, 0),
     }
+
+
+def test_timeline_scope_splits_global_timeline_and_character_os(
+    rows: list[dict], entities: dict[str, dict]
+) -> None:
+    im_rows = [row for row in rows if row["entity_type"] == "im_post"]
+    assert len(im_rows) == 15
+    assert {row["timeline_scope"] for row in im_rows} == {"timeline"}
+
+    os_rows = [row for row in rows if row["entity_type"] == "os_log"]
+    timeline_os = {
+        row["entity_id"]
+        for row in os_rows
+        if row["timeline_scope"] == "timeline"
+    }
+    character_os = {
+        row["entity_id"] for row in os_rows if row["timeline_scope"] == "character"
+    }
+
+    # Only the main-seven OS file (Ivy here) enters the timeline; free
+    # non-main (Alpha), paid (Beta), side (Side) and PΛFF stay character-only.
+    assert timeline_os == {"os/ivos001", "os/ivos002"}
+    assert character_os == {
+        "os/aos001",
+        "os/aos002",
+        "os/aos003",
+        "os/bos001",
+        "os/gos001",
+        "os/paos001",
+    }
+    assert entities["os/paos001"]["timeline_scope"] == "character"
+    assert entities["os/paos001"]["thread"] == "character/paff003"
+
+    assert all(
+        row["timeline_scope"] == "none"
+        for row in rows
+        if row["entity_type"] in {"oa_document", "story_node"}
+    )
+    assert sum(1 for row in rows if row["timeline_scope"] == "timeline") == 17
+
+
+def test_timeline_scope_records_its_source(entities: dict[str, dict]) -> None:
+    for entity_id in ("os/ivos001", "os/bos001", "os/paos001"):
+        provenance = entities[entity_id]["provenance"]
+        assert any(
+            entry["kind"] == "manual"
+            and "issues/24" in entry["locator"]
+            and "OS timeline scope" in entry.get("note", "")
+            for entry in provenance
+        ), entity_id
+
+
+def test_spa_projection_carries_the_im_filter_accounts(
+    built_pair: tuple[Path, Path],
+) -> None:
+    data = json.loads((built_pair[0] / "spa" / "data.json").read_text(encoding="utf-8"))
+    filters = data["imFilters"]
+    assert filters["otherAvatar"] == "default_01"
+    assert [item["avatar"] for item in filters["items"]] == ["ivy_01", "paff_01"]
+    assert filters["items"][0] == {
+        "avatar": "ivy_01",
+        "avatars": ["ivy_01"],
+        "name": "Ivy",
+    }
+    assert filters["items"][1]["avatars"] == ["paff_01", "paff_02"]
 
 
 def test_prerequisites_never_precede_their_gates(
@@ -448,4 +522,55 @@ def test_legacy_im_parity_against_viewer(tmp_path: Path) -> None:
     assert any(
         lock["character"] == "character/xenon001" and lock["level"] == 41
         for lock in gated["level_locks"]
+    )
+
+
+def test_real_timeline_scope_counts(tmp_path: Path) -> None:
+    """The confirmed boundary on the real APK export: 323 iM + 501 main-7 OS."""
+    work = Path(os.environ.get("CYTUS2_WORK", "C:/tmp/workspace/cytus2/cytus2_work"))
+    if not (work / "text" / "imdata" / "im_lock_condition_data").is_file():
+        pytest.skip("real input tree is not available")
+
+    out = tmp_path / "out"
+    result = run_build(work, out)
+    assert result.returncode == 0, result.stderr
+
+    rows = read_jsonl(out / "db" / "reading_order.jsonl")
+    im_rows = [row for row in rows if row["entity_type"] == "im_post"]
+    os_rows = [row for row in rows if row["entity_type"] == "os_log"]
+    timeline = [row for row in rows if row["timeline_scope"] == "timeline"]
+
+    assert len(im_rows) == 323
+    assert all(row["timeline_scope"] == "timeline" for row in im_rows)
+    assert len(os_rows) == 1125
+    assert sum(row["timeline_scope"] == "timeline" for row in os_rows) == 501
+    assert sum(row["timeline_scope"] == "character" for row in os_rows) == 624
+    assert len(timeline) == 824
+
+    main_seven = {
+        "character/paff001",
+        "character/neko001",
+        "character/robo001",
+        "character/ivy001",
+        "character/cherry002",
+        "character/vanessa001",
+        "character/bobo001",
+    }
+    timeline_os = [row for row in os_rows if row["timeline_scope"] == "timeline"]
+    assert {row["thread"] for row in timeline_os} == main_seven
+    assert all(
+        row["timeline_scope"] == "character"
+        for row in os_rows
+        if row["thread"] not in main_seven
+    )
+
+    # PΛFF's OS is character-only while its posts stay in the global feed.
+    assert any(
+        row["thread"] == "character/paff003" and row["timeline_scope"] == "character"
+        for row in os_rows
+    )
+    assert all(
+        row["timeline_scope"] == "timeline"
+        for row in im_rows
+        if row["lane_character"] == "character/paff003"
     )

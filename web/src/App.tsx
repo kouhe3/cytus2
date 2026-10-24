@@ -8,13 +8,14 @@ import {
 } from "react-router-dom";
 import { CommandPalette } from "./components/CommandPalette";
 import { Sidebar } from "./components/Sidebar";
-import { isChart } from "./data/database";
+import { isCharacter, isChart } from "./data/database";
 import { useI18n } from "./data/i18n";
 import type { MessageKey } from "./data/messages";
 import { decodeEntityPath } from "./data/selectors";
 import { useDatabase } from "./data/useDatabase";
 import type { Database } from "./types";
 import { BackupFolderView, BackupIndexView } from "./views/BackupView";
+import { CharacterView } from "./views/CharacterView";
 import { ChartView } from "./views/ChartView";
 import { EntityView } from "./views/EntityView";
 import {
@@ -79,6 +80,9 @@ function EntityRoute({ db }: { db: Database }) {
   }
   if (isChart(entity)) {
     return <ChartView db={db} chart={entity} />;
+  }
+  if (isCharacter(entity)) {
+    return <CharacterView db={db} character={entity} />;
   }
   return <EntityView db={db} entity={entity} />;
 }

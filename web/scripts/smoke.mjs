@@ -227,6 +227,7 @@ const TIMELINE_SNAPSHOT = `(() => {
     minLevelSeen: levels.length ? Math.min(...levels) : -1,
     types: [...new Set(cards.map((card) => card.dataset.type))].sort(),
     tiers: [...new Set(cards.map((card) => card.dataset.tier))].sort(),
+    accounts: [...new Set(cards.map((card) => card.dataset.account))].sort(),
     lanes: [...new Set(cards.map((card) => Number(card.dataset.lane)))].sort(
       (left, right) => left - right,
     ),
@@ -283,7 +284,7 @@ try {
   // ---------------------------------------------------------------- home feed
   const home = await cdp.evaluate(TIMELINE_SNAPSHOT);
   check(home.path === "/timeline", "history route /timeline loads directly");
-  check(home.count === 1448, `home renders all 1448 timeline entries (got ${home.count})`);
+  check(home.count === 824, `home renders the 824 in-scope timeline entries (got ${home.count})`);
   check(home.firstOrder === 1, "first card is reading order #1");
   check(home.sorted, "cards are ordered by reading_order.order ascending");
   check(
@@ -305,9 +306,8 @@ try {
   );
   check(Boolean(home.firstLane), "the first card names its lane");
   check(
-    home.firstTooltip.includes(translate("zh-Hans", "timeline.legendCostBadge")) &&
-      home.firstTooltip.includes(translate("zh-Hans", "timeline.lane")),
-    "the card tooltip exposes cost and lane",
+    home.firstTooltip.includes(translate("zh-Hans", "timeline.legendCostBadge")),
+    "the card tooltip exposes the unlock cost",
   );
   check(
     home.branchCards > 0 && home.branchChips === home.branchCards,
@@ -330,8 +330,8 @@ try {
     home.spoilerCards > 0 && home.spoilerChips === home.spoilerCards,
     "cards with a spoiler alert render a spoiler chip",
   );
-  check(home.osCards === 1125, `feed includes all 1125 OS logs (got ${home.osCards})`);
-  check(home.osWithSnippet > 1000, "OS cards render block-derived snippets");
+  check(home.osCards === 501, `feed includes only the 501 main-seven OS logs (got ${home.osCards})`);
+  check(home.osWithSnippet > 400, "OS cards render block-derived snippets");
   await cdp.screenshot("timeline.png");
 
   // -------------------------------------------------------------- level slider
@@ -379,44 +379,59 @@ try {
     "paid tier cards restored",
   );
 
-  // --------------------------------------------------------------- lane filter
-  const laneOptions = Number(
-    await cdp.evaluate(
-      `document.querySelector('[data-testid="lane-filter"]').options.length`,
-    ),
-  );
-  check(laneOptions > 3, `lane filter lists the accounts (got ${laneOptions})`);
-  await cdp.evaluate(`(() => {
-    const select = document.querySelector('[data-testid="lane-filter"]');
+  // ------------------------------------------------------------ account filter
+  const SET_ACCOUNT = (value) => `(() => {
+    const select = document.querySelector('[data-testid="account-filter"]');
     const setter = Object.getOwnPropertyDescriptor(
       HTMLSelectElement.prototype,
       'value',
     ).set;
-    setter.call(select, '0');
+    setter.call(select, ${JSON.stringify(value)});
     select.dispatchEvent(new Event('change', { bubbles: true }));
-  })()`);
-  const laneZero = await cdp.waitFor(
+  })()`;
+  const accountOptions = Number(
+    await cdp.evaluate(
+      `document.querySelector('[data-testid="account-filter"]').options.length`,
+    ),
+  );
+  // all + the seven im_filter_data accounts + other/NPC
+  check(accountOptions === 9, `account filter lists 7 accounts plus other (got ${accountOptions})`);
+  await cdp.evaluate(SET_ACCOUNT("paff_01"));
+  const paffCards = await cdp.waitFor(
     `(() => {
       const cards = [...document.querySelectorAll('[data-testid="timeline-card"]')];
       if (!cards.length) return null;
-      return cards.every((card) => card.dataset.lane === '0') ? cards.length : null;
+      return cards.every((card) => card.dataset.account === 'paff_01')
+        ? cards.length
+        : null;
     })()`,
-    "lane 0 cards",
+    "PAFF account cards",
   );
-  check(laneZero > 0 && laneZero < home.count, "lane filter keeps one account");
-  await cdp.screenshot("timeline-lane-filtered.png");
-  await cdp.evaluate(`(() => {
-    const select = document.querySelector('[data-testid="lane-filter"]');
-    const setter = Object.getOwnPropertyDescriptor(
-      HTMLSelectElement.prototype,
-      'value',
-    ).set;
-    setter.call(select, 'all');
-    select.dispatchEvent(new Event('change', { bubbles: true }));
-  })()`);
+  check(
+    paffCards === 110,
+    `account filter shows PAFF's 29 posts and 81 OS logs (got ${paffCards})`,
+  );
+  check(
+    await cdp.evaluate(`location.search === '?account=paff_01'`),
+    "account filter is reflected in the URL",
+  );
+  await cdp.screenshot("timeline-account-filtered.png");
+  await cdp.evaluate(SET_ACCOUNT("other"));
+  const otherCards = await cdp.waitFor(
+    `(() => {
+      const cards = [...document.querySelectorAll('[data-testid="timeline-card"]')];
+      if (!cards.length) return null;
+      return cards.every((card) => card.dataset.account === 'other')
+        ? cards.length
+        : null;
+    })()`,
+    "other account cards",
+  );
+  check(otherCards === 401, `other/NPC account keeps the remaining 401 rows (got ${otherCards})`);
+  await cdp.evaluate(SET_ACCOUNT("all"));
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="timeline-card"]').length === ${home.count}`,
-    "lane filter restores every lane",
+    "account filter restores every account",
   );
 
   // -------------------------------------------------------------- type filter
@@ -435,6 +450,132 @@ try {
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="timeline-card"]').length === ${home.count}`,
     "timeline restored after type filter",
+  );
+
+  // ------------------------------------------------------- character pages
+  const CHARACTER_SNAPSHOT = `(() => {
+    const versions = [...document.querySelectorAll('[data-testid="character-os-version"]')]
+      .map((group) => group.dataset.version);
+    const orders = [...document.querySelectorAll('[data-testid="character-os-entry"]')]
+      .map((entry) => entry.dataset.versionOrder);
+    const numeric = (value) => value.split('.').map((part) => Number(part));
+    const compare = (left, right) => {
+      const a = numeric(left);
+      const b = numeric(right);
+      for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+        const difference = (a[index] ?? -1) - (b[index] ?? -1);
+        if (difference !== 0) return difference;
+      }
+      return 0;
+    };
+    const imTab = document.querySelector('[data-testid="character-tab-im"]');
+    return {
+      osEntries: orders.length,
+      versions,
+      osSorted: orders.every(
+        (value, index) => index === 0 || compare(orders[index - 1], value) <= 0,
+      ),
+      imTab: Boolean(imTab),
+      imHref: imTab?.getAttribute('href') ?? null,
+      paffNote:
+        document.querySelector('[data-testid="character-paff-note"]')?.textContent?.trim() ??
+        null,
+      characterId:
+        document.querySelector('[data-testid="character-view"]')?.dataset.characterId ??
+        null,
+    };
+  })()`;
+
+  await cdp.navigate(`${appBase}/character/paff001`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="character-os-entry"]').length > 0`,
+    "PAFF character page",
+  );
+  const paffPage = await cdp.evaluate(CHARACTER_SNAPSHOT);
+  check(paffPage.characterId === "character/paff001", "PAFF character page loads");
+  check(paffPage.osEntries === 81, `PAFF lists all 81 OS logs (got ${paffPage.osEntries})`);
+  check(paffPage.versions.length > 1 && paffPage.osSorted, "PAFF OS logs are sorted by version");
+  check(paffPage.imTab, "PAFF character page has an IM tab");
+  check(
+    paffPage.imHref === "/timeline?account=paff001",
+    `PAFF IM tab links to the filtered global feed (got ${paffPage.imHref})`,
+  );
+  await cdp.screenshot("character-paff.png");
+
+  await cdp.evaluate(`document.querySelector('[data-testid="character-tab-im"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/timeline' &&
+     location.search === '?account=paff001' &&
+     document.querySelector('[data-testid="account-filter"]')?.value === 'paff_01' &&
+     document.querySelectorAll('[data-testid="timeline-card"]').length === 110`,
+    "PAFF IM tab opens the account-filtered timeline",
+  );
+  check(true, "character IM tab opens the global feed filtered by that account");
+
+  for (const [gameId, expected, hasImTab] of [
+    ["neko001", 55, true],
+    ["robo001", 55, true],
+    ["ivy001", 109, false],
+    ["xenon001", 48, false],
+    ["cherry002", 61, false],
+  ]) {
+    await cdp.navigate(`${appBase}/character/${gameId}`);
+    await cdp.waitFor(
+      `document.querySelectorAll('[data-testid="character-os-entry"]').length > 0`,
+      `${gameId} character page`,
+    );
+    const page = await cdp.evaluate(CHARACTER_SNAPSHOT);
+    check(
+      page.osEntries === expected,
+      `${gameId} lists ${expected} OS logs (got ${page.osEntries})`,
+    );
+    check(page.osSorted, `${gameId} OS logs are sorted by version`);
+    check(
+      page.imTab === hasImTab,
+      `${gameId} IM tab presence is ${hasImTab} (got ${page.imTab})`,
+    );
+  }
+
+  await cdp.navigate(`${appBase}/character/paff003`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="character-os-entry"]').length > 0`,
+    "PΛFF character page",
+  );
+  const paffAlt = await cdp.evaluate(CHARACTER_SNAPSHOT);
+  check(paffAlt.osEntries === 18, `PΛFF lists its 18 OS logs (got ${paffAlt.osEntries})`);
+  check(!paffAlt.imTab, "PΛFF has no IM tab");
+  check(
+    paffAlt.paffNote === translate("zh-Hans", "character.paffNote"),
+    "PΛFF carries the epilogue-response note",
+  );
+  await cdp.screenshot("character-paff-note.png");
+
+  await cdp.navigate(`${appBase}/timeline?account=xenon_01`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="timeline-card"]').length === 19`,
+    "Xenon account feed",
+  );
+  const xenonFeed = await cdp.evaluate(`(() => {
+    const cards = [...document.querySelectorAll('[data-testid="timeline-card"]')];
+    return {
+      count: cards.length,
+      types: [...new Set(cards.map((card) => card.dataset.type))],
+    };
+  })()`);
+  check(
+    xenonFeed.types.length === 1 && xenonFeed.types[0] === "im_post",
+    "paid Xenon OS logs stay out of the timeline",
+  );
+  await cdp.navigate(`${appBase}/timeline`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="timeline-card"]').length === ${home.count}`,
+    "timeline restored after character checks",
+  );
+  check(
+    !(await cdp.evaluate(
+      `Boolean(document.querySelector('[data-testid="timeline-card"][href^="/os/paos"]'))`,
+    )),
+    "PΛFF OS logs stay out of the timeline",
   );
 
   // ----------------------------------------------------------- command palette
@@ -1198,6 +1339,7 @@ try {
       title: document.querySelector('.page-head h1')?.textContent?.trim() ?? '',
       filter: document.querySelector('[data-testid="type-all"]')?.textContent?.trim() ?? '',
       levelGate: document.querySelector('.context .panel h2')?.textContent?.trim() ?? '',
+      account: document.querySelector('[data-testid="account-heading"]')?.textContent?.trim() ?? '',
       stored: localStorage.getItem('cytus2.language'),
       htmlLang: document.documentElement.lang,
       snippet: document.querySelector('[data-testid="timeline-card"] .card-snippet')?.textContent ?? '',
@@ -1217,6 +1359,10 @@ try {
     check(
       uiState.levelGate === translate(code, "timeline.levelGate"),
       `${code}: timeline level gate heading follows the UI language`,
+    );
+    check(
+      uiState.account === translate(code, "timeline.account"),
+      `${code}: timeline account heading follows the UI language`,
     );
     check(
       uiState.stored === code && uiState.htmlLang === code,
@@ -1258,6 +1404,24 @@ try {
     if (contentState.body) {
       bodyByLanguage.set(code, contentState.body);
     }
+
+    await cdp.navigate(`${appBase}/character/paff003`);
+    await cdp.waitFor(
+      `Boolean(document.querySelector('[data-testid="character-paff-note"]'))`,
+      `PΛFF note for ${code}`,
+    );
+    const characterState = await cdp.evaluate(`(() => ({
+      note: document.querySelector('[data-testid="character-paff-note"]')?.textContent?.trim() ?? '',
+      osTab: document.querySelector('[data-testid="character-tab-os"]')?.textContent?.trim() ?? '',
+    }))()`);
+    check(
+      characterState.note === translate(code, "character.paffNote"),
+      `${code}: PΛFF note follows the UI language`,
+    );
+    check(
+      characterState.osTab === translate(code, "character.osTab"),
+      `${code}: character OS tab follows the UI language`,
+    );
   }
   check(
     bodyLanguages.size >= 3,

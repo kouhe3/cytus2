@@ -20,6 +20,8 @@ export type ReadingTier = "free" | "paid" | "side";
 
 export type ReadingEntityType = "im_post" | "os_log" | "oa_document" | "story_node";
 
+export type TimelineScope = "timeline" | "character" | "none";
+
 export interface ProvenanceEntry {
   kind: string;
   locator: string;
@@ -375,6 +377,7 @@ export interface ReadingOrderRow extends BaseEntity {
   readonly type: "reading_order";
   readonly entity_id: string;
   readonly entity_type: ReadingEntityType;
+  readonly timeline_scope: TimelineScope;
   readonly stage: number;
   readonly level_gate: number;
   readonly original_level: number;
@@ -407,12 +410,25 @@ export interface Edge {
   readonly provenance?: ProvenanceEntry[];
 }
 
+/** One icon of the game's iM account filter (`im_filter_data`). */
+export interface ImFilterItem {
+  readonly avatar: string;
+  readonly avatars: string[];
+  readonly name: string;
+}
+
+export interface ImFilters {
+  readonly items: ImFilterItem[];
+  readonly otherAvatar: string | null;
+}
+
 export interface Projection {
   readonly schemaVersion: number;
   readonly counts: Record<string, number>;
   readonly difficulties: Difficulty[];
   readonly entities: Record<string, BaseEntity[]>;
   readonly edges: Edge[];
+  readonly imFilters?: ImFilters;
 }
 
 export interface TextBlock {
@@ -440,7 +456,9 @@ export interface Database {
   readonly projection: Projection;
   readonly entityById: Map<string, BaseEntity>;
   readonly entitiesByType: Map<string, BaseEntity[]>;
+  readonly imFilters: ImFilters;
   readonly timelineOrders: ReadingOrderRow[];
+  readonly allReadingOrders: ReadingOrderRow[];
   readonly readingOrderByEntity: Map<string, ReadingOrderRow>;
   readonly textRefs: TextSummary["refs"];
   readonly textNames: TextSummary["names"];

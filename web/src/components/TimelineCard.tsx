@@ -34,6 +34,7 @@ export function TimelineCard({ entry }: { entry: TimelineEntry }) {
       data-level={row.level_gate}
       data-tier={row.tier}
       data-lane={row.lane}
+      data-account={entry.account}
       data-cost={row.cost}
       data-read-index={row.read_index ?? ""}
       data-branch={row.branch ?? ""}

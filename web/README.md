@@ -27,7 +27,8 @@ repository root when the default `python` does not have UnityPy;
 | Route | Content |
 |:--|:--|
 | `/` | redirects to `/timeline` |
-| `/timeline` | iM posts + OS logs ordered by `reading_order.order`; level slider, type and tier filters |
+| `/timeline` | global unlock timeline: all 323 iM posts + the 501 main-seven OS logs (`timeline_scope=timeline`) ordered by `reading_order.order`; level slider, type, tier and iM account filters |
+| `/character/<gameId>` | character page: every OS log of that character via `OS → SORT BY VERSION`; PAFF / NEKO / ROBO add an IM tab linking to the account-filtered feed |
 | `/oa` | OA archive index: one card per character with object/document/description counts |
 | `/oa/<gameId>` | OA workspace: object tabs, each object's text and documents, all hotspot descriptions |
 | `/backup` | Backup Database folder index with per-folder media counts |
@@ -59,6 +60,13 @@ relations and units live beside it. Missing keys fall back to `zh-Hans` and log
 a development warning; the raw key is never rendered. `useI18n()` also exposes
 `Intl`-backed `formatNumber` / `formatDate`, so counts and dates follow the
 active locale. Entity titles and bodies are not translated by this dictionary.
+
+`/timeline` reads only `timeline_scope=timeline` rows. Paid and side/DLC OS
+logs (`timeline_scope=character`) stay out of the feed and appear only on
+their character page, sorted by the numeric `version_order`. The account
+filter uses the seven icons from `im_filter_data` (exported as `imFilters` in
+`data.json`) plus `other/NPC`; PΛFF therefore has no IM tab, and its four
+epilogue posts remain in the global feed.
 
 ## Served artifacts
 
@@ -95,17 +103,19 @@ pnpm smoke       # app must be running; Edge CDP at 127.0.0.1:9333
 Node 24 strips the types, so no test runner or build step is involved.
 
 `pnpm smoke` drives a real Edge tab over the DevTools protocol and asserts the
-home feed order, slider/filter behaviour, the Ctrl+K palette, a chart opened
-from an entity link, an unlock-source jump, direct chart deep links, the return
-to the timeline, the chart → post → chart round trip, the OA archive and
-document views, a backup gallery item, a Branching OS node, a CAPSO pack and
-the Black Market bundle, the extras hub, all 19 assistant groups / 30 pages
-with their language switch, the 10 title screens and 13 video clips (or their
-missing-export notes), grouped search hits opened with the keyboard, and the
-five-language switch including the explicit missing-language fallback. The
-switch checks assert the sidebar label, timeline heading, timeline filter,
-level-gate heading and search placeholder in each of the five languages, plus
-that the canonical text language changes with the UI.
+824-entry home feed and its account filter, the character OS version order and
+the IM tab limited to PAFF / NEKO / ROBO, the PΛFF note, the slider/filter
+behaviour, the Ctrl+K palette, a chart opened from an entity link, an
+unlock-source jump, direct chart deep links, the return to the timeline, the
+chart → post → chart round trip, the OA archive and document views, a backup
+gallery item, a Branching OS node, a CAPSO pack and the Black Market bundle,
+the extras hub, all 19 assistant groups / 30 pages with their language switch,
+the 10 title screens and 13 video clips (or their missing-export notes),
+grouped search hits opened with the keyboard, and the five-language switch
+including the explicit missing-language fallback. The switch checks assert the
+sidebar label, timeline heading/filter/level gate/account heading, character
+tab and PΛFF note in each of the five languages, plus that the canonical text
+language changes with the UI.
 Screenshots land in `web/.shots/` (git-ignored).
 
 ## Scope

@@ -758,6 +758,19 @@ kbd {
   color: var(--text-strong);
 }
 
+.os-version-group {
+  margin-top: 18px;
+}
+
+.os-version-group h3 {
+  margin: 0 0 8px;
+  color: var(--accent-dim);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
 .facts {
   margin: 0;
   display: flex;

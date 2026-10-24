@@ -181,7 +181,26 @@ function blockText(block: TextBlock): string {
 }
 
 function recordBody(record: TextRecord): string {
-  let raw = record.text ?? "";
+  let raw = (record.text ?? "").replace(
+    />>hyperlink\s*\{[\s\S]*?\}\s*<<hyperlink/g,
+    (block) => {
+      const start = block.indexOf("{");
+      const end = block.lastIndexOf("}");
+      if (start === -1 || end <= start) {
+        return " ";
+      }
+      try {
+        const parsed = JSON.parse(
+          block.slice(start, end + 1).replace(/\u00a0/g, " "),
+        ) as { Content?: unknown };
+        return typeof parsed.Content === "string"
+          ? ` ${parsed.Content} `
+          : " ";
+      } catch {
+        return " ";
+      }
+    },
+  );
   if (!raw && record.blocks) {
     raw = record.blocks.map(blockText).filter(Boolean).join(" ");
   }

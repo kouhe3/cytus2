@@ -138,7 +138,49 @@ function Block({ block }: { block: TextBlock }) {
 type BodyNode =
   | { readonly kind: "paragraph"; readonly text: string }
   | { readonly kind: "image"; readonly id: string }
-  | { readonly kind: "movie"; readonly id: string };
+  | { readonly kind: "movie"; readonly id: string }
+  | {
+      readonly kind: "hyperlink";
+      readonly content: string;
+      readonly url: string;
+    };
+
+function cleanInlineMarkup(value: string): string {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+}
+
+function parseHyperlink(body: string): BodyNode | null {
+  const start = body.indexOf("{");
+  const end = body.lastIndexOf("}");
+  if (start === -1 || end <= start) {
+    return null;
+  }
+  try {
+    const raw = JSON.parse(body.slice(start, end + 1).replace(/\u00a0/g, " ")) as {
+      Content?: unknown;
+      Urls?: Record<string, unknown>;
+    };
+    const content = cleanInlineMarkup(
+      typeof raw.Content === "string" ? raw.Content : "",
+    );
+    const urls = Object.values(raw.Urls ?? {}).filter(
+      (value): value is string => typeof value === "string" && value.length > 0,
+    );
+    const editor =
+      typeof raw.Urls?.Editor === "string" ? raw.Urls.Editor : null;
+    const url = editor ?? urls[0];
+    if (!url) {
+      return null;
+    }
+    return { kind: "hyperlink", content: content || url, url };
+  } catch {
+    return null;
+  }
+}
 
 function textBodyNodes(text: string): BodyNode[] {
   const nodes: BodyNode[] = [];
@@ -156,8 +198,23 @@ function textBodyNodes(text: string): BodyNode[] {
     }
     paragraph.length = 0;
   };
-  for (const raw of text.split("\n")) {
-    const line = raw.trim();
+  const lines = text.split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = (lines[index] ?? "").trim();
+    if (line === ">>hyperlink") {
+      flush();
+      const body: string[] = [];
+      index += 1;
+      while (index < lines.length && (lines[index] ?? "").trim() !== "<<hyperlink") {
+        body.push(lines[index] ?? "");
+        index += 1;
+      }
+      const hyperlink = parseHyperlink(body.join("\n"));
+      if (hyperlink) {
+        nodes.push(hyperlink);
+      }
+      continue;
+    }
     if (line.startsWith("##")) {
       flush();
       const [key, value = ""] = line.slice(2).split("=", 2);
@@ -253,6 +310,21 @@ export function TextBody({
             }
             if (node.kind === "movie") {
               return <MediaVideo key={index} id={node.id} />;
+            }
+            if (node.kind === "hyperlink") {
+              return (
+                <a
+                  key={index}
+                  className="im-hyperlink"
+                  href={node.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-testid="im-hyperlink"
+                >
+                  <span>{node.content}</span>
+                  <span aria-hidden="true">↗</span>
+                </a>
+              );
             }
             return <p key={index}>{node.text}</p>;
           })}

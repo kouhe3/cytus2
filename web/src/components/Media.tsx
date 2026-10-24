@@ -125,6 +125,7 @@ export function MediaAudio({
   }
   return (
     <span className="media-audio-wrap">
+      {label ? <span className="media-audio-label">{label}</span> : null}
       <audio
         className="media-audio"
         src={mediaUrl(asset.file)}
@@ -132,7 +133,6 @@ export function MediaAudio({
         preload="metadata"
         aria-label={label ?? id}
       />
-      {label ? <span className="media-audio-label">{label}</span> : null}
     </span>
   );
 }

@@ -2754,6 +2754,7 @@ const GAME_TIMESTAMP =
 
 const numberFormats = new Map<string, Intl.NumberFormat>();
 const dateFormats = new Map<string, Intl.DateTimeFormat>();
+const pluralRules = new Map<string, Intl.PluralRules>();
 
 function numberFormatter(locale: string, options?: Intl.NumberFormatOptions) {
   const key = options ? `${locale}:${JSON.stringify(options)}` : locale;
@@ -3075,7 +3076,11 @@ export const UNIT_FORMS: Record<Lang, Record<UnitKey, UnitForms>> = {
 
 export function formatUnit(i18n: I18n, unit: UnitKey, count: number): string {
   const forms = UNIT_FORMS[i18n.lang][unit];
-  const category =
-    new Intl.PluralRules(i18n.locale).select(count) === "one" ? "one" : "other";
+  let rules = pluralRules.get(i18n.locale);
+  if (!rules) {
+    rules = new Intl.PluralRules(i18n.locale);
+    pluralRules.set(i18n.locale, rules);
+  }
+  const category = rules.select(count) === "one" ? "one" : "other";
   return interpolate(forms[category], { count: i18n.formatNumber(count) });
 }

@@ -46,7 +46,7 @@ export function TimelineCard({ entry }: { entry: TimelineEntry }) {
       data-entity-id={entity.id}
     >
       <header className="card-head">
-        <Avatar name={entry.author} />
+        <Avatar name={entry.author} mediaId={entity.type === "im_post" ? entity.avatar : undefined} />
         <div className="card-who">
           <span className="card-author">{entry.author}</span>
           {entry.character ? (

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { BackButton } from "../components/BackButton";
 import { EntityLink } from "../components/EntityLink";
+import { MediaImage } from "../components/Media";
 import { TypeBadge } from "../components/ui";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
@@ -120,6 +121,15 @@ export function CharacterView({
               <code>{character.game_id}</code>
             </p>
           </header>
+
+          <div className="entity-media character-media">
+            <MediaImage
+              id={character.game_id}
+              kind="illustration"
+              alt={character.name}
+              className="character-illustration"
+            />
+          </div>
 
           <nav
             className="tab-strip"

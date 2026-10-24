@@ -1,4 +1,5 @@
 import { useI18n } from "../data/i18n";
+import { MediaImage } from "./Media";
 import {
   entityTypeLabel,
   mediaKindLabel,
@@ -66,11 +67,11 @@ export function SpoilerChip({ threshold }: { threshold: number | null }) {
   );
 }
 
-export function Avatar({ name }: { name: string }) {
+export function Avatar({ name, mediaId }: { name: string; mediaId?: string }) {
   const initial = name.trim().slice(0, 1).toUpperCase() || "?";
   return (
     <span className="avatar" aria-hidden="true">
-      {initial}
+      {mediaId ? <MediaImage id={mediaId} kind="avatar" alt={name} /> : initial}
     </span>
   );
 }

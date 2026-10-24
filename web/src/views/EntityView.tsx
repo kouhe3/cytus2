@@ -20,6 +20,7 @@ import {
   StoryNodeDetails,
   SubtitleLineDetails,
 } from "../components/EntitySections";
+import { EntityMedia } from "../components/EntityMedia";
 import { Fact, Facts } from "../components/Facts";
 import { RelationsSection } from "../components/Relations";
 import { TextBody } from "../components/TextBody";
@@ -356,6 +357,8 @@ export function EntityView({
               </p>
             ) : null}
           </header>
+
+          <EntityMedia entity={entity} />
 
           {textRef ? <TextBody textRef={textRef} lang={lang} /> : null}
 

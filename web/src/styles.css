@@ -1812,9 +1812,20 @@ kbd {
 .post-avatar {
   width: 48px;
   height: 48px;
+  flex: 0 0 48px;
   border: 1px solid var(--line-strong);
   border-radius: 50%;
   background: #05070a;
+}
+
+.entity-media.post-media {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.post-media .post-attachment {
+  width: 100%;
 }
 
 .post-attachment,

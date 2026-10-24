@@ -1918,3 +1918,28 @@ kbd {
   color: var(--muted);
   font-size: 12px;
 }
+
+.os-character-group {
+  margin: 14px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.os-character-group > summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.os-character-group > summary:hover {
+  background: var(--panel-2);
+}
+
+.os-character-group > .os-version-group {
+  margin: 0 14px 12px;
+}

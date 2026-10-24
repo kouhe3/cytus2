@@ -54,6 +54,7 @@ export const ZH_HANS = {
   "brand.sub": "故事数据库",
 
   "nav.timeline": "时间线",
+  "nav.os": "OS 日志",
   "nav.search": "搜索",
   "nav.oa": "OA",
   "nav.backup": "备份数据库",
@@ -611,6 +612,7 @@ const EN: Messages = {
   "brand.sub": "Story DB",
 
   "nav.timeline": "Timeline",
+  "nav.os": "OS logs",
   "nav.search": "Search",
   "nav.oa": "OA",
   "nav.backup": "Backup Database",
@@ -1165,6 +1167,7 @@ const JA: Messages = {
   "brand.sub": "ストーリーDB",
 
   "nav.timeline": "タイムライン",
+  "nav.os": "OS ログ",
   "nav.search": "検索",
   "nav.oa": "OA",
   "nav.backup": "バックアップDB",
@@ -1719,6 +1722,7 @@ const ZH_HANT: Messages = {
   "brand.sub": "故事資料庫",
 
   "nav.timeline": "時間軸",
+  "nav.os": "OS 日誌",
   "nav.search": "搜尋",
   "nav.oa": "OA",
   "nav.backup": "備份資料庫",
@@ -2273,6 +2277,7 @@ const KO: Messages = {
   "brand.sub": "스토리 DB",
 
   "nav.timeline": "타임라인",
+  "nav.os": "OS 로그",
   "nav.search": "검색",
   "nav.oa": "OA",
   "nav.backup": "백업 데이터베이스",

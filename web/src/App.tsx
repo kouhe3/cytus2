@@ -25,6 +25,7 @@ import {
 } from "./views/ExtrasView";
 import { NotFound } from "./views/NotFound";
 import { OaCharacterView, OaIndexView } from "./views/OaView";
+import { OsIndexView } from "./views/OsIndexView";
 import { SearchView } from "./views/SearchView";
 import { ShopIndexView } from "./views/ShopView";
 import { StoryIndexView } from "./views/StoryView";
@@ -173,6 +174,7 @@ cd web && pnpm dev`}</pre>
           <Route path="/" element={<Navigate to="/timeline" replace />} />
           <Route path="/timeline" element={<TimelineView db={db} />} />
           <Route path="/search" element={<SearchView />} />
+          <Route path="/os" element={<OsIndexView db={db} />} />
           <Route path="/oa" element={<OaIndexView db={db} />} />
           <Route path="/oa/:gameId" element={<OaCharacterRoute db={db} />} />
           <Route path="/backup" element={<BackupIndexView db={db} />} />

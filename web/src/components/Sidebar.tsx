@@ -12,6 +12,7 @@ const NAV_ITEMS: readonly {
 }[] = [
   { to: "/timeline", labelKey: "nav.timeline", testId: "nav-timeline" },
   { to: "/search", labelKey: "nav.search", testId: "nav-search" },
+  { to: "/os", labelKey: "nav.os", testId: "nav-os" },
   { to: "/oa", labelKey: "nav.oa", testId: "nav-oa" },
   { to: "/backup", labelKey: "nav.backup", testId: "nav-backup" },
   { to: "/story", labelKey: "nav.story", testId: "nav-story" },

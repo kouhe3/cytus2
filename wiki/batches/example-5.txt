@@ -1,0 +1,7 @@
+# 小批量审阅示例：角色、歌曲、iM 帖、OS 档案、OA 文件各一页。
+# 每行一个实体 id 或站点标题；空行与 # 注释会被忽略。
+character/alice001
+song/alice001_002
+im/N0201
+os/aios019
+oa_document/bobo001_obj002_oa006

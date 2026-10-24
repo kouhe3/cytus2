@@ -10,8 +10,9 @@ from pathlib import Path
 
 from .build import build_database
 from .errors import BuildError, ValidationError
-from .wiki.build import render_wiki
 from .verify import DEFAULT_LIVE_API, format_summary, verify_wiki
+from .wiki.build import render_wiki
+from .wiki.review import DEFAULT_FETCH_API, PAGE_TYPES, render_review
 
 DEFAULT_WORK = os.environ.get("CYTUS2_WORK", "C:/tmp/workspace/cytus2/cytus2_work")
 _MAX_REPORTED_ERRORS = 50
@@ -69,6 +70,50 @@ def build_parser() -> argparse.ArgumentParser:
         "--snapshot",
         default="wiki/snapshot",
         help="wiki snapshot directory used by --patches (default: %(default)s)",
+    )
+    render.add_argument(
+        "--batch",
+        metavar="FILE|IDS",
+        default=None,
+        help=(
+            "with --patches: review only 3-10 selected pages. FILE has one "
+            "title or entity id per line; otherwise IDS is comma-separated. "
+            "Reads the local pages cache and writes only "
+            "<out>/review/<batch>.md"
+        ),
+    )
+    render.add_argument(
+        "--batch-name",
+        default=None,
+        help="output stem for --batch (default: the selection file stem)",
+    )
+    render.add_argument(
+        "--type",
+        dest="page_type",
+        choices=PAGE_TYPES,
+        default=None,
+        help="only keep --batch pages of this type",
+    )
+    render.add_argument(
+        "--fetch-selected",
+        action="store_true",
+        help=(
+            "with --batch: fetch only the selected pages instead of reading "
+            "the local cache (never refreshes the whole site)"
+        ),
+    )
+    render.add_argument(
+        "--fetch-api",
+        default=DEFAULT_FETCH_API,
+        help="api.php used by --fetch-selected (default: %(default)s)",
+    )
+    render.add_argument(
+        "--fetch-helper",
+        default=None,
+        help=(
+            "optional command that fetches {url} for --fetch-selected when "
+            "the wiki WAF blocks plain HTTP"
+        ),
     )
     verify = commands.add_parser(
         "verify",
@@ -131,6 +176,53 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     if args.command == "render":
+        batch_flags = (
+            args.page_type is not None
+            or args.batch_name is not None
+            or args.fetch_selected
+            or args.fetch_helper is not None
+        )
+        if args.batch is not None and not args.patches:
+            parser.error("--batch requires --patches")
+        if args.batch is None and batch_flags:
+            parser.error(
+                "--type, --batch-name, --fetch-selected and --fetch-helper "
+                "require --batch"
+            )
+        if args.batch is not None:
+            try:
+                review = render_review(
+                    Path(args.db),
+                    Path(args.out),
+                    Path(args.profile),
+                    Path(args.snapshot),
+                    args.batch,
+                    page_type=args.page_type,
+                    batch_name=args.batch_name,
+                    fetch_selected=args.fetch_selected,
+                    fetch_api=args.fetch_api,
+                    fetch_helper=args.fetch_helper,
+                )
+            except BuildError as exc:
+                print(f"cytus2db: {exc}", file=sys.stderr)
+                return 1
+            summary = " ".join(
+                f"{name}={count}" for name, count in review["counts"].items()
+            )
+            print(
+                f"review batch: {review['page_count']} page(s) ({summary})"
+            )
+            print(f"wrote review -> {Path(review['review']).as_posix()}")
+            excluded = review.get("excluded") or []
+            if excluded:
+                print(f"filtered out by --type: {', '.join(excluded)}")
+            missing = review.get("missing") or []
+            if missing:
+                print(
+                    "not found on the site (treated as new pages): "
+                    f"{', '.join(missing)}"
+                )
+            return 0
         try:
             result = render_wiki(
                 Path(args.db),

@@ -231,6 +231,19 @@ def template_parameters(wikitext: str, template: str) -> dict[str, str]:
     }
 
 
+def template_block(wikitext: str, template: str) -> str:
+    """Return the exact top-level ``template`` block, braces included.
+
+    The block is copied verbatim from the rendered page, so it can be shown
+    to a human reviewer without re-serialising (and possibly reordering) the
+    parameters.
+    """
+    block = _find_template(wikitext, template)
+    if block is None:
+        raise PatchError(f"template {template!r} not found in page")
+    return wikitext[block[0] : block[3]]
+
+
 def _find_template(
     wikitext: str, name: str
 ) -> tuple[int, int, int, int] | None:
@@ -423,26 +436,32 @@ def match_pages(
     claimed: set[str] = set()
     matches: dict[str, PageMatch] = {}
     for page in sorted(pages, key=lambda item: item.entity_id):
-        match = _match_one(page, snapshot, by_template, indexes, claimed)
+        match = _match_one(page, snapshot, indexes, claimed)
         if match.matched:
             claimed.add(match.title)
         matches[page.entity_id] = match
     return matches
 
 
+_Index = tuple[
+    dict[tuple[str, ...], list[SnapshotPage]],
+    dict[str, list[SnapshotPage]],
+    dict[tuple[str, ...], list[SnapshotPage]],
+    dict[str, list[SnapshotPage]],
+    dict[str, list[SnapshotPage]],
+]
+
+
 def _build_index(
     records: Iterable[SnapshotPage],
-) -> tuple[
-    dict[tuple[str, ...], list[SnapshotPage]],
-    dict[str, list[SnapshotPage]],
-    dict[tuple[str, ...], list[SnapshotPage]],
-    dict[str, list[SnapshotPage]],
-]:
+) -> _Index:
     by_key: dict[tuple[str, ...], list[SnapshotPage]] = defaultdict(list)
     by_first: dict[str, list[SnapshotPage]] = defaultdict(list)
     by_loose: dict[tuple[str, ...], list[SnapshotPage]] = defaultdict(list)
     by_loose_first: dict[str, list[SnapshotPage]] = defaultdict(list)
+    by_exact: dict[str, list[SnapshotPage]] = defaultdict(list)
     for record in sorted(records, key=lambda item: item.title):
+        by_exact[normalise_title(record.title)].append(record)
         rule = _RULES.get(record.template)
         if rule is None:
             continue
@@ -461,28 +480,27 @@ def _build_index(
         dict(by_first),
         dict(by_loose),
         dict(by_loose_first),
+        dict(by_exact),
     )
 
 
 def _match_one(
     page: PatchPage,
     snapshot: Snapshot,
-    by_template: dict[str, list[SnapshotPage]],
-    indexes: dict[str, tuple[dict, dict, dict, dict]],
+    indexes: dict[str, _Index],
     claimed: set[str],
 ) -> PageMatch:
     rule = _RULES.get(page.template)
     conflicts: list[Conflict] = []
-    empty_index: tuple[dict, dict, dict, dict] = ({}, {}, {}, {})
-    by_key, by_first, by_loose, by_loose_first = indexes.get(
+    empty_index: _Index = ({}, {}, {}, {}, {})
+    by_key, by_first, by_loose, by_loose_first, by_exact = indexes.get(
         page.template, empty_index
     )
 
     exact_all = [
         item
-        for item in by_template.get(page.template, ())
-        if normalise_title(item.title) == normalise_title(page.title)
-        and item.title not in claimed
+        for item in by_exact.get(normalise_title(page.title), ())
+        if item.title not in claimed
     ]
 
     key_candidates: list[SnapshotPage] = []

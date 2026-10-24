@@ -60,6 +60,20 @@ uv run python -m cytus2db verify
 `--input` 指向解包目录（默认读 `$CYTUS2_WORK`，未设置时用本机解包路径）；
 `build/` 完全由管线重建，`--clean` 会先清空 `db/`、`db.sqlite` 与 `spa/`。
 
+没有机器人账户时先用小批量审阅，人工确认后再谈批量：
+
+```bash
+uv run python -m cytus2db render --out build/wiki --patches \
+  --batch wiki/batches/example-5.txt
+# → build/wiki/review/example-5.md
+```
+
+`--batch` 接受文件（每行一个标题或实体 id）或逗号分隔的列表，选出 3–10 页；
+可用 `--type character|song|im_post|os_log|oa_document` 过滤。该模式只读本地
+`pages.json`，只写 `review/<batch>.md`，不会生成 `pages/`、`patches/` 或
+`report.json`，也不调用任何写接口。缓存缺失或需要站内最新值时，用
+`--fetch-selected` 只抓取选中页（`action=query`），绝不刷新整站。
+
 `wiki/snapshot/` 里只有 `titles.json` 与 `template_params.json` 入库；
 `pages.json`（登录站页面正文与模板参数）是**本地缓存**，被 `.gitignore` 忽略，
 由上面的 `wiki_snapshot.py` 刷新。`render --patches` 需要它来比对参数，

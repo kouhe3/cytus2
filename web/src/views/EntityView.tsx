@@ -7,6 +7,7 @@ import {
   BossStageDetails,
   CapsoItemDetails,
   CapsoPackDetails,
+  ExpansionPackDetails,
   GachaMachineDetails,
   GachaRewardDetails,
   GalleryFolderDetails,
@@ -22,6 +23,7 @@ import {
 } from "../components/EntitySections";
 import { EntityMedia } from "../components/EntityMedia";
 import { Fact, Facts } from "../components/Facts";
+import { MediaImage } from "../components/Media";
 import { RelationsSection } from "../components/Relations";
 import { TextBody } from "../components/TextBody";
 import { TypeBadge } from "../components/ui";
@@ -30,6 +32,7 @@ import {
   isBossStage,
   isCapsoShopItem,
   isCapsoShopPack,
+  isExpansionPack,
   isGachaMachine,
   isGachaReward,
   isGalleryFolder,
@@ -81,6 +84,7 @@ const GENERIC_FIELDS = [
   "item_id",
   "machine_id",
   "pack_id",
+  "expansion_pack_id",
   "character_id",
   "analyze_type",
   "analyze_type_id",
@@ -127,6 +131,7 @@ const GENERIC_FIELDS = [
 const REF_FIELDS: ReadonlySet<string> = new Set([
   "machine_id",
   "pack_id",
+  "expansion_pack_id",
   "character_id",
   "chapter_id",
   "folder_id",
@@ -148,6 +153,7 @@ const DETAILED_TYPES: Record<string, true> = {
   boss_stage: true,
   story_node: true,
   capso_shop_pack: true,
+  expansion_pack: true,
   capso_shop_item: true,
   gacha_machine: true,
   gacha_reward: true,
@@ -269,6 +275,9 @@ function TypeDetails({
   if (isCapsoShopPack(entity)) {
     return <CapsoPackDetails db={db} entity={entity} lang={lang} />;
   }
+  if (isExpansionPack(entity)) {
+    return <ExpansionPackDetails db={db} entity={entity} lang={lang} />;
+  }
   if (isCapsoShopItem(entity)) {
     return <CapsoItemDetails db={db} entity={entity} lang={lang} />;
   }
@@ -353,65 +362,79 @@ export function EntityView({
           data-entity-id={entity.id}
           data-entity-type={entity.type}
         >
-          <header className="detail-head">
-            <p className="eyebrow">
-              {entityTypeLabel(i18n, entity.type)} · <code>{entity.id}</code>
-            </p>
-            <h1>{picked.title}</h1>
-            {picked.fallback ? (
-              <div className="fallback-note" data-testid="language-fallback">
-                {fallbackNotice(i18n, lang, picked.actual)}
-              </div>
+          <header
+            className={isImPost(entity) || isImReply(entity)
+              ? "detail-head detail-head--post"
+              : "detail-head"}
+          >
+            {isImPost(entity) || isImReply(entity) ? (
+              <MediaImage
+                id={entity.avatar}
+                kind="avatar"
+                alt={entity.author}
+                className="post-avatar"
+              />
             ) : null}
-            {isImReply(entity) ? (
-              <p className="byline">
-                {entity.author} ·{" "}
-                <Link to={entityHref(entity.post_id)} className="inline-link">
-                  {(() => {
-                    const parent = db.entityById.get(entity.post_id);
-                    return parent
-                      ? entityTitle(db, parent, lang, i18n)
-                      : entity.post_id;
-                  })()}
-                </Link>
+            <div className="detail-head-body">
+              <p className="eyebrow">
+                {entityTypeLabel(i18n, entity.type)} · <code>{entity.id}</code>
               </p>
-            ) : null}
-            {isImPost(entity) ? (
-              <p className="byline">
-                {entity.author}
-                {order?.thread ? (
-                  <>
-                    {" · "}
-                    <Link to={entityHref(order.thread)} className="inline-link">
-                      {characterName(db, order.thread)}
-                    </Link>
-                  </>
-                ) : null}{" "}
-                ·{" "}
-                {formatUnit(i18n, "likes", entity.likes)} ·{" "}
-                {formatUnit(i18n, "replies", entity.reply_count)}
-              </p>
-            ) : null}
-            {isOsLog(entity) ? (
-              <p className="byline">
-                {entity.date
-                  ? i18n.formatDate(entity.date)
-                  : i18n.t("entity.noDate")}{" "}
-                · {i18n.t("entity.fileMeta", { file: entity.file })} ·{" "}
-                {i18n.t("entity.indexMeta", { index: entity.index })}
-              </p>
-            ) : null}
-            {!isImPost(entity) && !isOsLog(entity) ? (
-              <p className="byline">
-                <TypeBadge type={entity.type} />
-                {typeof data["game_id"] === "string" ? (
-                  <>
-                    {" · "}
-                    <code>{data["game_id"]}</code>
-                  </>
-                ) : null}
-              </p>
-            ) : null}
+              <h1>{picked.title}</h1>
+              {picked.fallback ? (
+                <div className="fallback-note" data-testid="language-fallback">
+                  {fallbackNotice(i18n, lang, picked.actual)}
+                </div>
+              ) : null}
+              {isImReply(entity) ? (
+                <p className="byline">
+                  {entity.author} ·{" "}
+                  <Link to={entityHref(entity.post_id)} className="inline-link">
+                    {(() => {
+                      const parent = db.entityById.get(entity.post_id);
+                      return parent
+                        ? entityTitle(db, parent, lang, i18n)
+                        : entity.post_id;
+                    })()}
+                  </Link>
+                </p>
+              ) : null}
+              {isImPost(entity) ? (
+                <p className="byline">
+                  {entity.author}
+                  {order?.thread ? (
+                    <>
+                      {" · "}
+                      <Link to={entityHref(order.thread)} className="inline-link">
+                        {characterName(db, order.thread)}
+                      </Link>
+                    </>
+                  ) : null}{" "}
+                  ·{" "}
+                  {formatUnit(i18n, "likes", entity.likes)} ·{" "}
+                  {formatUnit(i18n, "replies", entity.reply_count)}
+                </p>
+              ) : null}
+              {isOsLog(entity) ? (
+                <p className="byline">
+                  {entity.date
+                    ? i18n.formatDate(entity.date)
+                    : i18n.t("entity.noDate")}{" "}
+                  · {i18n.t("entity.fileMeta", { file: entity.file })} ·{" "}
+                  {i18n.t("entity.indexMeta", { index: entity.index })}
+                </p>
+              ) : null}
+              {!isImPost(entity) && !isOsLog(entity) ? (
+                <p className="byline">
+                  <TypeBadge type={entity.type} />
+                  {typeof data["game_id"] === "string" ? (
+                    <>
+                      {" · "}
+                      <code>{data["game_id"]}</code>
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+            </div>
           </header>
 
           <EntityMedia entity={entity} />
@@ -492,12 +515,14 @@ export function EntityView({
                 >
                   #{order.order}
                 </Fact>
-                <Fact
-                  label={i18n.t("entity.fact.levelGate")}
-                  testId="entity-level"
-                >
-                  {i18n.t("common.level", { level: order.level_gate + 1 })}
-                </Fact>
+                {isOsLog(entity) ? null : (
+                  <Fact
+                    label={i18n.t("entity.fact.levelGate")}
+                    testId="entity-level"
+                  >
+                    {i18n.t("common.level", { level: order.level_gate + 1 })}
+                  </Fact>
+                )}
                 <Fact label={i18n.t("entity.fact.tier")} testId="entity-tier">
                   {tierLabel(i18n, order.tier)}
                 </Fact>
@@ -579,6 +604,16 @@ export function EntityView({
               </Fact>
               <Fact label={i18n.t("entity.fact.category")}>
                 {entity.category || "—"}
+              </Fact>
+              <Fact label={i18n.t("fact.levelLocks")}>
+                {levelLocks.length > 0
+                  ? levelLocks.join(" · ")
+                  : i18n.t("common.none")}
+              </Fact>
+              <Fact label={i18n.t("entity.fact.levelLockDisplay")}>
+                {entity.level_lock_display
+                  ? i18n.t("common.yes")
+                  : i18n.t("common.no")}
               </Fact>
               <Fact label={i18n.t("entity.fact.chapter")}>
                 <FactValue

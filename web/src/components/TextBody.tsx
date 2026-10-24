@@ -3,6 +3,7 @@ import { useI18n } from "../data/i18n";
 import { fallbackNotice } from "../data/labels";
 import { formatFieldValue } from "../data/selectors";
 import { loadTextRecord } from "../data/text";
+import { RichText } from "./InlineText";
 import { MediaAudio, MediaImage, MediaVideo } from "./Media";
 import type { Lang, TextBlock, TextRecord } from "../types";
 
@@ -19,13 +20,19 @@ function readString(block: TextBlock, key: string): string {
     : "";
 }
 
-function readStrings(block: TextBlock, key: string): string[] {
+function readStringsMarkup(block: TextBlock, key: string): string[] {
   const value = block[key];
   return Array.isArray(value)
     ? value
         .filter((item): item is string => typeof item === "string")
-        .map((item) => item.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " "))
+        .map((item) => item.replace(/&nbsp;/g, " "))
     : [];
+}
+
+/** Text fields keep their game markup; only `&nbsp;` needs normalising. */
+function readMarkup(block: TextBlock, key: string): string {
+  const value = block[key];
+  return typeof value === "string" ? value.replace(/&nbsp;/g, " ") : "";
 }
 
 function Block({ block }: { block: TextBlock }) {
@@ -36,12 +43,16 @@ function Block({ block }: { block: TextBlock }) {
       return (
         <p className="block dialogue">
           {speaker ? <span className="speaker">{speaker}</span> : null}
-          {readString(block, "text")}
+          <RichText text={readMarkup(block, "text")} />
         </p>
       );
     }
     case "narration":
-      return <p className="block narration">{readString(block, "text")}</p>;
+      return (
+        <p className="block narration">
+          <RichText text={readMarkup(block, "text")} />
+        </p>
+      );
     case "page": {
       const page = typeof block["page"] === "number" ? block["page"] : null;
       return (
@@ -51,7 +62,9 @@ function Block({ block }: { block: TextBlock }) {
               {i18n.t("text.page", { page })}
             </span>
           )}
-          <p>{readString(block, "text")}</p>
+          <p>
+            <RichText text={readMarkup(block, "text")} />
+          </p>
         </div>
       );
     }
@@ -62,7 +75,9 @@ function Block({ block }: { block: TextBlock }) {
             {readString(block, "from")} → {readString(block, "to")}
           </p>
           <h4>{readString(block, "title")}</h4>
-          <p>{readString(block, "body")}</p>
+          <p>
+            <RichText text={readMarkup(block, "body")} />
+          </p>
         </div>
       );
     case "image":
@@ -103,7 +118,6 @@ function Block({ block }: { block: TextBlock }) {
     case "booklet": {
       const title = readString(block, "title");
       const subtitle = readString(block, "subtitle");
-      const paragraphs = readStrings(block, "paragraphs");
       return (
         <section className="block booklet">
           <header>
@@ -111,8 +125,10 @@ function Block({ block }: { block: TextBlock }) {
             {subtitle ? <span>{subtitle}</span> : null}
           </header>
           <div className="booklet-body">
-            {paragraphs.map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
+            {readStringsMarkup(block, "paragraphs").map((paragraph, index) => (
+              <p key={index}>
+                <RichText text={paragraph} />
+              </p>
             ))}
           </div>
         </section>
@@ -143,14 +159,15 @@ type BodyNode =
       readonly kind: "hyperlink";
       readonly content: string;
       readonly url: string;
-    };
+    }
+  | { readonly kind: "quote"; readonly paragraphs: readonly string[] };
 
-function cleanInlineMarkup(value: string): string {
-  return value
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .trim();
+/** The game's rich-text quote markers, on their own lines around the quote. */
+const QUOTE_OPEN = ">>";
+const QUOTE_CLOSE = "<<";
+
+function cleanLinkContent(value: string): string {
+  return value.replace(/&nbsp;/g, " ").trim();
 }
 
 function parseHyperlink(body: string): BodyNode | null {
@@ -164,7 +181,7 @@ function parseHyperlink(body: string): BodyNode | null {
       Content?: unknown;
       Urls?: Record<string, unknown>;
     };
-    const content = cleanInlineMarkup(
+    const content = cleanLinkContent(
       typeof raw.Content === "string" ? raw.Content : "",
     );
     const urls = Object.values(raw.Urls ?? {}).filter(
@@ -182,17 +199,20 @@ function parseHyperlink(body: string): BodyNode | null {
   }
 }
 
+function cleanBodyText(value: string): string {
+  return value
+    .replace(/<\s*br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\s*p\s*>/gi, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+}
+
 function textBodyNodes(text: string): BodyNode[] {
   const nodes: BodyNode[] = [];
   const paragraph: string[] = [];
   const flush = () => {
-    const joined = paragraph
-      .join("\n")
-      .replace(/<\s*br\s*\/?>/gi, "\n")
-      .replace(/<\/p>/gi, "\n\n")
-      .replace(/<[^>]+>/g, "")
-      .replace(/&nbsp;/g, " ")
-      .trim();
+    const joined = cleanBodyText(paragraph.join("\n"));
     if (joined) {
       nodes.push({ kind: "paragraph", text: joined });
     }
@@ -213,6 +233,28 @@ function textBodyNodes(text: string): BodyNode[] {
       if (hyperlink) {
         nodes.push(hyperlink);
       }
+      continue;
+    }
+    if (line === QUOTE_OPEN) {
+      flush();
+      const quoted: string[] = [];
+      index += 1;
+      while (index < lines.length && (lines[index] ?? "").trim() !== QUOTE_CLOSE) {
+        quoted.push(lines[index] ?? "");
+        index += 1;
+      }
+      const paragraphs = cleanBodyText(quoted.join("\n"))
+        .split(/\n{2,}/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+      if (paragraphs.length > 0) {
+        nodes.push({ kind: "quote", paragraphs });
+      }
+      continue;
+    }
+    if (line === QUOTE_CLOSE) {
+      // A close marker without an opener: drop the marker, keep the text.
+      flush();
       continue;
     }
     if (line.startsWith("##")) {
@@ -298,6 +340,19 @@ export function TextBody({
       {fallbackNotice(i18n, record.requested_lang ?? lang, record.lang)}
     </div>
   ) : null;
+  const blocks = record.blocks ?? [];
+  if (blocks.length > 0) {
+    return (
+      <>
+        {fallbackNote}
+        <div className="prose blocks" data-testid="entity-body" data-lang={record.lang}>
+          {blocks.map((block, index) => (
+            <Block key={index} block={block} />
+          ))}
+        </div>
+      </>
+    );
+  }
   if (record.text) {
     const nodes = textBodyNodes(record.text);
     return (
@@ -321,25 +376,29 @@ export function TextBody({
                   rel="noreferrer"
                   data-testid="im-hyperlink"
                 >
-                  <span>{node.content}</span>
-                  <span aria-hidden="true">↗</span>
+                  <span>
+                    <RichText text={node.content} />
+                  </span>
                 </a>
               );
             }
-            return <p key={index}>{node.text}</p>;
+            if (node.kind === "quote") {
+              return (
+                <blockquote key={index} className="text-quote">
+                  {node.paragraphs.map((paragraph, offset) => (
+                    <p key={offset}>
+                      <RichText text={paragraph} />
+                    </p>
+                  ))}
+                </blockquote>
+              );
+            }
+            return (
+              <p key={index}>
+                <RichText text={node.text} />
+              </p>
+            );
           })}
-        </div>
-      </>
-    );
-  }
-  if (record.blocks && record.blocks.length > 0) {
-    return (
-      <>
-        {fallbackNote}
-        <div className="prose blocks" data-testid="entity-body" data-lang={record.lang}>
-          {record.blocks.map((block, index) => (
-            <Block key={index} block={block} />
-          ))}
         </div>
       </>
     );

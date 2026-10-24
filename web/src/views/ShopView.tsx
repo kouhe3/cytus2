@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { capsoGroups, gachaGroups, shopBundles } from "../data/collections";
+import { isExpansionPack } from "../data/database";
 import { useI18n } from "../data/i18n";
 import { formatUnit } from "../data/messages";
 import { entityHref } from "../data/selectors";
@@ -10,6 +11,9 @@ export function ShopIndexView({ db }: { db: Database }) {
   const packs = capsoGroups(db);
   const gacha = gachaGroups(db);
   const bundles = shopBundles(db);
+  const expansionPacks = (db.entitiesByType.get("expansion_pack") ?? [])
+    .filter(isExpansionPack)
+    .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
   const packItems = packs.reduce((sum, group) => sum + group.items.length, 0);
   const rewards = gacha.reduce((sum, group) => sum + group.rewards.length, 0);
 
@@ -30,6 +34,39 @@ export function ShopIndexView({ db }: { db: Database }) {
             })}
           </div>
         </header>
+
+        {expansionPacks.length > 0 ? (
+          <section
+            className="detail-section"
+            data-testid="shop-expansion-packs"
+          >
+            <h2>{i18n.t("shop.expansionPacks")}</h2>
+            <div className="card-grid">
+              {expansionPacks.map((pack) => (
+                <Link
+                  key={pack.id}
+                  to={entityHref(pack.id)}
+                  className="collection-card"
+                  data-testid="expansion-pack-card"
+                  data-pack-id={pack.id}
+                >
+                  <span className="collection-title">
+                    {pack.name.replace(/\s+/g, " ").trim()}
+                  </span>
+                  <span className="collection-meta">
+                    {i18n.t("shop.expansionMeta", {
+                      price: pack.price || "—",
+                      songs: formatUnit(i18n, "songs", pack.song_ids.length),
+                    })}
+                  </span>
+                  <span className="collection-id">
+                    <code>{pack.game_id}</code>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="detail-section" data-testid="shop-capso-packs">
           <h2>{i18n.t("shop.capsoPacks")}</h2>

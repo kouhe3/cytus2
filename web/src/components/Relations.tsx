@@ -7,7 +7,38 @@ import {
 } from "../data/selectors";
 import type { EdgeGroup } from "../data/selectors";
 import type { I18n } from "../data/messages";
-import type { Database, Lang } from "../types";
+import type { Database, Edge, Lang } from "../types";
+
+/**
+ * Relation lists follow the game: replies are labelled by floor and listed in
+ * that order, which the build stores as the entity's `order`. Edge order out
+ * of the JSONL is lexicographic (`#1`, `#10`, `#11`, `#2`), so sort here.
+ */
+function sortEdgesForDisplay(
+  db: Database,
+  direction: "outgoing" | "incoming",
+  edges: readonly Edge[],
+): Edge[] {
+  const key = (edge: Edge): { readonly order: number; readonly id: string } => {
+    const id = direction === "outgoing" ? edge.target : edge.source;
+    const entity = db.entityById.get(id);
+    const order = entity && "order" in entity
+      ? entity.order
+      : undefined;
+    return {
+      order: typeof order === "number" ? order : Number.MAX_SAFE_INTEGER,
+      id,
+    };
+  };
+  return [...edges].sort((left, right) => {
+    const a = key(left);
+    const b = key(right);
+    if (a.order !== b.order) {
+      return a.order - b.order;
+    }
+    return a.id.localeCompare(b.id, undefined, { numeric: true });
+  });
+}
 
 function EdgeGroupList({
   db,
@@ -35,7 +66,7 @@ function EdgeGroupList({
             {group.label} <span className="edge-count">{group.edges.length}</span>
           </h3>
           <ul className="link-list">
-            {group.edges.map((edge) => {
+            {sortEdgesForDisplay(db, direction, group.edges).map((edge) => {
               const otherId =
                 direction === "outgoing" ? edge.target : edge.source;
               const entity = db.entityById.get(otherId);

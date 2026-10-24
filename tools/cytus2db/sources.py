@@ -73,6 +73,16 @@ class InputSource:
             "song_pack_data",
         )
 
+    def expansion_packs(self) -> Table | None:
+        """``expansion_pack_data``: song-only packs sold separately."""
+        table = self.text_json("expansion_pack_data")
+        if table is not None:
+            return table
+        try:
+            return self.bundle_table("sharedassets0.assets", "expansion_pack_data")
+        except InputError:
+            return None
+
     def illustrations(self) -> Table:
         return self.json_or_bundle(
             (("illustrationdata",), ("illustrationdata", "illustration")),

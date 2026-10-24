@@ -10,6 +10,7 @@ import type {
   Database,
   Difficulty,
   Edge,
+  ExpansionPackEntity,
   GachaMachineEntity,
   GachaRewardEntity,
   GalleryFolderEntity,
@@ -114,6 +115,12 @@ export function isStoryNode(entity: BaseEntity): entity is StoryNodeEntity {
 
 export function isBossStage(entity: BaseEntity): entity is BossStageEntity {
   return entity.type === "boss_stage";
+}
+
+export function isExpansionPack(
+  entity: BaseEntity,
+): entity is ExpansionPackEntity {
+  return entity.type === "expansion_pack";
 }
 
 export function isCapsoShopPack(entity: BaseEntity): entity is CapsoShopPackEntity {

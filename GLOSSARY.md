@@ -13,8 +13,12 @@ _Avoid_: 帖子、article、topic
 _Avoid_: 楼中楼、嵌套回复
 
 **OS Log** (`os_log`):
-OS 档案中的一条记录：所属文件、编号、日期、正文 blocks、影片引用。
+OS 档案中的一条记录：所属文件、编号、日期、正文 blocks、影片引用、`position`（osdata 数组内顺序）与 `level_lock_display`。
 _Avoid_: OS 文件、entry、archive（泛指文件时）
+
+**OS 锁定态**（来自 `OSFile.GetLockStatus`）:
+`Hidden`（列表不出现）、`Locked`（显示 `???` 与锁图标）、`Unlocked`。等级锁之间是 AND：任一未达即锁定；`Locked` 还要求 `LevelLockDisplay` 为真且至少一个等级条件已达成，否则 `Hidden`。`FileLockId` 未满足时始终 `Hidden`。
+_Avoid_: 把 `level_locks` 的任意一条当成解锁条件（是全部满足）
 
 **OA Character / OA Object / OA Document**:
 OA 探索档案的角色、可点击物件，以及挂在物件下的文件。
@@ -25,7 +29,7 @@ _Avoid_: 联动章节
 _Avoid_: 剧情闸（作实体）、把 Branching OS 节点叫「备份节点」
 
 **Branching OS** (`story_node`，`kind=branch`):
-新角色的分支式 OS：节点按曲包等级与分支状态解锁，和备份数据库不是同一套东西。
+新角色的分支式 OS：节点按角色等级（`SongPackId`）与分支状态解锁，和备份数据库不是同一套东西。
 _Avoid_: 备份数据库、backup
 
 **Backup Database** (`gallery_item`):
@@ -37,12 +41,16 @@ _Avoid_: 备份节点、branching node
 _Avoid_: boss 曲、活动曲
 
 **Character** (`character`):
-拥有等级与经验曲线的游戏角色（如 NEKO#ΦωΦ，id `neko001`）。iM 与 OS 的等级锁指向角色，不指向曲包。
-_Avoid_: 把角色叫「曲包」、pack
+拥有等级与经验曲线的游戏角色（如 NEKO#ΦωΦ，id `neko001`）。游戏内的 `SongPackId` 就是角色 id；iM、OS 与曲目解锁的等级锁都指向它，而不是指向商业曲包。
+_Avoid_: 把角色的 `SongPackId` 当成商业曲包；把角色叫「歌曲包」
 
-**Song Pack** (`pack`):
-歌曲的发行集合（`song_pack_data`）；一首歌通过 `pack_id` 归属它。同名字符串可能同时是角色 id（`character/neko001` 与 `pack/neko001`），但两者是不同实体。
-_Avoid_: 把 pack 当作等级拥有者
+**Character Pack** (`pack`):
+角色在商店/曲库里的发行记录（`song_pack_data.offline_song_pack_list`）：`song_pack_id` 就是角色 id，携带价格、IAP、`hasIM`、主题色与该角色基础曲目。与 `character` 1:1，但一个负责等级/锁，一个负责发行与展示。
+_Avoid_: 把 `pack` 当作等级/锁拥有者；把 Song Pack（`expansion_pack`）叫 pack
+
+**Song Pack** (`expansion_pack`):
+只卖歌曲、不卖角色的追加曲包（`expansion_pack_data.ExpansionPackList`，如 `expack049` Kizuna AI Extend 2026）。每首歌带 `SongPackId`，指向它归属的角色；购买后显示在该角色下，并共享该角色的等级与解锁门槛。
+_Avoid_: 把角色包（`pack`）叫 Song Pack；把 Expansion Pack 当成新角色
 
 ## 音乐
 
@@ -129,7 +137,7 @@ _Avoid_: 把原因当成实体；与 `unlock_condition`（实体自身字段）�
 _Avoid_: 与 `story_node.kind=branch`（Branching OS 节点）混用；不要把显示文本写进 DB
 
 **Timeline scope** (`reading_order.timeline_scope`):
-一条阅读顺序记录属于哪里：`timeline` = 全局解锁时间线（全部 iM 帖 + 主线 7 人的 OS），`character` = 只在角色页按版本阅读的 OS，`none` = OA 文档与故事节点。角色页的 iM 页签只对 PAFF / NEKO / ROBO 开放；这是游戏的角色页导航结构，不由 `imFilters`（iM feed 的账号过滤维度）推导。PΛFF 没有 iM 账号入口。
+一条阅读顺序记录属于哪里：`timeline` = 全局解锁时间线（全部 iM 帖 + 主线 7 人的 OS），`character` = 只在角色页按 `Category` 分组、按 osdata 数组顺序（`os_log.position`）阅读的 OS，`none` = OA 文档与故事节点。角色页的 iM 页签只对 PAFF / NEKO / ROBO 开放；这是游戏的角色页导航结构，不由 `imFilters`（iM feed 的账号过滤维度）推导。PΛFF 没有 iM 账号入口。
 _Avoid_: 把 `character` 当成「角色实体」；把 `imFilters` 的账户当成角色页 iM 页签的依据
 
 ## Wiki 导出

@@ -4,6 +4,7 @@ import { EntityLink } from "../components/EntityLink";
 import { MediaImage } from "../components/Media";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
+import type { I18n } from "../data/messages";
 import {
   characterOsEntries,
   compareOsVersions,
@@ -18,18 +19,33 @@ type CharacterGroup = {
   readonly character: CharacterEntity;
   readonly entries: CharacterOsEntry[];
 };
-function versionGroups(entries: CharacterOsEntry[]): [string, CharacterOsEntry[]][] {
+function categoryGroups(entries: CharacterOsEntry[]): [string, CharacterOsEntry[]][] {
   const grouped = new Map<string, CharacterOsEntry[]>();
   for (const entry of entries) {
-    const version = entry.row.version ?? "";
-    const bucket = grouped.get(version);
+    const category = entry.entity.category;
+    const bucket = grouped.get(category);
     if (bucket) {
       bucket.push(entry);
     } else {
-      grouped.set(version, [entry]);
+      grouped.set(category, [entry]);
     }
   }
   return [...grouped.entries()];
+}
+
+/** Date plus a lock marker; level-0 conditions are always satisfied. */
+function osFileMeta(i18n: I18n, entry: CharacterOsEntry): string {
+  const locked =
+    entry.entity.file_lock !== null ||
+    entry.entity.level_locks.some((lock) => lock.level > 0);
+  return [
+    entry.entity.date
+      ? i18n.formatDate(entry.entity.date)
+      : i18n.t("entity.noDate"),
+    locked ? i18n.t("osIndex.locked") : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 const OPEN_STORAGE = "os-index-open";
@@ -205,14 +221,14 @@ export function OsIndexView({ db }: { readonly db: Database }) {
                         })}
                       </span>
                     </summary>
-                    {versionGroups(entries).map(([version, group]) => (
+                    {categoryGroups(entries).map(([category, group]) => (
                       <section
-                        key={version || "unknown"}
+                        key={category || "unknown"}
                         className="os-version-group"
-                        data-testid="os-version-group"
-                        data-version={version}
+                        data-testid="os-category-group"
+                        data-category={category}
                       >
-                        <h3>{version || "—"}</h3>
+                        <h3>{category || "—"}</h3>
                         <ul className="link-list">
                           {group.map((entry) => (
                             <li key={entry.entity.id}>
@@ -220,11 +236,7 @@ export function OsIndexView({ db }: { readonly db: Database }) {
                                 db={db}
                                 entity={entry.entity}
                                 lang={lang}
-                                meta={
-                                  entry.entity.date
-                                    ? i18n.formatDate(entry.entity.date)
-                                    : i18n.t("entity.noDate")
-                                }
+                                meta={osFileMeta(i18n, entry)}
                               />
                             </li>
                           ))}
@@ -287,11 +299,7 @@ export function OsIndexView({ db }: { readonly db: Database }) {
                                 db={db}
                                 entity={entry.entity}
                                 lang={lang}
-                                meta={
-                                  entry.entity.date
-                                    ? i18n.formatDate(entry.entity.date)
-                                    : i18n.t("entity.noDate")
-                                }
+                                meta={osFileMeta(i18n, entry)}
                               />
                             </li>
                           ))}

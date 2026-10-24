@@ -2,7 +2,6 @@ import { MediaImage } from "./Media";
 import {
   isGalleryItem,
   isIllustration,
-  isImReply,
   isImPost,
   isSong,
   recordOf,
@@ -23,27 +22,12 @@ export function EntityMedia({ entity }: { readonly entity: BaseEntity }) {
       </div>
     );
   }
-  if (isImReply(entity)) {
-    return (
-      <div className="entity-media post-media">
-        <MediaImage
-          id={entity.avatar}
-          kind="avatar"
-          alt={entity.author}
-          className="post-avatar"
-        />
-      </div>
-    );
-  }
   if (isImPost(entity)) {
+    if (entity.attachments.length === 0) {
+      return null;
+    }
     return (
       <div className="entity-media post-media">
-        <MediaImage
-          id={entity.avatar}
-          kind="avatar"
-          alt={entity.author}
-          className="post-avatar"
-        />
         {entity.attachments.map((id) => (
           <MediaImage
             key={id}

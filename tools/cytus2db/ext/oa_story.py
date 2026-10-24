@@ -27,6 +27,7 @@ import re
 from pathlib import Path
 from typing import Any, Iterable
 
+from ..blocks import paged_dialogue, parse_blocks
 from ..errors import BuildError, InputError
 from ..keys import DIFFICULTIES, chart_key, entity_key
 from ..provenance import manual, sort_record, text_asset
@@ -881,15 +882,23 @@ def _oa_text_records(
                     if isinstance(name_values, list)
                     else str(name_values or "")
                 )
-                records.append(
-                    {
-                        "ref": entity["text_ref"],
-                        "entity": entity_type,
-                        "lang": code,
-                        "name": name,
-                        "text": _slot(body_values, slot),
-                    }
-                )
+                text = _slot(body_values, slot)
+                record: dict[str, Any] = {
+                    "ref": entity["text_ref"],
+                    "entity": entity_type,
+                    "lang": code,
+                    "name": name,
+                    "text": text,
+                }
+                if entity_type == "oa_document":
+                    blocks = parse_blocks(text)
+                elif entity_type == "oa_description":
+                    blocks = paged_dialogue(text)
+                else:
+                    blocks = []
+                if blocks:
+                    record["blocks"] = blocks
+                records.append(record)
     return records
 
 
@@ -911,14 +920,17 @@ def _story_text_records(
         if raw is None:
             continue
         for code, slot in LANGS:
-            records.append(
-                {
-                    "ref": entity["text_ref"],
-                    "entity": "story_node",
-                    "lang": code,
-                    "text": _slot(raw.get("Contents"), slot),
-                }
-            )
+            text = _slot(raw.get("Contents"), slot)
+            record: dict[str, Any] = {
+                "ref": entity["text_ref"],
+                "entity": "story_node",
+                "lang": code,
+                "text": text,
+            }
+            blocks = parse_blocks(text)
+            if blocks:
+                record["blocks"] = blocks
+            records.append(record)
     return records
 
 

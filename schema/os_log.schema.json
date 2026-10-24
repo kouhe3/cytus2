@@ -13,6 +13,8 @@
     "index",
     "date",
     "category",
+    "position",
+    "level_lock_display",
     "log_type",
     "names",
     "file_lock",
@@ -57,6 +59,15 @@
     },
     "category": {
       "type": "string"
+    },
+    "position": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Index inside the character's osdata table; the game's list order."
+    },
+    "level_lock_display": {
+      "type": "boolean",
+      "description": "raw LevelLockDisplay; the game shows a locked entry as ??? only when this is true and at least one level lock is already met."
     },
     "log_type": {
       "type": "integer",

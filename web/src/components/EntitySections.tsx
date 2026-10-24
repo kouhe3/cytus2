@@ -27,6 +27,7 @@ import type {
   CapsoShopItemEntity,
   CapsoShopPackEntity,
   Database,
+  ExpansionPackEntity,
   GachaMachineEntity,
   GachaRewardEntity,
   GalleryFolderEntity,
@@ -642,6 +643,67 @@ export function StoryNodeDetails({
 }
 
 /* ------------------------------------------------------------------- shop */
+export function ExpansionPackDetails({
+  db,
+  entity,
+  lang,
+}: {
+  db: Database;
+  entity: ExpansionPackEntity;
+  lang: Lang;
+}) {
+  const i18n = useI18n();
+  const songs = entity.song_ids.flatMap((id) => {
+    const record = db.entityById.get(id);
+    return record ? [record] : [];
+  });
+  const characters = entity.character_ids.flatMap((id) => {
+    const record = db.entityById.get(id);
+    return record ? [record] : [];
+  });
+  return (
+    <>
+      <Section
+        title={i18n.t("section.expansionPack")}
+        testId="expansion-pack-detail"
+      >
+        <Facts>
+          <Fact label={i18n.t("fact.price")}>{entity.price || "—"}</Fact>
+          <Fact label={i18n.t("fact.icon")}>
+            <code>{entity.icon || "—"}</code>
+          </Fact>
+          <Fact label={i18n.t("fact.boxId")}>
+            <code>{entity.box_id || "—"}</code>
+          </Fact>
+          <Fact label={i18n.t("fact.order")}>{entity.order}</Fact>
+        </Facts>
+      </Section>
+      <Section
+        title={i18n.t("section.expansionCharacters")}
+        testId="expansion-characters"
+      >
+        <EntityList
+          db={db}
+          entities={characters}
+          lang={lang}
+          empty={i18n.t("common.notRecorded")}
+        />
+      </Section>
+      <Section
+        title={i18n.t("section.expansionSongs")}
+        testId="expansion-songs"
+      >
+        <EntityList
+          db={db}
+          entities={songs}
+          lang={lang}
+          empty={i18n.t("common.notRecorded")}
+        />
+      </Section>
+    </>
+  );
+}
+
 export function CapsoPackDetails({
   db,
   entity,

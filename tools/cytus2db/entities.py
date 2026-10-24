@@ -91,56 +91,9 @@ def build_catalog(
             song_locator = f"{pack_locator}.song_info_list[{song_index}]"
             if not isinstance(raw_song, dict):
                 raise BuildError(f"{song_locator}: must be an object")
-            song_id = str(_require(raw_song, "song_id", song_locator))
-            search_terms = [
-                term.strip()
-                for term in (raw_song.get("AlternativeSearchTerms") or [])
-                if isinstance(term, str) and term.strip()
-            ]
-            songs.append(
-                {
-                    "id": song_key(song_id),
-                    "type": "song",
-                    "game_id": song_id,
-                    "name": raw_song.get("song_name"),
-                    "artist": raw_song.get("artist"),
-                    "pack_id": entity_key("pack", pack_id),
-                    "category": raw_song.get("Category"),
-                    "is_hidden": bool(raw_song.get("is_hidden")),
-                    "download_only": bool(raw_song.get("IsDownloadOnly")),
-                    "hide_when_locked": bool(raw_song.get("HideWhenLocked")),
-                    "search_terms": search_terms,
-                    "provenance": [_text_asset(song_locator)],
-                }
-            )
-
-            raw_charts = raw_song.get("charts") or {}
-            if not isinstance(raw_charts, dict):
-                raise BuildError(f"{song_locator}: charts must be an object")
-            for difficulty, raw_chart in raw_charts.items():
-                chart_locator = f"{song_locator}.charts.{difficulty}"
-                if not isinstance(raw_chart, dict):
-                    raise BuildError(f"{chart_locator}: must be an object")
-                try:
-                    identifier = chart_key(song_id, difficulty)
-                except ValueError as exc:
-                    raise BuildError(f"{chart_locator}: {exc}") from exc
-                level = raw_chart.get("Level")
-                if level is None or str(level).strip() == "":
-                    raise BuildError(f"{chart_locator}: missing Level")
-                charts.append(
-                    {
-                        "id": identifier,
-                        "type": "chart",
-                        "game_id": f"{song_id}@{difficulty}",
-                        "song_id": song_key(song_id),
-                        "difficulty": difficulty,
-                        "level": str(level),
-                        "need_unlock": bool(raw_chart.get("NeedUnlock")),
-                        "music_id": str(raw_chart.get("MusicID") or ""),
-                        "provenance": [_text_asset(chart_locator)],
-                    }
-                )
+            song, song_charts = song_and_charts(raw_song, pack_id, song_locator)
+            songs.append(song)
+            charts.extend(song_charts)
 
     for record in packs + songs + charts:
         _sorted_provenance(record)
@@ -149,6 +102,67 @@ def build_catalog(
         _dedupe(songs, "song"),
         _dedupe(charts, "chart"),
     )
+
+
+def song_and_charts(
+    raw_song: dict[str, Any],
+    pack_id: str,
+    song_locator: str,
+    expansion_pack_id: str | None = None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Build one ``song`` record and its ``chart`` records from catalog JSON."""
+    song_id = str(_require(raw_song, "song_id", song_locator))
+    search_terms = [
+        term.strip()
+        for term in (raw_song.get("AlternativeSearchTerms") or [])
+        if isinstance(term, str) and term.strip()
+    ]
+    song: dict[str, Any] = {
+        "id": song_key(song_id),
+        "type": "song",
+        "game_id": song_id,
+        "name": raw_song.get("song_name"),
+        "artist": raw_song.get("artist"),
+        "pack_id": entity_key("pack", pack_id),
+        "category": raw_song.get("Category"),
+        "is_hidden": bool(raw_song.get("is_hidden")),
+        "download_only": bool(raw_song.get("IsDownloadOnly")),
+        "hide_when_locked": bool(raw_song.get("HideWhenLocked")),
+        "search_terms": search_terms,
+        "provenance": [_text_asset(song_locator)],
+    }
+    if expansion_pack_id:
+        song["expansion_pack_id"] = entity_key("expansion_pack", expansion_pack_id)
+
+    charts: list[dict[str, Any]] = []
+    raw_charts = raw_song.get("charts") or {}
+    if not isinstance(raw_charts, dict):
+        raise BuildError(f"{song_locator}: charts must be an object")
+    for difficulty, raw_chart in raw_charts.items():
+        chart_locator = f"{song_locator}.charts.{difficulty}"
+        if not isinstance(raw_chart, dict):
+            raise BuildError(f"{chart_locator}: must be an object")
+        try:
+            identifier = chart_key(song_id, difficulty)
+        except ValueError as exc:
+            raise BuildError(f"{chart_locator}: {exc}") from exc
+        level = raw_chart.get("Level")
+        if level is None or str(level).strip() == "":
+            raise BuildError(f"{chart_locator}: missing Level")
+        charts.append(
+            {
+                "id": identifier,
+                "type": "chart",
+                "game_id": f"{song_id}@{difficulty}",
+                "song_id": song_key(song_id),
+                "difficulty": difficulty,
+                "level": str(level),
+                "need_unlock": bool(raw_chart.get("NeedUnlock")),
+                "music_id": str(raw_chart.get("MusicID") or ""),
+                "provenance": [_text_asset(chart_locator)],
+            }
+        )
+    return song, charts
 
 
 # ---------------------------------------------------------------- exp tables

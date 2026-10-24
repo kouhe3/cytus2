@@ -321,7 +321,29 @@ export function compareOsVersions(
   );
 }
 
-/** Every OS log owned by a character, in the game's SORT BY VERSION order. */
+/** Compare `Category` labels ("1.1", "2.9") numerically, segment by segment. */
+export function compareOsCategories(left: string, right: string): number {
+  const a = left.split(".");
+  const b = right.split(".");
+  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+    const x = Number.parseInt(a[index] ?? "", 10);
+    const y = Number.parseInt(b[index] ?? "", 10);
+    if (Number.isFinite(x) && Number.isFinite(y) && x !== y) {
+      return x - y;
+    }
+    if (Number.isFinite(x) !== Number.isFinite(y)) {
+      return Number.isFinite(x) ? -1 : 1;
+    }
+  }
+  return left.localeCompare(right);
+}
+
+/**
+ * Every OS log owned by a character, in the game's list order: grouped by
+ * `Category`, then in osdata array order (`position`). `position` is the
+ * index of the file inside the character's `osdata` table, which is exactly
+ * the order `OSView.AddFile` appends them.
+ */
 export function characterOsEntries(
   db: Database,
   characterId: string,
@@ -337,7 +359,13 @@ export function characterOsEntries(
     }
     entries.push({ row, entity });
   }
-  return entries.sort(compareOsVersions);
+  return entries.sort(
+    (left, right) =>
+      compareOsCategories(left.entity.category, right.entity.category) ||
+      left.entity.position - right.entity.position ||
+      left.entity.index - right.entity.index ||
+      left.entity.id.localeCompare(right.entity.id),
+  );
 }
 
 export function selectTimeline(
@@ -687,6 +715,7 @@ export function entityHome(
     case "gacha_machine":
     case "gacha_reward":
     case "shop_bundle":
+    case "expansion_pack":
       return { href: "/shop", labelKey: "nav.shop" };
     case "assistant_dialogue":
       return { href: "/extras/assistants", labelKey: "nav.extras" };

@@ -91,6 +91,8 @@ export interface OsLogEntity extends BaseEntity {
   readonly index: number;
   readonly date: string;
   readonly category: string;
+  readonly position: number;
+  readonly level_lock_display: boolean;
   readonly log_type: number;
   readonly names: LocalizedText;
   readonly file_lock: string | null;
@@ -118,8 +120,23 @@ export interface SongEntity extends BaseEntity {
   readonly name: string | null;
   readonly artist: string | null;
   readonly pack_id: string;
+  readonly expansion_pack_id?: string;
   readonly category: string | null;
   readonly search_terms: string[];
+}
+
+export interface ExpansionPackEntity extends BaseEntity {
+  readonly type: "expansion_pack";
+  readonly game_id: string;
+  readonly name: string;
+  readonly price: string;
+  readonly icon: string;
+  readonly box_id: string;
+  readonly is_box_only: boolean;
+  readonly is_pre_purchase: boolean;
+  readonly order: number;
+  readonly song_ids: string[];
+  readonly character_ids: string[];
 }
 
 export interface CharacterEntity extends BaseEntity {

@@ -9,6 +9,7 @@ const TYPE_KEYS: Record<string, MessageKey> = {
   song: "type.song",
   character: "type.character",
   pack: "type.pack",
+  expansion_pack: "type.expansion_pack",
   folder: "type.folder",
   chapter: "type.chapter",
   story_node: "type.story_node",

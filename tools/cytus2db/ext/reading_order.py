@@ -346,19 +346,24 @@ def _thread_rank(thread: str | None, packs: dict[str, _Pack]) -> int:
 
 
 def _thread_from_locks(
-    characters: Iterable[str], packs: dict[str, _Pack]
+    characters: Iterable[str], packs: dict[str, _Pack], avatar: str
 ) -> str | None:
     """Pick the thread a multi-lock post belongs to.
 
     A lock list often includes the three main characters as a shared
-    requirement.  Prefer a non-main character; the three main characters are
-    the fallback and the avatar is the last resort.
+    requirement.  Prefer a non-main character.  When the lock list is only
+    the three main characters, use the post's own account if that account is
+    one of them (ROBO_Head's shared posts stay on ROBO's thread); otherwise
+    fall back to the lowest-ranked lock character.
     """
     known = [character for character in characters if character in packs]
     if not known:
         return None
     candidates = [character for character in known if character not in MAIN_TRIO]
-    pool = candidates or known
+    if candidates:
+        return min(candidates, key=lambda item: (packs[item].rank, item))
+    owned = _avatar_thread(avatar, packs)
+    pool = [owned] if owned in known else known
     return min(pool, key=lambda item: (packs[item].rank, item))
 
 
@@ -546,7 +551,9 @@ def _im_rows(source: InputSource, packs: dict[str, _Pack]) -> list[_Row]:
 
         characters = [lock["character"] for lock in level_locks]
         avatar = str(topic.get("AvatarId") or "").strip()
-        thread = _thread_from_locks(characters, packs) or _avatar_thread(avatar, packs)
+        thread = _thread_from_locks(characters, packs, avatar) or _avatar_thread(
+            avatar, packs
+        )
 
         deps: list[str] = []
         topic_gate = str(raw.get("TopicLockId") or "").strip().upper()

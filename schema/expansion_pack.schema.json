@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "expansion_pack.schema.json",
+  "title": "expansion_pack",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "game_id",
+    "name",
+    "price",
+    "icon",
+    "box_id",
+    "is_box_only",
+    "is_pre_purchase",
+    "order",
+    "song_ids",
+    "character_ids",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^expansion_pack/[^\\s]+$"
+    },
+    "type": {
+      "const": "expansion_pack"
+    },
+    "game_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "price": {
+      "type": "string"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "box_id": {
+      "type": "string"
+    },
+    "is_box_only": {
+      "type": "boolean"
+    },
+    "is_pre_purchase": {
+      "type": "boolean"
+    },
+    "order": {
+      "type": "integer"
+    },
+    "song_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^song/[^@\\s]+$"
+      }
+    },
+    "character_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^character/[^\\s]+$"
+      }
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  }
+}

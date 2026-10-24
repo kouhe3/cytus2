@@ -40,6 +40,10 @@
       "type": "string",
       "pattern": "^pack/[^\\s]+$"
     },
+    "expansion_pack_id": {
+      "type": "string",
+      "pattern": "^expansion_pack/[^\\s]+$"
+    },
     "category": {
       "type": ["string", "null"]
     },

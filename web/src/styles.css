@@ -648,6 +648,17 @@ kbd {
   margin-bottom: 18px;
 }
 
+.detail-head--post {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.detail-head-body {
+  flex: 1;
+  min-width: 0;
+}
+
 .detail-head h1 {
   font-size: 27px;
   overflow-wrap: anywhere;
@@ -685,6 +696,17 @@ kbd {
   margin-bottom: 0;
 }
 
+.prose .text-quote {
+  margin: 0 0 12px;
+  padding-left: 14px;
+  border-left: 2px solid var(--accent-dim);
+  color: var(--text);
+}
+
+.prose .text-quote:last-child {
+  margin-bottom: 0;
+}
+
 .prose.blocks {
   display: flex;
   flex-direction: column;
@@ -709,7 +731,6 @@ kbd {
 
 .block.narration {
   color: #aab8c7;
-  font-style: italic;
 }
 
 .block.mail {
@@ -1874,7 +1895,7 @@ kbd {
 
 .entity-link--reply {
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 
@@ -2067,21 +2088,14 @@ kbd {
 }
 
 .im-hyperlink {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 100%;
-  padding: 9px 14px;
-  border: 1px solid var(--accent-dim);
-  border-radius: 8px;
-  background: var(--panel-2);
-  color: var(--accent);
-  font-weight: 600;
-  text-decoration: none;
+  display: inline;
+  color: #4a86e8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
   white-space: pre-line;
 }
 
 .im-hyperlink:hover {
-  border-color: var(--accent);
-  background: var(--panel);
+  color: var(--accent);
 }

@@ -1894,7 +1894,7 @@ kbd {
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  width: min(620px, 100%);
+  width: 100%;
   max-width: 100%;
 }
 

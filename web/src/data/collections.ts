@@ -175,7 +175,7 @@ export function storyEntries(
   lang: Lang,
   sort: StorySort,
   kind: StoryKindFilter,
-  i18n?: I18n,
+  i18n: I18n,
 ): StoryEntry[] {
   const nodes = typed<StoryNodeEntity>(db, "story_node").filter(isStoryNode);
   const entries: StoryEntry[] = [];

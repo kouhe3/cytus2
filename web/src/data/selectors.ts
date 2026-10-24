@@ -88,7 +88,7 @@ export function entityTitle(
   db: Database,
   entity: BaseEntity,
   lang: Lang,
-  i18n?: I18n,
+  i18n: I18n,
 ): string {
   if (isImPost(entity)) {
     return pickLocalized(entity.titles, lang).value || entity.game_id;
@@ -103,7 +103,7 @@ export function entityTitle(
     return entity.name || entity.game_id;
   }
   if (isSubtitleLine(entity)) {
-    return `${entity.character || (i18n ? i18n.t("entity.voice") : "Voice")} · ${entity.game_id}`;
+    return `${entity.character || i18n.t("entity.voice")} · ${entity.game_id}`;
   }
   if (entity.type === "oa_document" && isOaDocument(entity)) {
     return textName(db, entity.text_ref, lang) || entity.game_id;

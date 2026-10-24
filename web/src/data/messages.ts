@@ -144,6 +144,9 @@ export const ZH_HANS = {
   "card.tooltipLane": "线路 {name}（{lane}）",
   "card.tooltipStage": "关卡 ≤ Lv {level}",
   "card.tooltipBranch": "分支 {branch}",
+  "branch.good_ending1": "善终1",
+  "branch.good_ending2": "善终2",
+  "branch.ending04": "结局04",
   "card.tooltipExternal": "外部 {detail}",
 
   "type.im_post": "iM 帖子",
@@ -698,6 +701,9 @@ const EN: Messages = {
   "card.tooltipLane": "lane {name} ({lane})",
   "card.tooltipStage": "stage ≤ Lv {level}",
   "card.tooltipBranch": "branch {branch}",
+  "branch.good_ending1": "Good Ending 1",
+  "branch.good_ending2": "Good Ending 2",
+  "branch.ending04": "Ending 04",
   "card.tooltipExternal": "external {detail}",
 
   "type.im_post": "iM post",
@@ -1249,6 +1255,9 @@ const JA: Messages = {
   "card.tooltipLane": "レーン {name}（{lane}）",
   "card.tooltipStage": "ステージ ≤ Lv {level}",
   "card.tooltipBranch": "分岐 {branch}",
+  "branch.good_ending1": "グッドエンディング1",
+  "branch.good_ending2": "グッドエンディング2",
+  "branch.ending04": "エンディング04",
   "card.tooltipExternal": "外部 {detail}",
 
   "type.im_post": "iM 投稿",
@@ -1800,6 +1809,9 @@ const ZH_HANT: Messages = {
   "card.tooltipLane": "線路 {name}（{lane}）",
   "card.tooltipStage": "關卡 ≤ Lv {level}",
   "card.tooltipBranch": "分支 {branch}",
+  "branch.good_ending1": "善終1",
+  "branch.good_ending2": "善終2",
+  "branch.ending04": "結局04",
   "card.tooltipExternal": "外部 {detail}",
 
   "type.im_post": "iM 貼文",
@@ -2351,6 +2363,9 @@ const KO: Messages = {
   "card.tooltipLane": "레인 {name} ({lane})",
   "card.tooltipStage": "스테이지 ≤ Lv {level}",
   "card.tooltipBranch": "분기 {branch}",
+  "branch.good_ending1": "굿 엔딩 1",
+  "branch.good_ending2": "굿 엔딩 2",
+  "branch.ending04": "엔딩 04",
   "card.tooltipExternal": "외부 {detail}",
 
   "type.im_post": "iM 게시물",

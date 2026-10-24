@@ -518,6 +518,8 @@ try {
     ["ivy001", 109, false],
     ["xenon001", 48, false],
     ["cherry002", 61, false],
+    ["conner001", 71, false],
+    ["joe001", 42, false],
   ]) {
     await cdp.navigate(`${appBase}/character/${gameId}`);
     await cdp.waitFor(

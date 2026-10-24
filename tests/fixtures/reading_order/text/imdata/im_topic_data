@@ -60,6 +60,16 @@
     "Replies": []
   },
   {
+    "Id": "B0201",
+    "AvatarId": "beta_01",
+    "CharacterName": "Beta",
+    "Titles": ["Paid account, free lock", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
     "Id": "G0101",
     "AvatarId": "side_01",
     "CharacterName": "Side",
@@ -74,6 +84,66 @@
     "AvatarId": "ivy_01",
     "CharacterName": "Ivy",
     "Titles": ["Ivy post", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "Q0101",
+    "AvatarId": "alpha_01",
+    "CharacterName": "Alpha-Official",
+    "Titles": ["Branch one", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "X0101",
+    "AvatarId": "xenon_01",
+    "CharacterName": "Xenon",
+    "Titles": ["Xenon ambient", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "Q6501",
+    "AvatarId": "xenon_01",
+    "CharacterName": "Xenon",
+    "Titles": ["Xenon branch", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "ZCAP1",
+    "AvatarId": "default_08",
+    "CharacterName": "System",
+    "Titles": ["Level cap row", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "B0901",
+    "AvatarId": "alpha_01",
+    "CharacterName": "Alpha-Official",
+    "Titles": ["Outside the model", "", "", "", "", ""],
+    "LikeCount": 0,
+    "FirstAttachmentId": "",
+    "UnlockCharts": [],
+    "Replies": []
+  },
+  {
+    "Id": "Q0201",
+    "AvatarId": "alpha_01",
+    "CharacterName": "Alpha-Official",
+    "Titles": ["Branch four", "", "", "", "", ""],
     "LikeCount": 0,
     "FirstAttachmentId": "",
     "UnlockCharts": [],

@@ -34,6 +34,8 @@ export interface TimelineFilters {
   readonly maxLevel: number;
   readonly type: TimelineTypeFilter;
   readonly tiers: ReadonlySet<ReadingTier>;
+  /** Exact lane rank, or null for every lane. */
+  readonly lane: number | null;
 }
 
 export interface TimelineEntry {
@@ -42,9 +44,16 @@ export interface TimelineEntry {
   readonly title: string;
   readonly author: string;
   readonly character: string;
+  readonly laneName: string;
   readonly context: string;
   readonly snippet: string;
   readonly spoilerThreshold: number | null;
+}
+
+export interface TimelineLane {
+  readonly lane: number;
+  readonly label: string;
+  readonly count: number;
 }
 
 function localized(map: unknown): LocalizedText | null {
@@ -194,6 +203,28 @@ export function maxTimelineLevel(db: Database): number {
   return max;
 }
 
+export function timelineLanes(db: Database): TimelineLane[] {
+  const seen = new Map<number, { character: string | null; count: number }>();
+  for (const row of db.timelineOrders) {
+    const entry = seen.get(row.lane);
+    if (entry) {
+      entry.count += 1;
+    } else {
+      seen.set(row.lane, { character: row.lane_character, count: 1 });
+    }
+  }
+  return [...seen.entries()]
+    .sort((left, right) => left[0] - right[0])
+    .map(([lane, entry]) => ({
+      lane,
+      label:
+        lane === 300
+          ? "Other / plot"
+          : characterName(db, entry.character) || `Lane ${lane}`,
+      count: entry.count,
+    }));
+}
+
 export function selectTimeline(
   db: Database,
   filters: TimelineFilters,
@@ -210,11 +241,18 @@ export function selectTimeline(
     if (!filters.tiers.has(row.tier)) {
       continue;
     }
+    if (filters.lane !== null && row.lane !== filters.lane) {
+      continue;
+    }
     const entity = db.entityById.get(row.entity_id);
     if (!entity) {
       continue;
     }
     const threadName = characterName(db, row.thread);
+    const laneName =
+      row.lane === 300
+        ? "Other / plot"
+        : characterName(db, row.lane_character) || `Lane ${row.lane}`;
     const spoilerThreshold = row.spoiler_alert
       ? (db.spoilerById.get(row.spoiler_alert)?.threshold ?? null)
       : null;
@@ -225,6 +263,7 @@ export function selectTimeline(
         title: localizedValue(entity.titles, lang) || entity.game_id,
         author: entity.author,
         character: threadName,
+        laneName,
         context: `iM · #${entity.order}`,
         snippet: textSnippet(db, entity.text_ref, lang),
         spoilerThreshold,
@@ -236,6 +275,7 @@ export function selectTimeline(
         title: localizedValue(entity.names, lang) || entity.game_id,
         author: threadName || "OS",
         character: `OS · ${entity.file}`,
+        laneName,
         context: entity.date || `Index ${entity.index}`,
         snippet: textSnippet(db, entity.text_ref, lang),
         spoilerThreshold,

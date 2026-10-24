@@ -4,6 +4,7 @@ import { useLanguage } from "../data/language";
 import {
   maxTimelineLevel,
   selectTimeline,
+  timelineLanes,
   type TimelineTypeFilter,
 } from "../data/selectors";
 import type { Database, ReadingTier } from "../types";
@@ -23,15 +24,17 @@ const TIER_OPTIONS: { value: ReadingTier; label: string }[] = [
 export function TimelineView({ db }: { db: Database }) {
   const { lang } = useLanguage();
   const maxLevel = useMemo(() => maxTimelineLevel(db), [db]);
+  const lanes = useMemo(() => timelineLanes(db), [db]);
   const [level, setLevel] = useState(maxLevel);
   const [type, setType] = useState<TimelineTypeFilter>("all");
+  const [lane, setLane] = useState<number | null>(null);
   const [tiers, setTiers] = useState<Set<ReadingTier>>(
     () => new Set<ReadingTier>(["free", "paid", "side"]),
   );
 
   const entries = useMemo(
-    () => selectTimeline(db, { maxLevel: level, type, tiers }, lang),
-    [db, level, type, tiers, lang],
+    () => selectTimeline(db, { maxLevel: level, type, tiers, lane }, lang),
+    [db, level, type, tiers, lane, lang],
   );
 
   const toggleTier = (tier: ReadingTier) => {
@@ -61,6 +64,7 @@ export function TimelineView({ db }: { db: Database }) {
             {db.timelineOrders.length.toLocaleString()} entries · level gate ≤{" "}
             {level + 1} · tier{" "}
             {tiers.size === 3 ? "all" : [...tiers].join(", ") || "none"} ·{" "}
+            lane {lane === null ? "all" : lanes.find((item) => item.lane === lane)?.label ?? lane} ·{" "}
             {type === "all" ? "iM + OS" : type === "im_post" ? "iM only" : "OS only"}
           </div>
         </header>
@@ -144,6 +148,33 @@ export function TimelineView({ db }: { db: Database }) {
           </div>
         </section>
 
+        <section className="panel">
+          <h2>Lane</h2>
+          <select
+            className="lane-select"
+            value={lane === null ? "all" : String(lane)}
+            onChange={(event) =>
+              setLane(
+                event.target.value === "all" ? null : Number(event.target.value),
+              )
+            }
+            aria-label="Account lane"
+            data-testid="lane-filter"
+          >
+            <option value="all">All lanes ({db.timelineOrders.length})</option>
+            {lanes.map((item) => (
+              <option key={item.lane} value={item.lane}>
+                {item.label} ({item.count})
+              </option>
+            ))}
+          </select>
+          <p className="hint">
+            Lanes follow the account thread: free characters, then paid, then
+            side characters; <code>Other / plot</code> collects posts that do
+            not belong to a character account.
+          </p>
+        </section>
+
         <section className="panel legend">
           <h2>Legend</h2>
           <p>
@@ -153,6 +184,15 @@ export function TimelineView({ db }: { db: Database }) {
           <p>
             <span className="spoiler-chip">Spoiler</span> the reading position
             defers this entry until a later level.
+          </p>
+          <p>
+            <span className="meta-chip">Cost</span> the sum of every level lock;
+            multi-character gates cost the sum, so they sort later.
+          </p>
+          <p>
+            <span className="meta-chip">Branch</span> an ending branch mapped
+            from the story lock; <span className="meta-chip">External</span>{" "}
+            marks a post the model cannot unlock on its own.
           </p>
           <p className="hint">
             Cards are ordered by <code>reading_order.order</code>, ascending.

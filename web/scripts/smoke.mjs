@@ -221,7 +221,18 @@ const TIMELINE_SNAPSHOT = `(() => {
     minLevelSeen: levels.length ? Math.min(...levels) : -1,
     types: [...new Set(cards.map((card) => card.dataset.type))].sort(),
     tiers: [...new Set(cards.map((card) => card.dataset.tier))].sort(),
+    lanes: [...new Set(cards.map((card) => Number(card.dataset.lane)))].sort(
+      (left, right) => left - right,
+    ),
     paidCards: cards.filter((card) => card.dataset.tier === 'paid').length,
+    costChips: cards.filter((card) => card.querySelector('.cost-chip')).length,
+    laneChips: cards.filter((card) => card.querySelector('.lane-chip')).length,
+    branchCards: cards.filter((card) => card.dataset.branch).length,
+    branchChips: cards.filter((card) => card.querySelector('.branch-chip')).length,
+    externalCards: cards.filter((card) => card.dataset.external).length,
+    firstCost: cards[0]?.querySelector('.cost-chip')?.textContent ?? null,
+    firstLane: cards[0]?.querySelector('.lane-chip')?.textContent ?? null,
+    firstTooltip: cards[0]?.getAttribute('title') ?? '',
     spoilerCards: cards.filter((card) => card.dataset.spoiler === 'true').length,
     spoilerChips: cards.filter((card) => card.querySelector('.spoiler-chip')).length,
     osCards: cards.filter((card) => card.dataset.type === 'os_log').length,
@@ -280,6 +291,27 @@ try {
   check(Boolean(home.firstCharacter), "first card shows a character");
   check(home.firstLevel === "Lv 1", "first card shows its level gate");
   check(home.firstTier === "Free", "first card shows its tier");
+  check(home.costChips === home.count, "every card shows its unlock cost");
+  check(home.laneChips === home.count, "every card shows its account lane");
+  check(home.firstCost === "Cost 0", "the first card has cost 0");
+  check(Boolean(home.firstLane), "the first card names its lane");
+  check(
+    home.firstTooltip.includes("cost") && home.firstTooltip.includes("lane"),
+    "the card tooltip exposes cost and lane",
+  );
+  check(
+    home.branchCards > 0 && home.branchChips === home.branchCards,
+    "ending-branch cards render a branch chip",
+  );
+  const branchTooltip = await cdp.evaluate(`(() => {
+    const card = [...document.querySelectorAll('[data-testid="timeline-card"]')]
+      .find((item) => item.dataset.branch);
+    return card?.getAttribute('title') ?? '';
+  })()`);
+  check(
+    branchTooltip.includes("branch"),
+    "the branch card tooltip names its branch",
+  );
   check(
     home.secondOrder > 1,
     "OA documents in reading order are absent from the timeline feed",
@@ -335,6 +367,46 @@ try {
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="timeline-card"]').length === ${home.count}`,
     "paid tier cards restored",
+  );
+
+  // --------------------------------------------------------------- lane filter
+  const laneOptions = Number(
+    await cdp.evaluate(
+      `document.querySelector('[data-testid="lane-filter"]').options.length`,
+    ),
+  );
+  check(laneOptions > 3, `lane filter lists the accounts (got ${laneOptions})`);
+  await cdp.evaluate(`(() => {
+    const select = document.querySelector('[data-testid="lane-filter"]');
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLSelectElement.prototype,
+      'value',
+    ).set;
+    setter.call(select, '0');
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  const laneZero = await cdp.waitFor(
+    `(() => {
+      const cards = [...document.querySelectorAll('[data-testid="timeline-card"]')];
+      if (!cards.length) return null;
+      return cards.every((card) => card.dataset.lane === '0') ? cards.length : null;
+    })()`,
+    "lane 0 cards",
+  );
+  check(laneZero > 0 && laneZero < home.count, "lane filter keeps one account");
+  await cdp.screenshot("timeline-lane-filtered.png");
+  await cdp.evaluate(`(() => {
+    const select = document.querySelector('[data-testid="lane-filter"]');
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLSelectElement.prototype,
+      'value',
+    ).set;
+    setter.call(select, 'all');
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="timeline-card"]').length === ${home.count}`,
+    "lane filter restores every lane",
   );
 
   // -------------------------------------------------------------- type filter

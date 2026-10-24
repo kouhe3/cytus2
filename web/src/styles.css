@@ -2006,11 +2006,10 @@ kbd {
   display: grid;
   grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
   gap: 24px;
-  margin: 18px 0 24px;
-  padding: 20px 22px;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--panel-2);
+  margin: 6px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .block.booklet header {

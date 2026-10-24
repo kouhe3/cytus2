@@ -65,8 +65,10 @@ active locale. Entity titles and bodies are not translated by this dictionary.
 logs (`timeline_scope=character`) stay out of the feed and appear only on
 their character page, sorted by the numeric `version_order`. The account
 filter uses the seven icons from `im_filter_data` (exported as `imFilters` in
-`data.json`) plus `other/NPC`; PΛFF therefore has no IM tab, and its four
-epilogue posts remain in the global feed.
+`data.json`) plus `other/NPC`. That filter is a feed dimension, not the
+character-page navigation: only PAFF / NEKO / ROBO have an IM tab, so Xenon,
+ConneR, Cherry and JOE do not, and PΛFF has none either. PΛFF's four epilogue
+posts remain in the global feed.
 
 ## Served artifacts
 

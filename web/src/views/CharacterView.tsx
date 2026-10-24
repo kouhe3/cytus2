@@ -13,10 +13,16 @@ import {
   entityTitle,
 } from "../data/selectors";
 import type { CharacterOsEntry } from "../data/selectors";
+import type { I18n } from "../data/messages";
 import type { CharacterEntity, Database, Lang } from "../types";
 
-/** The game only exposes a CHARACTER → IM entry for the three protagonists. */
-const IM_TAB_CHARACTERS: Record<string, true> = {
+/**
+ * The game's character page exposes an iM entry only for the three
+ * protagonists. This is navigation structure, not a data derivation: the feed's
+ * account filter (`imFilters`) also contains Xenon, ConneR, Cherry and JOE, and
+ * those characters still have no character-page iM tab.
+ */
+const IM_TAB_CHARACTERS: Readonly<Record<string, true>> = {
   paff001: true,
   neko001: true,
   robo001: true,
@@ -26,11 +32,13 @@ function PackFact({
   db,
   character,
   lang,
+  i18n,
   children,
 }: {
   db: Database;
   character: CharacterEntity;
   lang: Lang;
+  i18n: I18n;
   children: ReactNode;
 }) {
   if (!character.pack_id) {
@@ -43,7 +51,7 @@ function PackFact({
       <dd>
         {pack ? (
           <Link to={entityHref(pack.id)} className="inline-link">
-            {entityTitle(db, pack, lang)}
+            {entityTitle(db, pack, lang, i18n)}
           </Link>
         ) : (
           <code>{character.pack_id}</code>
@@ -81,7 +89,7 @@ export function CharacterView({
   }, [entries]);
 
   const imAccount = IM_TAB_CHARACTERS[character.game_id]
-    ? (characterImAccount(db, character) ?? character.game_id)
+    ? characterImAccount(db, character)
     : null;
   const timelineOs = entries.filter(
     (entry) => entry.row.timeline_scope === "timeline",
@@ -206,7 +214,7 @@ export function CharacterView({
                 <code>{character.game_id}</code>
               </dd>
             </div>
-            <PackFact db={db} character={character} lang={lang}>
+            <PackFact db={db} character={character} lang={lang} i18n={i18n}>
               {i18n.t("type.pack")}
             </PackFact>
             <div className="fact">

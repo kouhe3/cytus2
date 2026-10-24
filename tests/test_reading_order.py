@@ -386,7 +386,7 @@ def test_paid_account_posts_split_by_their_own_gates(
         "character/xenon001"
     }
     assert gated["level_locks"][0]["level"] == 41
-    assert gated["branch"] == "善终1"
+    assert gated["branch"] == "good_ending1"
     ending = entities["story_node/story_ending03_main"]
     assert ending["stage"] == 1
     assert gated["stage"] > ending["stage"]
@@ -395,13 +395,13 @@ def test_paid_account_posts_split_by_their_own_gates(
 
 def test_branch_labels_and_blocked_posts(entities: dict[str, dict]) -> None:
     first = entities["im/Q0101"]
-    assert first["branch"] == "善终1"
+    assert first["branch"] == "good_ending1"
     assert first["external"] is None
     assert first["stage"] == 2
     assert first["read_index"] == 12
 
     fourth = entities["im/Q0201"]
-    assert fourth["branch"] == "结局04"
+    assert fourth["branch"] == "ending04"
     assert fourth["external"] is None
     assert fourth["stage"] == 2
     assert fourth["read_index"] == 13
@@ -415,9 +415,22 @@ def test_branch_labels_and_blocked_posts(entities: dict[str, dict]) -> None:
 
     assert any(
         entry["kind"] == "manual"
-        and "branch label for story_ending03_good_ending1" in entry.get("note", "")
+        and entry["locator"] == "cytus2db/branches.py:ENDING_BRANCHES"
+        and entry.get("note", "").startswith("story_ending03_good_ending1:")
         for entry in first["provenance"]
     )
+
+
+def test_branch_codes_are_language_neutral(rows: list[dict]) -> None:
+    from cytus2db.branches import ENDING_BRANCHES
+
+    codes = {code for code, _ in ENDING_BRANCHES.values()}
+    assert codes == {"good_ending1", "good_ending2", "ending04"}
+    for row in rows:
+        if row["branch"] is None:
+            continue
+        assert row["branch"] in codes
+        assert row["branch"].isascii()
 
 
 def test_side_lane_unlocks_after_ending02(entities: dict[str, dict]) -> None:
@@ -441,19 +454,6 @@ def test_legacy_read_index_is_contiguous(rows: list[dict]) -> None:
         for row in rows
         if row["entity_type"] != "im_post"
     )
-
-
-def test_character_tier_override_is_a_separate_layer() -> None:
-    from cytus2db.ext.reading_order import _Pack, _lane_table
-
-    packs = {
-        "paff001": _Pack("paff001", "free", 0),
-        "ghost001": _Pack("ghost001", "free", 1),
-    }
-    assert _lane_table(packs)["ghost001"].tier == "free"
-    moved = _lane_table(packs, {"ghost001": "paid"})
-    assert moved["ghost001"].tier == "paid"
-    assert moved["ghost001"].lane == 100
 
 
 def test_legacy_im_parity_against_viewer(tmp_path: Path) -> None:

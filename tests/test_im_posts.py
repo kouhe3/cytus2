@@ -278,7 +278,9 @@ def test_ending_branch_and_avatar_override(im_output: Path) -> None:
         for entry in models["im/P0301"].provenance
         if entry.get("kind") == "manual"
     ]
-    assert manual and "IM_POST_ENDING_BRANCHES" in manual[0]["locator"]
+    assert manual and manual[0]["locator"] == (
+        "cytus2db/branches.py:ENDING_BRANCHES"
+    )
     assert models["im/P0201"].field_value("avatar_override") == "alpha alt 01"
     assert models["im/P0101"].field_value("avatar_override") == ""
 

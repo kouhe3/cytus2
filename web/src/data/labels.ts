@@ -1,5 +1,5 @@
 import type { I18n, MessageKey } from "./messages";
-import type { Lang, ReadingTier } from "../types";
+import type { Lang, ReadingBranch, ReadingTier } from "../types";
 
 const TYPE_KEYS: Record<string, MessageKey> = {
   im_post: "type.im_post",
@@ -65,6 +65,17 @@ const TIER_KEYS: Record<ReadingTier, MessageKey> = {
 
 export function tierLabel(i18n: I18n, tier: ReadingTier): string {
   return i18n.t(TIER_KEYS[tier]);
+}
+
+const BRANCH_KEYS: Record<ReadingBranch, MessageKey> = {
+  good_ending1: "branch.good_ending1",
+  good_ending2: "branch.good_ending2",
+  ending04: "branch.ending04",
+};
+
+export function branchLabel(i18n: I18n, branch: string): string {
+  const key = BRANCH_KEYS[branch as ReadingBranch];
+  return key ? i18n.t(key) : branch;
 }
 
 const MEDIA_KIND_KEYS: Record<string, MessageKey> = {

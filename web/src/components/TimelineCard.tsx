@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useI18n } from "../data/i18n";
+import { branchLabel } from "../data/labels";
 import { entityHref } from "../data/selectors";
 import type { TimelineEntry } from "../data/selectors";
 import { Avatar, LevelBadge, SpoilerChip, TierChip, TypeBadge } from "./ui";
@@ -7,6 +8,7 @@ import { Avatar, LevelBadge, SpoilerChip, TierChip, TypeBadge } from "./ui";
 export function TimelineCard({ entry }: { entry: TimelineEntry }) {
   const i18n = useI18n();
   const { row, entity } = entry;
+  const branch = row.branch ? branchLabel(i18n, row.branch) : null;
   const detail = [
     i18n.t("card.tooltipOrder", { order: row.order }),
     row.read_index === null
@@ -17,7 +19,7 @@ export function TimelineCard({ entry }: { entry: TimelineEntry }) {
     row.lock_level
       ? i18n.t("card.tooltipStage", { level: row.lock_level + 1 })
       : null,
-    row.branch ? i18n.t("card.tooltipBranch", { branch: row.branch }) : null,
+    branch ? i18n.t("card.tooltipBranch", { branch }) : null,
     row.external
       ? i18n.t("card.tooltipExternal", { detail: row.external })
       : null,
@@ -74,9 +76,9 @@ export function TimelineCard({ entry }: { entry: TimelineEntry }) {
         >
           {entry.laneName}
         </span>
-        {row.branch ? (
+        {branch ? (
           <span className="meta-chip branch-chip" title={i18n.t("card.branchTitle")}>
-            {row.branch}
+            {branch}
           </span>
         ) : null}
         {row.external ? (

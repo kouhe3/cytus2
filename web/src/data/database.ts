@@ -365,3 +365,48 @@ export function textSnippet(
   }
   return localizedValue(byLang as Record<Lang, string | null>, lang);
 }
+
+/**
+ * Resolve a raw game id (topics such as C0101, OS files such as paos002,
+ * story ids such as story01) to a canonical entity.  Callers may pass the
+ * expected namespace when the same raw id exists in more than one family.
+ */
+export function resolveEntityRef(
+  db: Database,
+  raw: string | null | undefined,
+  namespace?: string,
+): BaseEntity | undefined {
+  const value = (raw ?? "").trim();
+  if (!value) {
+    return undefined;
+  }
+  const direct = db.entityById.get(value);
+  if (direct) {
+    return direct;
+  }
+  const namespaces = namespace
+    ? [namespace]
+    : [
+        "im",
+        "os",
+        "story_node",
+        "character",
+        "pack",
+        "song",
+        "oa_object",
+        "oa_document",
+        "illustration",
+        "boss_stage",
+        "gallery_item",
+        "folder",
+        "chapter",
+        "gacha_machine",
+      ];
+  for (const family of namespaces) {
+    const entity = db.entityById.get(`${family}/${value}`);
+    if (entity) {
+      return entity;
+    }
+  }
+  return undefined;
+}

@@ -12,6 +12,7 @@ import {
   isGalleryItem,
   isOaDocument,
   isStoryNode,
+  resolveEntityRef,
 } from "../data/database";
 import { useI18n } from "../data/i18n";
 import {
@@ -79,6 +80,80 @@ function EntityById({
     <Link to={entityHref(id)} className="inline-link">
       {entityTitle(db, entity, lang, i18n)}
     </Link>
+  );
+}
+
+function EntityRef({
+  db,
+  lang,
+  id,
+  namespace,
+  compact = false,
+}: {
+  db: Database;
+  lang: Lang;
+  id: string | null | undefined;
+  namespace?: string;
+  compact?: boolean;
+}) {
+  const i18n = useI18n();
+  if (!id) {
+    return <span className="muted">{i18n.t("common.none")}</span>;
+  }
+  const entity = resolveEntityRef(db, id, namespace);
+  if (!entity) {
+    return <code>{id}</code>;
+  }
+  const title = entityTitle(db, entity, lang, i18n);
+  return (
+    <Link
+      to={entityHref(entity.id)}
+      className="inline-link"
+      title={title}
+    >
+      {compact ? id : title}
+    </Link>
+  );
+}
+
+function EntityRefList({
+  db,
+  lang,
+  values,
+  namespace,
+}: {
+  db: Database;
+  lang: Lang;
+  values: readonly string[];
+  namespace?: string;
+}) {
+  const i18n = useI18n();
+  if (values.length === 0) {
+    return <span className="muted">{i18n.t("common.none")}</span>;
+  }
+  return (
+    <span className="chip-row">
+      {values.map((value, index) => {
+        const entity = resolveEntityRef(db, value, namespace);
+        if (!entity) {
+          return (
+            <code key={`${value}:${index}`} className="code-chip">
+              {value}
+            </code>
+          );
+        }
+        return (
+          <Link
+            key={`${value}:${index}`}
+            to={entityHref(entity.id)}
+            className="code-chip inline-link"
+            title={entityTitle(db, entity, lang, i18n)}
+          >
+            {value}
+          </Link>
+        );
+      })}
+    </span>
   );
 }
 
@@ -262,7 +337,12 @@ export function OaDescriptionDetails({
           <EntityById db={db} id={entity.character_id} lang={lang} />
         </Fact>
         <Fact label={i18n.t("fact.descriptionObject")}>
-          <code>{entity.description_object_id}</code>
+          <EntityRef
+            db={db}
+            lang={lang}
+            namespace="oa_object"
+            id={entity.description_object_id}
+          />
         </Fact>
         <Fact label={i18n.t("fact.weight")}>{entity.weight}</Fact>
         <Fact label={i18n.t("fact.event")}>{entity.event}</Fact>
@@ -479,19 +559,44 @@ export function StoryNodeDetails({
           <code>{entity.class_name ?? "—"}</code>
         </Fact>
         <Fact label={i18n.t("fact.topicIds")}>
-          <StringChips values={entity.topic_ids ?? []} />
+          <EntityRefList
+            db={db}
+            lang={lang}
+            namespace="im"
+            values={entity.topic_ids ?? []}
+          />
         </Fact>
         <Fact label={i18n.t("fact.startTopic")}>
-          <code>{entity.start_topic_id ?? "—"}</code>
+          <EntityRef
+            db={db}
+            lang={lang}
+            namespace="im"
+            id={entity.start_topic_id}
+          />
         </Fact>
         <Fact label={i18n.t("fact.endTopic")}>
-          <code>{entity.end_topic_id ?? "—"}</code>
+          <EntityRef
+            db={db}
+            lang={lang}
+            namespace="im"
+            id={entity.end_topic_id}
+          />
         </Fact>
         <Fact label={i18n.t("fact.triggerTopics")}>
-          <StringChips values={entity.trigger_topics ?? []} />
+          <EntityRefList
+            db={db}
+            lang={lang}
+            namespace="im"
+            values={entity.trigger_topics ?? []}
+          />
         </Fact>
         <Fact label={i18n.t("fact.triggerOs")}>
-          <code>{entity.trigger_os_id ?? "—"}</code>
+          <EntityRef
+            db={db}
+            lang={lang}
+            namespace="os"
+            id={entity.trigger_os_id}
+          />
         </Fact>
         <Fact label={i18n.t("fact.actions")}>
           <StringChips values={entity.actions ?? []} />
@@ -715,13 +820,28 @@ export function GachaRewardDetails({
           <code>{entity.tap_fx_id ?? "—"}</code>
         </Fact>
         <Fact label={i18n.t("fact.imLock")}>
-          <code>{entity.reward_locks.im_topic_id || "—"}</code>
+          <EntityRef
+            db={db}
+            lang={lang}
+            namespace="im"
+            id={entity.reward_locks.im_topic_id}
+          />
         </Fact>
         <Fact label={i18n.t("fact.osLock")}>
-          <code>{entity.reward_locks.os_file_id || "—"}</code>
+          <EntityRef
+            db={db}
+            lang={lang}
+            namespace="os"
+            id={entity.reward_locks.os_file_id}
+          />
         </Fact>
         <Fact label={i18n.t("fact.storyLock")}>
-          <code>{entity.reward_locks.story_lock_id || "—"}</code>
+          <EntityRef
+            db={db}
+            lang={lang}
+            namespace="story_node"
+            id={entity.reward_locks.story_lock_id}
+          />
         </Fact>
       </Facts>
     </Section>

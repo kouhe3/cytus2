@@ -46,6 +46,7 @@ import {
   isStoryNode,
   isSubtitleLine,
   recordOf,
+  resolveEntityRef,
 } from "../data/database";
 import { pickLocalized, useLanguage } from "../data/language";
 import {
@@ -123,6 +124,20 @@ const GENERIC_FIELDS = [
   "trigger_free_character_level",
 ] as const;
 
+const REF_FIELDS: ReadonlySet<string> = new Set([
+  "machine_id",
+  "pack_id",
+  "character_id",
+  "chapter_id",
+  "folder_id",
+  "story_gate",
+  "topic_gate",
+  "file_lock",
+  "mission_id",
+  "description_object_id",
+  "item_id",
+]);
+
 const DETAILED_TYPES: Record<string, true> = {
   oa_character: true,
   oa_object: true,
@@ -140,6 +155,33 @@ const DETAILED_TYPES: Record<string, true> = {
   subtitle_line: true,
   illustration: true,
 };
+
+function FactValue({
+  db,
+  lang,
+  field,
+  raw,
+  value,
+}: {
+  db: Database;
+  lang: Lang;
+  field: string;
+  raw: unknown;
+  value: string;
+}): ReactNode {
+  const i18n = useI18n();
+  if (REF_FIELDS.has(field) && typeof raw === "string") {
+    const entity = resolveEntityRef(db, raw);
+    if (entity) {
+      return (
+        <Link to={entityHref(entity.id)} className="inline-link">
+          {entityTitle(db, entity, lang, i18n)}
+        </Link>
+      );
+    }
+  }
+  return value;
+}
 
 function textRefOf(entity: BaseEntity): string | null {
   const value = recordOf(entity)["text_ref"];
@@ -380,7 +422,13 @@ export function EntityView({
             <dl className="facts entity-facts">
               {genericFacts.map((fact) => (
                 <Fact key={fact.field} label={fact.field}>
-                  {fact.value}
+                  <FactValue
+                    db={db}
+                    lang={lang}
+                    field={fact.field}
+                    raw={data[fact.field]}
+                    value={fact.value}
+                  />
                 </Fact>
               ))}
               {levelLocks.length > 0 ? (
@@ -494,10 +542,22 @@ export function EntityView({
                 {entity.reply_count}
               </Fact>
               <Fact label={i18n.t("entity.fact.storyGate")}>
-                {entity.story_gate ?? i18n.t("common.none")}
+                <FactValue
+                  db={db}
+                  lang={lang}
+                  field="story_gate"
+                  raw={entity.story_gate}
+                  value={entity.story_gate ?? i18n.t("common.none")}
+                />
               </Fact>
               <Fact label={i18n.t("entity.fact.topicGate")}>
-                {entity.topic_gate ?? i18n.t("common.none")}
+                <FactValue
+                  db={db}
+                  lang={lang}
+                  field="topic_gate"
+                  raw={entity.topic_gate}
+                  value={entity.topic_gate ?? i18n.t("common.none")}
+                />
               </Fact>
               <Fact label={i18n.t("entity.fact.attachments")}>
                 {entity.attachments.length > 0
@@ -521,10 +581,22 @@ export function EntityView({
                 {entity.category || "—"}
               </Fact>
               <Fact label={i18n.t("entity.fact.chapter")}>
-                {entity.chapter_id}
+                <FactValue
+                  db={db}
+                  lang={lang}
+                  field="chapter_id"
+                  raw={entity.chapter_id}
+                  value={entity.chapter_id}
+                />
               </Fact>
               <Fact label={i18n.t("entity.fact.fileLock")}>
-                {entity.file_lock ?? i18n.t("common.none")}
+                <FactValue
+                  db={db}
+                  lang={lang}
+                  field="file_lock"
+                  raw={entity.file_lock}
+                  value={entity.file_lock ?? i18n.t("common.none")}
+                />
               </Fact>
               <Fact label={i18n.t("entity.fact.movies")}>
                 {entity.movies.length > 0

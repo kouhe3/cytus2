@@ -15,6 +15,7 @@ import type {
   GalleryFolderEntity,
   GalleryItemEntity,
   ImPostEntity,
+  ImFilters,
   IllustrationEntity,
   Lang,
   OaCharacterEntity,
@@ -207,9 +208,16 @@ export function buildDatabase(
   }
   const timelineOrders = [...readingOrderByEntity.values()]
     .filter(
-      (row) => row.entity_type === "im_post" || row.entity_type === "os_log",
+      (row) =>
+        row.timeline_scope === "timeline" &&
+        (row.entity_type === "im_post" || row.entity_type === "os_log"),
     )
     .sort((left, right) => left.order - right.order);
+
+  const imFilters: ImFilters = projection.imFilters ?? {
+    items: [],
+    otherAvatar: null,
+  };
 
   const characterById = new Map<string, CharacterEntity>();
   for (const record of projection.entities["character"] ?? []) {
@@ -287,7 +295,9 @@ export function buildDatabase(
     projection,
     entityById,
     entitiesByType,
+    imFilters,
     timelineOrders,
+    allReadingOrders: readingOrders,
     readingOrderByEntity,
     textRefs: text.refs,
     textNames: text.names ?? {},

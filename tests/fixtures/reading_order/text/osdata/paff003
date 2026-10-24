@@ -1,0 +1,17 @@
+[
+  {
+    "Id": "paos001",
+    "Type": 3,
+    "Names": ["PΛFF OS", "PΛFF OS", "PΛFF OS", "PΛFF OS", "PΛFF OS", "PΛFF OS"],
+    "Contents": ["##conversation=PΛFF\nEpilogue", "", "", "", "", ""],
+    "TimelineChapter": {"Folder": "PΛFF", "Chapter": "Side Stories", "Index": 1},
+    "Date": "690_06_06",
+    "OSLockCondition": {
+      "FileLockId": "",
+      "LevelLocks": [{"SongPackId": "paff003", "Level": 1, "IsLevelLocked": false}]
+    },
+    "UnlockCharts": [],
+    "DigitLock": null,
+    "Category": "5.3"
+  }
+]

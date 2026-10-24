@@ -49,7 +49,10 @@ export function CommandPalette({
         href: "/timeline",
       },
     ];
-    for (const row of db.timelineOrders) {
+    for (const row of db.allReadingOrders) {
+      if (row.entity_type !== "im_post" && row.entity_type !== "os_log") {
+        continue;
+      }
       const entity = db.entityById.get(row.entity_id);
       if (!entity) {
         continue;

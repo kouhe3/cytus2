@@ -40,6 +40,10 @@ _Avoid_: boss 曲、活动曲
 游戏角色 / 曲包身份。
 _Avoid_: 人物、hero
 
+**Timeline scope** (`reading_order.timeline_scope`):
+一条阅读顺序记录属于哪里：`timeline` = 全局解锁时间线（全部 iM 帖 + 主线 7 人的 OS），`character` = 只在角色页按版本阅读的 OS，`none` = OA 文档与故事节点。角色页的 iM 页签只对 PAFF / NEKO / ROBO 开放，PΛFF 没有 iM 账号入口。
+_Avoid_: 把 `character` 当成「角色实体」；它描述的是阅读入口
+
 ## 音乐
 
 **Song** (`song`):

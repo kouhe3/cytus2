@@ -254,6 +254,7 @@ def write_spa(
     path: Path,
     entities: dict[str, list[dict[str, Any]]],
     edges: list[dict[str, Any]],
+    im_filters: dict[str, Any] | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     counts = {name: len(records) for name, records in entities.items()}
@@ -262,6 +263,7 @@ def write_spa(
         "counts": counts,
         "difficulties": list(DIFFICULTIES),
         "entities": entities,
+        "imFilters": im_filters or {"items": [], "otherAvatar": None},
         "edges": sorted(
             edges, key=lambda item: (item["source"], item["relation"], item["target"])
         ),

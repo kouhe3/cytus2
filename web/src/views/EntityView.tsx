@@ -54,6 +54,7 @@ import {
 import { formatUnit } from "../data/messages";
 import {
   characterName,
+  entityHref,
   entityHome,
   entityTitle,
   formatFieldValue,
@@ -321,7 +322,15 @@ export function EntityView({
             {isImPost(entity) ? (
               <p className="byline">
                 {entity.author}
-                {order?.thread ? ` · ${characterName(db, order.thread)}` : ""} ·{" "}
+                {order?.thread ? (
+                  <>
+                    {" · "}
+                    <Link to={entityHref(order.thread)} className="inline-link">
+                      {characterName(db, order.thread)}
+                    </Link>
+                  </>
+                ) : null}{" "}
+                ·{" "}
                 {formatUnit(i18n, "likes", entity.likes)} ·{" "}
                 {formatUnit(i18n, "replies", entity.reply_count)}
               </p>
@@ -430,7 +439,9 @@ export function EntityView({
                 <Fact label={i18n.t("entity.fact.stage")}>{order.stage}</Fact>
                 {order.thread ? (
                   <Fact label={i18n.t("entity.fact.thread")}>
-                    {characterName(db, order.thread)}
+                    <Link to={entityHref(order.thread)} className="inline-link">
+                      {characterName(db, order.thread)}
+                    </Link>
                   </Fact>
                 ) : null}
                 {order.chapter ? (

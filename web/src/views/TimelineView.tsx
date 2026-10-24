@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { TimelineCard } from "../components/TimelineCard";
 import { useI18n } from "../data/i18n";
 import { tierLabel } from "../data/labels";
 import { useLanguage } from "../data/language";
 import {
   maxTimelineLevel,
+  resolveTimelineAccount,
   selectTimeline,
-  timelineLanes,
+  timelineAccounts,
+  OTHER_ACCOUNT,
   type TimelineTypeFilter,
 } from "../data/selectors";
 import type { Database, ReadingTier } from "../types";
@@ -28,18 +31,35 @@ export function TimelineView({ db }: { db: Database }) {
   const { lang } = useLanguage();
   const i18n = useI18n();
   const maxLevel = useMemo(() => maxTimelineLevel(db), [db]);
-  const lanes = useMemo(() => timelineLanes(db, i18n), [db, i18n]);
+  const accounts = useMemo(() => timelineAccounts(db, i18n), [db, i18n]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const account = resolveTimelineAccount(db, searchParams.get("account"));
   const [level, setLevel] = useState(maxLevel);
   const [type, setType] = useState<TimelineTypeFilter>("all");
-  const [lane, setLane] = useState<number | null>(null);
   const [tiers, setTiers] = useState<Set<ReadingTier>>(
     () => new Set<ReadingTier>(["free", "paid", "side"]),
   );
 
   const entries = useMemo(
-    () => selectTimeline(db, { maxLevel: level, type, tiers, lane }, lang, i18n),
-    [db, level, type, tiers, lane, lang, i18n],
+    () =>
+      selectTimeline(
+        db,
+        { maxLevel: level, type, tiers, account },
+        lang,
+        i18n,
+      ),
+    [db, level, type, tiers, account, lang, i18n],
   );
+
+  const setAccount = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "all") {
+      next.delete("account");
+    } else {
+      next.set("account", value);
+    }
+    setSearchParams(next, { replace: true });
+  };
 
   const toggleTier = (tier: ReadingTier) => {
     setTiers((previous) => {
@@ -58,10 +78,11 @@ export function TimelineView({ db }: { db: Database }) {
       ? i18n.t("timeline.tierAll")
       : [...tiers].map((tier) => tierLabel(i18n, tier)).join(", ") ||
         i18n.t("timeline.tierNone");
-  const laneSummary =
-    lane === null
+  const accountSummary =
+    account === null
       ? i18n.t("timeline.tierAll")
-      : (lanes.find((item) => item.lane === lane)?.label ?? String(lane));
+      : (accounts.find((item) => item.key === account)?.label ??
+        (account === OTHER_ACCOUNT ? i18n.t("timeline.accountOther") : account));
   const typeSummary =
     type === "all"
       ? "timeline.types.all"
@@ -82,7 +103,7 @@ export function TimelineView({ db }: { db: Database }) {
               total: i18n.formatNumber(db.timelineOrders.length),
               level: level + 1,
               tier: tierSummary,
-              lane: laneSummary,
+              account: accountSummary,
               types: i18n.t(typeSummary),
             })}
           </div>
@@ -167,25 +188,21 @@ export function TimelineView({ db }: { db: Database }) {
         </section>
 
         <section className="panel">
-          <h2>{i18n.t("timeline.lane")}</h2>
+          <h2 data-testid="account-heading">{i18n.t("timeline.account")}</h2>
           <select
             className="lane-select"
-            value={lane === null ? "all" : String(lane)}
-            onChange={(event) =>
-              setLane(
-                event.target.value === "all" ? null : Number(event.target.value),
-              )
-            }
-            aria-label={i18n.t("timeline.lane")}
-            data-testid="lane-filter"
+            value={account ?? "all"}
+            onChange={(event) => setAccount(event.target.value)}
+            aria-label={i18n.t("timeline.account")}
+            data-testid="account-filter"
           >
             <option value="all">
-              {i18n.t("timeline.laneAll", {
+              {i18n.t("timeline.accountAll", {
                 count: i18n.formatNumber(db.timelineOrders.length),
               })}
             </option>
-            {lanes.map((item) => (
-              <option key={item.lane} value={item.lane}>
+            {accounts.map((item) => (
+              <option key={item.key} value={item.key}>
                 {i18n.t("common.labelCount", {
                   label: item.label,
                   count: item.count,
@@ -194,7 +211,9 @@ export function TimelineView({ db }: { db: Database }) {
             ))}
           </select>
           <p className="hint">
-            {i18n.t("timeline.laneHint", { other: i18n.t("timeline.laneOther") })}
+            {i18n.t("timeline.accountHint", {
+              other: i18n.t("timeline.accountOther"),
+            })}
           </p>
         </section>
 

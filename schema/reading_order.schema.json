@@ -9,6 +9,7 @@
     "type",
     "entity_id",
     "entity_type",
+    "timeline_scope",
     "stage",
     "level_gate",
     "original_level",
@@ -49,6 +50,10 @@
     },
     "entity_type": {
       "enum": ["im_post", "os_log", "oa_document", "story_node"]
+    },
+    "timeline_scope": {
+      "enum": ["timeline", "character", "none"],
+      "description": "Where the row is read: timeline for every iM post and for the seven main characters' OS logs; character for every other OS log, which is listed on its character page by version; none for OA documents and story nodes, which belong to neither list."
     },
     "stage": {
       "type": "integer",

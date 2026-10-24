@@ -49,6 +49,17 @@ TIER_ORDER = ("free", "paid", "side")
 TIER_RANK = {tier: index for index, tier in enumerate(TIER_ORDER)}
 ENTITY_ORDER = {"im_post": 0, "os_log": 1, "oa_document": 2, "story_node": 3}
 MAIN_TRIO = frozenset({"paff001", "neko001", "robo001"})
+
+# The seven free main characters whose OS logs belong to the global unlock
+# timeline.  Paid main and side/DLC OS logs are read through their character
+# page only (``timeline_scope=character``).  This boundary is editorial and
+# comes from the game's navigation, not from a pack field: every iM post is
+# part of the global feed, but only these seven accounts have OS content in
+# the unlock timeline.  See kouhe3/cytus2#24.
+TIMELINE_CHARACTERS = frozenset(
+    {"paff001", "neko001", "robo001", "ivy001", "cherry002", "vanessa001", "bobo001"}
+)
+TIMELINE_SCOPE_LOCATOR = "https://github.com/kouhe3/cytus2/issues/24"
 STAGING_CHAPTERS = frozenset({"test01", "test02"})
 MAX_LEVEL = 999
 MAX_STAGES = 1000
@@ -448,6 +459,7 @@ class _Row:
     branch: str | None = None
     external: str | None = None
     read_index: int | None = None
+    timeline_scope: str = "none"
 
     @property
     def character(self) -> str | None:
@@ -1186,6 +1198,35 @@ def _apply_lane(
                 break
 
 
+def _apply_timeline_scope(rows: list[_Row]) -> None:
+    """Mark which rows belong to the global unlock timeline.
+
+    Every iM post sits in the global feed, including posts by paid, side and
+    NPC accounts.  OS logs belong to the timeline only for the seven main
+    characters; every other OS log is reachable through its character page
+    (sorted by version) and stays out of the timeline.  OA documents and story
+    nodes belong to neither list.  The scope does not feed back into stage,
+    lane or order; it is a projection label consumed by the SPA.
+    """
+    for row in rows:
+        if row.entity_type == "im_post":
+            row.timeline_scope = "timeline"
+        elif row.entity_type == "os_log":
+            character = _character(row.thread)
+            row.timeline_scope = (
+                "timeline" if character in TIMELINE_CHARACTERS else "character"
+            )
+            row.provenance.append(
+                manual(
+                    TIMELINE_SCOPE_LOCATOR,
+                    f"{character or row.entity_id} OS timeline scope"
+                    f" {row.timeline_scope}",
+                )
+            )
+        else:
+            row.timeline_scope = "none"
+
+
 def _cap_rows(source: InputSource) -> list[list[dict[str, Any]]]:
     table = source.text_json("imdata", "im_lock_condition_data")
     if table is None or not isinstance(table.data, list):
@@ -1618,6 +1659,7 @@ def _record(row: _Row) -> dict[str, Any]:
         "type": "reading_order",
         "entity_id": row.entity_id,
         "entity_type": row.entity_type,
+        "timeline_scope": row.timeline_scope,
         "stage": row.stage,
         "level_gate": row.level_gate,
         "original_level": row.raw_level,
@@ -1662,6 +1704,7 @@ def build(source: InputSource) -> dict[str, list[dict[str, Any]]]:
     _apply_story_fallbacks(rows, packs)
     _finalize_rows(rows, packs)
     _apply_lane(rows, lanes, families)
+    _apply_timeline_scope(rows)
 
     for row in rows:
         alert = alerts_by_character.get(row.character or "")

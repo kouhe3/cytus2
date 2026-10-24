@@ -36,13 +36,14 @@ export interface TimelineFilters {
   readonly maxLevel: number;
   readonly type: TimelineTypeFilter;
   readonly tiers: ReadonlySet<ReadingTier>;
-  /** Exact lane rank, or null for every lane. */
-  readonly lane: number | null;
+  /** iM account filter key, "other", or null for every account. */
+  readonly account: string | null;
 }
 
 export interface TimelineEntry {
   readonly row: ReadingOrderRow;
   readonly entity: ImPostEntity | OsLogEntity;
+  readonly account: string;
   readonly title: string;
   readonly author: string;
   readonly character: string;
@@ -52,11 +53,13 @@ export interface TimelineEntry {
   readonly spoilerThreshold: number | null;
 }
 
-export interface TimelineLane {
-  readonly lane: number;
+export interface TimelineAccount {
+  readonly key: string;
   readonly label: string;
   readonly count: number;
 }
+
+export const OTHER_ACCOUNT = "other";
 
 function localized(map: unknown): LocalizedText | null {
   if (typeof map !== "object" || map === null) {
@@ -172,27 +175,151 @@ export function maxTimelineLevel(db: Database): number {
   return max;
 }
 
-export function timelineLanes(db: Database, i18n: I18n): TimelineLane[] {
-  const seen = new Map<number, { character: string | null; count: number }>();
-  for (const row of db.timelineOrders) {
-    const entry = seen.get(row.lane);
-    if (entry) {
-      entry.count += 1;
-    } else {
-      seen.set(row.lane, { character: row.lane_character, count: 1 });
+/** ``paff001`` -> ``paff_01``: the avatar-naming convention of the account filter. */
+export function characterAvatarId(characterId: string): string | null {
+  const gameId = characterId.replace(/^character\//, "");
+  const match = /^(.+?)(\d+)$/.exec(gameId);
+  if (!match) {
+    return null;
+  }
+  return `${match[1]}_${String(Number(match[2])).padStart(2, "0")}`;
+}
+
+/** The account icon that owns a post avatar or a character's OS thread. */
+export function timelineAccountKey(
+  db: Database,
+  row: ReadingOrderRow,
+  entity: BaseEntity,
+): string {
+  let avatar: string | null = null;
+  if (isImPost(entity)) {
+    avatar = entity.avatar;
+  } else if (isOsLog(entity)) {
+    const characterId = row.lane_character ?? row.thread;
+    avatar = characterId ? characterAvatarId(characterId) : null;
+  }
+  if (avatar) {
+    const item = db.imFilters.items.find((entry) =>
+      entry.avatars.includes(avatar),
+    );
+    if (item) {
+      return item.avatar;
     }
   }
-  return [...seen.entries()]
-    .sort((left, right) => left[0] - right[0])
-    .map(([lane, entry]) => ({
-      lane,
-      label:
-        lane === 300
-          ? i18n.t("timeline.laneOther")
-          : characterName(db, entry.character) ||
-            i18n.t("timeline.laneFallback", { lane }),
-      count: entry.count,
-    }));
+  return OTHER_ACCOUNT;
+}
+
+/**
+ * Normalize an ``?account=`` value.  Accepts the filter icon avatar id, a
+ * character id (``paff001``) or a character entity id.  Unknown values fall
+ * back to "all accounts" so a stale link never hides the whole feed.
+ */
+export function resolveTimelineAccount(
+  db: Database,
+  raw: string | null,
+): string | null {
+  if (!raw || raw === OTHER_ACCOUNT) {
+    return raw;
+  }
+  if (db.imFilters.items.some((item) => item.avatar === raw)) {
+    return raw;
+  }
+  const avatar = raw.includes("_")
+    ? raw.replace(/^character\//, "")
+    : characterAvatarId(raw);
+  if (!avatar) {
+    return null;
+  }
+  const item = db.imFilters.items.find((entry) =>
+    entry.avatars.includes(avatar),
+  );
+  return item ? item.avatar : null;
+}
+
+/** The IM tab account of a character page, when the game has one. */
+export function characterImAccount(
+  db: Database,
+  character: BaseEntity,
+): string | null {
+  const avatar = characterAvatarId(character.id);
+  if (!avatar) {
+    return null;
+  }
+  const item = db.imFilters.items.find((entry) =>
+    entry.avatars.includes(avatar),
+  );
+  return item ? item.avatar : null;
+}
+
+export function timelineAccounts(
+  db: Database,
+  i18n: I18n,
+): TimelineAccount[] {
+  const counts = new Map<string, number>();
+  for (const row of db.timelineOrders) {
+    const entity = db.entityById.get(row.entity_id);
+    if (!entity) {
+      continue;
+    }
+    const key = timelineAccountKey(db, row, entity);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const accounts = db.imFilters.items.map((item) => ({
+    key: item.avatar,
+    label: item.name,
+    count: counts.get(item.avatar) ?? 0,
+  }));
+  accounts.push({
+    key: OTHER_ACCOUNT,
+    label: i18n.t("timeline.accountOther"),
+    count: counts.get(OTHER_ACCOUNT) ?? 0,
+  });
+  return accounts;
+}
+
+export interface CharacterOsEntry {
+  readonly row: ReadingOrderRow;
+  readonly entity: OsLogEntity;
+}
+
+function compareOsVersions(
+  left: CharacterOsEntry,
+  right: CharacterOsEntry,
+): number {
+  const a = left.row.version_order;
+  const b = right.row.version_order;
+  if (a.length === 0 || b.length === 0) {
+    return a.length === 0 ? (b.length === 0 ? 0 : 1) : -1;
+  }
+  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+    const difference = (a[index] ?? -1) - (b[index] ?? -1);
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+  return (
+    left.row.in_game_order - right.row.in_game_order ||
+    left.entity.id.localeCompare(right.entity.id)
+  );
+}
+
+/** Every OS log owned by a character, in the game's SORT BY VERSION order. */
+export function characterOsEntries(
+  db: Database,
+  characterId: string,
+): CharacterOsEntry[] {
+  const entries: CharacterOsEntry[] = [];
+  for (const entity of db.entitiesByType.get("os_log") ?? []) {
+    if (!isOsLog(entity)) {
+      continue;
+    }
+    const row = db.readingOrderByEntity.get(entity.id);
+    if (!row || row.thread !== characterId) {
+      continue;
+    }
+    entries.push({ row, entity });
+  }
+  return entries.sort(compareOsVersions);
 }
 
 export function selectTimeline(
@@ -212,11 +339,12 @@ export function selectTimeline(
     if (!filters.tiers.has(row.tier)) {
       continue;
     }
-    if (filters.lane !== null && row.lane !== filters.lane) {
-      continue;
-    }
     const entity = db.entityById.get(row.entity_id);
     if (!entity) {
+      continue;
+    }
+    const account = timelineAccountKey(db, row, entity);
+    if (filters.account !== null && account !== filters.account) {
       continue;
     }
     const threadName = characterName(db, row.thread);
@@ -232,6 +360,7 @@ export function selectTimeline(
       entries.push({
         row,
         entity,
+        account,
         title: localizedValue(entity.titles, lang) || entity.game_id,
         author: entity.author,
         character: threadName,
@@ -244,6 +373,7 @@ export function selectTimeline(
       entries.push({
         row,
         entity,
+        account,
         title: localizedValue(entity.names, lang) || entity.game_id,
         author: threadName || i18n.t("timeline.osAuthor"),
         character: `${i18n.t("timeline.osAuthor")} · ${entity.file}`,

@@ -60,8 +60,62 @@ def build_database(
     text_records = _read_text_store(out / "text")
     write_edges(out / "db" / "edges.jsonl", edges)
     write_sqlite(out / "db.sqlite", entities, counts, edges, text_records)
-    write_spa(out / "spa" / "data.json", entities, edges)
+    write_spa(
+        out / "spa" / "data.json",
+        entities,
+        edges,
+        _spa_im_filters(source, entities),
+    )
     return counts
+
+
+def _spa_im_filters(
+    source: InputSource, entities: dict[str, list[dict[str, Any]]]
+) -> dict[str, Any]:
+    """The game's iM account filter groups, for the SPA timeline filter.
+
+    ``im_filter_data`` groups several avatars under one account icon (PAFF
+    owns ``paff_01`` and ``paff_02``).  The account label is resolved against
+    the character entities so the SPA does not need a second name table.
+    """
+    empty: dict[str, Any] = {"items": [], "otherAvatar": None}
+    table = source.text_json("imdata", "im_filter_data")
+    if table is None or not isinstance(table.data, dict):
+        return empty
+    names = {
+        str(record.get("game_id")): str(record.get("name") or "")
+        for record in entities.get("character", [])
+        if record.get("game_id")
+    }
+
+    def avatar_name(avatar: str) -> str:
+        base, _, number = avatar.partition("_")
+        if number.isdigit():
+            candidate = f"{base}{int(number):03d}"
+            if names.get(candidate):
+                return names[candidate]
+        for game_id in sorted(names):
+            if game_id.startswith(base) and names[game_id]:
+                return names[game_id]
+        return avatar
+
+    items: list[dict[str, Any]] = []
+    for raw in table.data.get("Items") or []:
+        if not isinstance(raw, dict):
+            continue
+        avatar = str(raw.get("DisplayAvatarId") or "").strip()
+        if not avatar:
+            continue
+        avatars = [
+            str(value).strip()
+            for value in raw.get("FilterAvatarIds") or []
+            if str(value).strip()
+        ]
+        items.append(
+            {"avatar": avatar, "avatars": avatars, "name": avatar_name(avatar)}
+        )
+    other = str(table.data.get("OtherItemDisplayAvatarId") or "").strip()
+    return {"items": items, "otherAvatar": other or None}
 
 
 def _read_text_store(directory: Path) -> list[dict[str, Any]]:

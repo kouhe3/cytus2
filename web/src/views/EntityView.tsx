@@ -24,6 +24,7 @@ import {
 import { EntityList } from "../components/EntityLink";
 import { EntityMedia } from "../components/EntityMedia";
 import { Fact, Facts } from "../components/Facts";
+import { ImReplies } from "../components/ImReplies";
 import { MediaImage } from "../components/Media";
 import { RelationsSection } from "../components/Relations";
 import { TextBody } from "../components/TextBody";
@@ -469,6 +470,10 @@ export function EntityView({
           ) : null}
 
           {textRef ? <TextBody textRef={textRef} lang={lang} /> : null}
+
+          {isImPost(entity) ? (
+            <ImReplies db={db} postId={entity.id} lang={lang} />
+          ) : null}
 
           {!textRef && !DETAILED_TYPES[entity.type] ? (
             <dl className="facts entity-facts">

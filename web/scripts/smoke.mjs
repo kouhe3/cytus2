@@ -106,7 +106,7 @@ class Cdp {
     });
   }
 
-  call(method, params = {}) {
+  call(method, params = {}, timeoutMs = 45000) {
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
@@ -115,7 +115,7 @@ class Cdp {
         if (this.pending.delete(id)) {
           reject(new Error(`CDP timeout: ${method}`));
         }
-      }, 45000);
+      }, timeoutMs);
     });
   }
 
@@ -160,7 +160,29 @@ class Cdp {
   }
 
   async screenshot(name) {
-    const result = await this.call("Page.captureScreenshot", { format: "png" });
+    let result = null;
+    for (let attempt = 0; attempt < 2 && !result; attempt += 1) {
+      try {
+        result = await this.call(
+          "Page.captureScreenshot",
+          { format: "png" },
+          15000,
+        );
+      } catch (error) {
+        if (attempt === 1) {
+          // A hung compositor must not hide the assertion result; the check
+          // log is the executable contract and screenshots are evidence.
+          console.warn(
+            `[smoke] screenshot ${name} skipped: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          return null;
+        }
+        await sleep(300);
+      }
+    }
+    if (!result) {
+      return null;
+    }
     fs.mkdirSync(shotsDir, { recursive: true });
     const file = path.join(shotsDir, name);
     fs.writeFileSync(file, Buffer.from(result.data, "base64"));
@@ -708,6 +730,198 @@ try {
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="timeline-card"]').length === ${home.count}`,
     "timeline restored after title-only post checks",
+  );
+
+  // ------------------------------------ IM post reply feed (Q5)
+  await cdp.navigate(`${appBase}/im/C0101`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="im-reply"]').length === 11 &&
+     document.querySelectorAll('[data-testid="im-reply-body"]').length === 11`,
+    "IM post renders every inbound reply under its body",
+  );
+  const replyFeed = await cdp.evaluate(`(() => ({
+    replies: document.querySelectorAll('[data-testid="im-reply"]').length,
+    bodies: document.querySelectorAll('[data-testid="im-reply-body"]').length,
+    inRelations: document.querySelectorAll('[data-testid="relations"] [data-testid="im-reply"]').length,
+    relations: document.querySelectorAll('[data-testid="relations-incoming"] [data-testid="relation-link"]').length,
+    batched: performance.getEntriesByType('resource')
+      .filter((entry) => entry.name.includes('/db/text?') && (entry.name.match(/ref=/g) ?? []).length > 1).length,
+    firstFloor: document.querySelector('[data-testid="im-reply"]')?.dataset.floor ?? '',
+  }))()`);
+  check(
+    replyFeed.replies === 11,
+    `all 11 inbound replies render under the post body (got ${replyFeed.replies})`,
+  );
+  check(
+    replyFeed.bodies === 11,
+    `all 11 reply bodies render (got ${replyFeed.bodies})`,
+  );
+  check(
+    replyFeed.inRelations === 0,
+    "reply bodies stay out of the relations list",
+  );
+  check(
+    replyFeed.relations === 11,
+    `relations list keeps its navigable reply links (got ${replyFeed.relations})`,
+  );
+  const replyTitleStyle = await cdp.evaluate(`(() => {
+    const title = document.querySelector(
+      '[data-testid="relations-incoming"] .entity-link--reply .entity-link-title',
+    );
+    if (!title) return null;
+    const style = getComputedStyle(title);
+    const line = parseFloat(style.lineHeight) || 20;
+    return {
+      whiteSpace: style.whiteSpace,
+      textOverflow: style.textOverflow,
+      height: title.getBoundingClientRect().height,
+      line,
+    };
+  })()`);
+  check(
+    replyTitleStyle?.whiteSpace === "nowrap" &&
+      replyTitleStyle?.textOverflow === "ellipsis",
+    "relation reply previews clip to one line with an ellipsis",
+  );
+  check(
+    Boolean(
+      replyTitleStyle &&
+        replyTitleStyle.height <= replyTitleStyle.line * 1.6,
+    ),
+    `relation reply previews stay on one line (got ${replyTitleStyle?.height}px)`,
+  );
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="relations"]')?.scrollIntoView({ block: 'start' })`,
+  );
+  await cdp.screenshot("im-reply-relations.png");
+  check(
+    replyFeed.batched === 1,
+    `reply bodies load through one batched text request (got ${replyFeed.batched})`,
+  );
+  check(
+    replyFeed.firstFloor === "1",
+    `reply feed starts at floor 1 (got ${replyFeed.firstFloor})`,
+  );
+  const replyLayout = await cdp.evaluate(`(() => {
+    const card = document.querySelector('[data-testid="im-reply"]');
+    const grid = card?.querySelector('.im-reply-grid');
+    const author = card?.querySelector('.im-reply-author');
+    const avatar = card?.querySelector('.im-reply-avatar');
+    const content = card?.querySelector('.im-reply-content');
+    const body = card?.querySelector('[data-testid="im-reply-body"]');
+    if (!card || !grid || !author || !avatar || !content || !body) return null;
+    const areas = getComputedStyle(grid).gridTemplateAreas;
+    const avatarRect = avatar.getBoundingClientRect();
+    const authorRect = author.getBoundingClientRect();
+    return {
+      areas,
+      columns: getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length,
+      cardBorder: getComputedStyle(card).borderTopWidth,
+      authorBorder: getComputedStyle(author).borderTopWidth,
+      contentBorder: getComputedStyle(content).borderTopWidth,
+      proseBorder: getComputedStyle(body).borderTopWidth,
+      prosePadding: getComputedStyle(body).paddingTop,
+      avatarAbove: avatarRect.top <= authorRect.top,
+      contentBelow: body.getBoundingClientRect().top >= authorRect.bottom - 1,
+    };
+  })()`);
+  check(
+    replyLayout?.areas.includes("avatar author floor") &&
+      replyLayout?.areas.includes("avatar content content"),
+    "reply grid keeps the avatar beside the name/floor and full-width content",
+  );
+  check(
+    replyLayout?.columns === 3,
+    `reply grid declares three columns (got ${replyLayout?.columns})`,
+  );
+  check(
+    (replyLayout?.cardBorder ?? "0px") !== "0px",
+    "each reply is framed",
+  );
+  check(
+    replyLayout?.authorBorder === "0px" &&
+      replyLayout?.contentBorder === "0px" &&
+      replyLayout?.proseBorder === "0px" &&
+      replyLayout?.prosePadding === "0px",
+    "the reply frame has no internal cell borders",
+  );
+  check(
+    replyLayout?.avatarAbove === true && replyLayout?.contentBelow === true,
+    "the avatar spans two rows above the full-width reply content",
+  );
+
+  const richReply = await cdp.evaluate(`(() => {
+    const reply = [...document.querySelectorAll('[data-testid="im-reply"]')]
+      .find((node) => node.dataset.ref === 'im_reply/C0101#1');
+    const body = reply?.querySelector('[data-testid="im-reply-body"]');
+    const bold = [...(body?.querySelectorAll('span') ?? [])]
+      .some((node) => node.getAttribute('style')?.includes('font-weight'));
+    return {
+      text: body?.textContent ?? '',
+      raw: body?.innerHTML ?? '',
+      bold,
+      floor: reply?.dataset.floor ?? '',
+      href: reply?.querySelector('[data-testid="im-reply-permalink"]')?.getAttribute('href') ?? '',
+    };
+  })()`);
+  check(
+    richReply.text.includes("@Colin Neumann Jr."),
+    "reply feed shows the full body text",
+  );
+  check(
+    !richReply.raw.includes("<color"),
+    "reply feed renders game colour markup",
+  );
+  check(richReply.bold, "reply feed keeps bold rich text");
+  check(
+    richReply.floor === "1" && richReply.href.includes("im_reply/C0101"),
+    "reply floor permalinks to the reply entity",
+  );
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="im-replies"]')?.scrollIntoView({ block: 'start' })`,
+  );
+  await cdp.screenshot("im-replies.png");
+
+  await cdp.evaluate(SET_LANGUAGE("en"));
+  await cdp.waitFor(
+    `document.querySelector('[data-ref="im_reply/C0101#1"] [data-testid="im-reply-body"]')?.textContent?.includes('I have requested an account transfer')`,
+    "reply feed follows the sidebar language",
+  );
+  check(true, "reply feed follows the sidebar language");
+  await cdp.evaluate(SET_LANGUAGE("zh-Hans"));
+  await cdp.waitFor(
+    `document.querySelector('[data-ref="im_reply/C0101#1"] [data-testid="im-reply-body"]')?.textContent?.includes('@Colin Neumann Jr.')`,
+    "reply feed returns to zh-Hans",
+  );
+
+  await cdp.navigate(`${appBase}/im/N2201`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="entity-view"]'))`,
+    "title-only post loads",
+  );
+  check(
+    (await cdp.evaluate(
+      `document.querySelectorAll('[data-testid="im-replies"]').length`,
+    )) === 0,
+    "post without replies renders no reply feed",
+  );
+
+  await cdp.navigate(`${appBase}/os/aios017`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="entity-view"]'))`,
+    "OS log loads",
+  );
+  check(
+    (await cdp.evaluate(
+      `document.querySelectorAll('[data-testid="im-replies"]').length`,
+    )) === 0,
+    "non-IM entities render no reply feed",
+  );
+
+  await cdp.navigate(`${appBase}/timeline`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="timeline-card"]').length === ${home.count}`,
+    "timeline restored after reply body checks",
   );
 
   // ----------------------------------------------------------- command palette

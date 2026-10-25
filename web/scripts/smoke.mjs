@@ -1476,6 +1476,44 @@ try {
   );
   check(true, "/ redirects to /timeline");
 
+  // --------------------------------------------------------- character list
+  await cdp.navigate(`${appBase}/characters`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="characters-index"]'))`,
+    "Character index loads",
+  );
+  const characterIndex = await cdp.evaluate(`(() => ({
+    cards: document.querySelectorAll('[data-testid="character-card"]').length,
+    stats: document.querySelector('[data-testid="characters-stats"]')?.textContent ?? '',
+    firstHref: document.querySelector('[data-testid="character-card"]')?.getAttribute('href'),
+    navActive: document.querySelector('[data-testid="nav-characters"]')?.getAttribute('aria-current'),
+  }))()`);
+  check(
+    characterIndex.cards === 27,
+    `Character index lists 27 characters (got ${characterIndex.cards})`,
+  );
+  check(
+    characterIndex.firstHref === "/character/alice001",
+    "Character index links a character page",
+  );
+  check(
+    characterIndex.stats.includes(formatUnit(zhHans, "characters", 27)),
+    "Character index counts 27 characters",
+  );
+  check(
+    characterIndex.navActive === "page",
+    "Sidebar marks the character list as the current view",
+  );
+  await cdp.evaluate(`document.querySelector('[data-testid="character-card"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/character/alice001' && Boolean(document.querySelector('[data-testid="character-view"]'))`,
+    "Character index opens a character page",
+  );
+  check(
+    (await cdp.evaluate(`document.title`)) === "character/alice001 · Cytus II",
+    "Character page keeps its entity title",
+  );
+
   // ------------------------------------------------------------- OA archive
   await cdp.navigate(`${appBase}/oa`);
   await cdp.waitFor(

@@ -142,6 +142,10 @@ export const ZH_HANS = {
   "character.osEmpty": "该角色没有 OS 档案。",
   "character.paffNote": "PΛFF 在游戏内没有 iM 账号入口：它的帖子是复刻主角后的「回应」，仍会出现在全局 iM feed 中。",
 
+  "characters.title": "角色列表",
+  "characters.lede": "游戏内全部角色的一览，每个角色对应一个曲包。进入角色页可以看 OS 档案、iM 账户与插画。",
+  "characters.stats": "{characters} · {logs}",
+
   "card.noText": "此语言没有文本记录。",
   "card.cost": "费用 {cost}",
   "card.costTitle": "解锁费用（等级锁总和）",
@@ -761,6 +765,10 @@ const EN: Messages = {
   "character.osEmpty": "This character has no OS logs.",
   "character.paffNote": "PΛFF has no in-game iM account entry: its posts are epilogue responses and still appear in the global iM feed.",
 
+  "characters.title": "Characters",
+  "characters.lede": "Every character in the game, one song pack each. A character page carries its OS archive, iM account and illustrations.",
+  "characters.stats": "{characters} · {logs}",
+
   "card.noText": "No text record for this language.",
   "card.cost": "Cost {cost}",
   "card.costTitle": "Unlock cost (sum of level locks)",
@@ -1376,6 +1384,10 @@ const JA: Messages = {
   "character.brokenIllustration": "バッドエンド",
   "character.osEmpty": "このキャラクターの OS はありません。",
   "character.paffNote": "PΛFF にはゲーム内の iM アカウント入口がありません。投稿は主人公を復刻した「返信」であり、グローバル iM フィードには引き続き表示されます。",
+
+  "characters.title": "キャラクター一覧",
+  "characters.lede": "ゲーム内の全キャラクターの一覧です。各キャラクターは 1 つの曲パックに対応します。キャラクターページでは OS アーカイブ、iM アカウント、イラストを確認できます。",
+  "characters.stats": "{characters} · {logs}",
 
   "card.noText": "この言語のテキスト記録はありません。",
   "card.cost": "コスト {cost}",
@@ -1993,6 +2005,10 @@ const ZH_HANT: Messages = {
   "character.osEmpty": "此角色沒有 OS 檔案。",
   "character.paffNote": "PΛFF 在遊戲內沒有 iM 帳號入口：它的貼文是復刻主角後的「回應」，仍會出現在全域 iM feed 中。",
 
+  "characters.title": "角色列表",
+  "characters.lede": "遊戲內全部角色的一覽，每個角色對應一個曲包。進入角色頁可以看 OS 檔案、iM 帳號與插畫。",
+  "characters.stats": "{characters} · {logs}",
+
   "card.noText": "此語言沒有文字記錄。",
   "card.cost": "費用 {cost}",
   "card.costTitle": "解鎖費用（等級鎖總和）",
@@ -2608,6 +2624,10 @@ const KO: Messages = {
   "character.brokenIllustration": "배드 엔딩",
   "character.osEmpty": "이 캐릭터에는 OS가 없습니다.",
   "character.paffNote": "PΛFF는 게임 내 iM 계정 입구가 없습니다. 게시물은 주인공을 복각한 '응답'이며 전역 iM 피드에는 계속 표시됩니다.",
+
+  "characters.title": "캐릭터 목록",
+  "characters.lede": "게임의 모든 캐릭터 목록입니다. 캐릭터마다 곡 팩 하나에 대응합니다. 캐릭터 페이지에서 OS 아카이브, iM 계정, 일러스트를 볼 수 있습니다.",
+  "characters.stats": "{characters} · {logs}",
 
   "card.noText": "이 언어의 텍스트 기록이 없습니다.",
   "card.cost": "비용 {cost}",

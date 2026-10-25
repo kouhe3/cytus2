@@ -16,6 +16,7 @@ import { decodeEntityPath } from "./data/selectors";
 import { useDatabase } from "./data/useDatabase";
 import type { Database } from "./types";
 import { BackupFolderView, BackupIndexView } from "./views/BackupView";
+import { CharacterIndexView } from "./views/CharacterIndexView";
 import { CharacterView } from "./views/CharacterView";
 import { ChartView } from "./views/ChartView";
 import { CutsceneLibraryView } from "./views/CutsceneLibraryView";
@@ -35,6 +36,7 @@ import { TimelineView } from "./views/TimelineView";
 
 const PAGE_TITLES: Record<string, MessageKey> = {
   "/timeline": "nav.timeline",
+  "/characters": "characters.title",
   "/search": "nav.search",
   "/oa": "nav.oa",
   "/backup": "nav.backup",
@@ -198,6 +200,7 @@ cd web && pnpm dev`}</pre>
         <Routes>
           <Route path="/" element={<Navigate to="/timeline" replace />} />
           <Route path="/timeline" element={<TimelineView db={db} />} />
+          <Route path="/characters" element={<CharacterIndexView db={db} />} />
           <Route path="/search" element={<SearchView />} />
           <Route path="/os" element={<OsIndexView db={db} />} />
           <Route path="/oa" element={<OaIndexView db={db} />} />

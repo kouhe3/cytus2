@@ -1822,6 +1822,8 @@ kbd {
 
   .nav {
     flex-direction: row;
+    flex-wrap: wrap;
+    min-width: 0;
   }
 
   .search-trigger {

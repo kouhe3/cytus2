@@ -101,6 +101,21 @@ export function ExtrasIndexView({ db }: { db: Database }) {
               <code>titleinfodata</code>
             </span>
           </Link>
+          <Link
+            to="/extras/cutscenes"
+            className="collection-card"
+            data-testid="extras-cutscenes-card"
+          >
+            <span className="collection-title">
+              {i18n.t("extras.cutscenesCard")}
+            </span>
+            <span className="collection-meta">
+              {i18n.t("extras.cutscenesMeta")}
+            </span>
+            <span className="collection-id">
+              <code>subs/*.vtt</code>
+            </span>
+          </Link>
         </div>
       </main>
 

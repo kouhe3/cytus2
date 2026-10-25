@@ -264,6 +264,28 @@ const GALLERY_MISSING_CLIP_STUB = `(() => {
   };
 })()`;
 
+/**
+ * Cutscene library negative path (#32): drop `story04_2` from both clip maps
+ * but keep its subtitle group, so the row has languages and no exported clip.
+ */
+const MISSING_SUBTITLE_CLIP_STUB = `(() => {
+  const realFetch = window.fetch;
+  window.fetch = async (input, init) => {
+    const url = typeof input === 'string' ? input : input.url;
+    const response = await realFetch(input, init);
+    if (!url.includes('/media/manifest.json')) {
+      return response;
+    }
+    const data = await response.clone().json();
+    if (data.movies) delete data.movies.story04_2;
+    if (data.videos) delete data.videos.story04_2;
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+})()`;
+
 const TIMELINE_SNAPSHOT = `(() => {
   const cards = [...document.querySelectorAll('[data-testid="timeline-card"]')];
   const orders = cards.map((card) => Number(card.dataset.order));
@@ -1695,9 +1717,10 @@ try {
     cards: document.querySelectorAll('[data-testid="extras-index"] .collection-card').length,
     assistantsHref: document.querySelector('[data-testid="extras-assistants-card"]')?.getAttribute('href'),
     titlesHref: document.querySelector('[data-testid="extras-titles-card"]')?.getAttribute('href'),
+    cutscenesHref: document.querySelector('[data-testid="extras-cutscenes-card"]')?.getAttribute('href'),
     stats: document.querySelector('[data-testid="extras-stats"]')?.textContent ?? '',
   }))()`);
-  check(extrasIndex.cards === 2, "extras hub links both appendix families");
+  check(extrasIndex.cards === 3, "extras hub links all three appendix families");
   check(
     extrasIndex.assistantsHref === "/extras/assistants",
     "extras hub links the assistant dialogues",
@@ -1705,6 +1728,10 @@ try {
   check(
     extrasIndex.titlesHref === "/extras/titles",
     "extras hub links the title screens",
+  );
+  check(
+    extrasIndex.cutscenesHref === "/extras/cutscenes",
+    "extras hub links the cutscene subtitle library",
   );
   check(
     extrasIndex.stats.includes(formatUnit(zhHans, "groups", 19)) &&
@@ -1805,6 +1832,282 @@ try {
     `titles render names through text_ref (got ${titleNames})`,
   );
   await cdp.screenshot("extras-titles.png");
+
+  // --------------------------------------- cutscene + subtitle library (#32)
+  await cdp.navigate(`${appBase}/extras/cutscenes`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="cutscenes-view"]')) &&
+      document.querySelectorAll('[data-testid="cutscene-row"]').length === 55`,
+    "cutscene library lists 55 subtitle groups",
+    60000,
+  );
+  const library = await cdp.evaluate(`(() => {
+    const rows = [...document.querySelectorAll('[data-testid="cutscene-row"]')];
+    const row = (group) => rows.find((item) => item.dataset.group === group);
+    const finalBoss = row('FinalBossStage_1');
+    const rest = [...document.querySelectorAll('[data-testid="cutscene-rest"]')];
+    const groups = rows.map((item) => item.dataset.group);
+    return {
+      rows: rows.length,
+      unique: new Set(groups).size,
+      sorted: groups.every((value, index) => index === 0 || groups[index - 1] <= value),
+      finalClip: finalBoss?.dataset.clip ?? '',
+      finalLangs: (finalBoss?.dataset.languages ?? '').split(',').filter(Boolean).length,
+      aiosClip: row('aios1701')?.dataset.clip ?? '',
+      aiosLangs: (row('aios1701')?.dataset.languages ?? '').split(',').filter(Boolean).length,
+      rest: rest.length,
+      restClips: new Set(rest.map((item) => item.dataset.clip)).size,
+      restNotes: document.querySelectorAll('[data-testid="cutscene-rest-no-subtitle"]').length,
+      stats: document.querySelector('[data-testid="cutscene-stats"]')?.textContent ?? '',
+    };
+  })()`);
+  check(library.rows === 55, `cutscene library lists 55 subtitle groups (got ${library.rows})`);
+  check(library.unique === 55, "every subtitle group appears exactly once");
+  check(library.sorted, "subtitle groups are sorted by key");
+  check(
+    library.finalClip === "FinalBossStage",
+    `FinalBossStage_1 pairs the shared clip (got ${library.finalClip})`,
+  );
+  check(
+    library.finalLangs === 5,
+    `FinalBossStage_1 lists its five languages (got ${library.finalLangs})`,
+  );
+  check(library.aiosClip === "aios1701", "exact keys pair without the base fallback");
+  check(library.aiosLangs === 5, "aios1701 lists its five languages");
+  check(library.rest === 62, `rest section lists 62 exported videos (got ${library.rest})`);
+  check(library.restClips === 62, "every rest row names its clip");
+  check(
+    library.restNotes === 62,
+    `every rest row explains its missing subtitles (got ${library.restNotes})`,
+  );
+  check(library.stats.trim().length > 0, "cutscene library reports its counts");
+
+  await cdp.waitFor(
+    `(() => {
+      const row = document.querySelector('[data-testid="cutscene-row"][data-group="aios1701"]');
+      const track = row?.querySelector('[data-testid="video-track"]');
+      return track?.srclang === 'zh-Hans' &&
+        track.src.endsWith('/media/subs/aios1701.zh-Hans.vtt');
+    })()`,
+    "aios1701 row attaches the zh-Hans subtitle track",
+    60000,
+  );
+  const subtitledRow = await cdp.evaluate(`(() => {
+    const row = document.querySelector('[data-testid="cutscene-row"][data-group="aios1701"]');
+    const video = row.querySelector('video[data-testid="video-player"]');
+    const track = row.querySelector('[data-testid="video-track"]');
+    return {
+      clip: video?.dataset.clip ?? '',
+      src: video?.getAttribute('src') ?? '',
+      autoplay: video?.autoplay,
+      paused: video?.paused,
+      tracks: row.querySelectorAll('[data-testid="video-track"]').length,
+      trackLang: track?.srclang ?? '',
+    };
+  })()`);
+  check(
+    subtitledRow.clip === "aios1701",
+    `aios1701 row plays its clip (got ${subtitledRow.clip})`,
+  );
+  check(
+    subtitledRow.src.endsWith("/media/videos/aios1701.mp4"),
+    `aios1701 row resolves through the media manifest (got ${subtitledRow.src})`,
+  );
+  check(subtitledRow.tracks === 1, "a subtitled row attaches exactly one track");
+  check(
+    subtitledRow.autoplay === false && subtitledRow.paused === true,
+    "library players never autoplay",
+  );
+  await cdp.waitFor(
+    `document.querySelector('[data-testid="cutscene-row"][data-group="aios1701"] [data-testid="video-track"]')?.track?.cues?.length === 17`,
+    "aios1701 zh-Hans track exposes its 17 cues",
+    60000,
+  );
+  await cdp.evaluate(SET_LANGUAGE("ja"));
+  await cdp.waitFor(
+    `(() => {
+      const track = document.querySelector('[data-testid="cutscene-row"][data-group="aios1701"] [data-testid="video-track"]');
+      return track?.srclang === 'ja' && track.src.endsWith('/media/subs/aios1701.ja.vtt');
+    })()`,
+    "library row follows the ja language switch",
+  );
+  check(true, "cutscene subtitles follow the sidebar language");
+  await cdp.evaluate(SET_LANGUAGE("zh-Hans"));
+  await cdp.waitFor(
+    `document.querySelector('[data-testid="cutscene-row"][data-group="aios1701"] [data-testid="video-track"]')?.srclang === 'zh-Hans'`,
+    "library row returns to zh-Hans",
+  );
+
+  await cdp.evaluate(SET_LANGUAGE("en"));
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="video-subtitle-missing"][data-lang="en"]').length >= 2`,
+    "missing-en notes render for the two groups without an en VTT",
+  );
+  for (const group of ["naos3001", "opening"]) {
+    const missingEn = await cdp.evaluate(`(() => {
+      const row = document.querySelector('[data-testid="cutscene-row"][data-group="${group}"]');
+      const note = row?.querySelector('[data-testid="video-subtitle-missing"]');
+      return {
+        lang: note?.dataset.lang ?? '',
+        tracks: row?.querySelectorAll('[data-testid="video-track"]').length ?? -1,
+        text: note?.textContent ?? '',
+      };
+    })()`);
+    check(missingEn.lang === "en", `group ${group} notes the missing en track`);
+    check(missingEn.tracks === 0, `group ${group} attaches no en track`);
+    check(missingEn.text.trim().length > 0, `group ${group} missing-track note has copy`);
+  }
+  await cdp.evaluate(SET_LANGUAGE("zh-Hans"));
+
+  const searchValue = await cdp.evaluate(`(() => {
+    const input = document.querySelector('[data-testid="cutscene-search"]');
+    if (!input) throw new Error('cutscene search missing');
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    setter.call(input, 'Waahhhh');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return input.value;
+  })()`);
+  check(searchValue === "Waahhhh", "cutscene search accepts typed text");
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="cutscene-hit"]').length === 1`,
+    "subtitle search finds the single Waahhhh cue",
+    120000,
+  );
+  const hit = await cdp.evaluate(`(() => {
+    const node = document.querySelector('[data-testid="cutscene-hit"]');
+    return {
+      group: node?.dataset.group ?? '',
+      lang: node?.dataset.lang ?? '',
+      time: node?.dataset.time ?? '',
+      text: node?.textContent ?? '',
+      summary: document.querySelector('[data-testid="cutscene-search-summary"]')?.textContent ?? '',
+    };
+  })()`);
+  check(hit.group === "aios1701", `search hit names its group (got ${hit.group})`);
+  check(hit.lang === "en", `search hit names the VTT language (got ${hit.lang})`);
+  check(hit.time === "3.7", `search hit names the cue time (got ${hit.time})`);
+  check(hit.text.includes("Waahhhh"), "search hit shows the matched line");
+  check(hit.summary.trim().length > 0, "search reports a summary");
+  await cdp.evaluate(`document.querySelector('[data-testid="cutscene-hit"]').click()`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="cutscene-hit-player"] video[data-testid="video-player"]'))`,
+    "clicking a hit opens its player",
+  );
+  await cdp.waitFor(
+    `(() => {
+      const video = document.querySelector('[data-testid="cutscene-hit-player"] video[data-testid="video-player"]');
+      return video.readyState >= 1 && Math.abs(video.currentTime - 3.7) < 0.5;
+    })()`,
+    "hit player seeks to the matched cue",
+    60000,
+  );
+  const hitPlayer = await cdp.evaluate(`(() => {
+    const figure = document.querySelector('[data-testid="cutscene-hit-player"]');
+    const video = figure.querySelector('video[data-testid="video-player"]');
+    const track = figure.querySelector('[data-testid="video-track"]');
+    return {
+      clip: video?.dataset.clip ?? '',
+      paused: video?.paused,
+      time: video?.currentTime ?? -1,
+      trackLang: track?.srclang ?? '',
+      trackSrc: track?.src ?? '',
+    };
+  })()`);
+  check(hitPlayer.clip === "aios1701", `hit player plays the paired clip (got ${hitPlayer.clip})`);
+  check(hitPlayer.paused === true, "hit player stays paused at the cue");
+  check(
+    hitPlayer.trackLang === "zh-Hans" &&
+      hitPlayer.trackSrc.endsWith("/media/subs/aios1701.zh-Hans.vtt"),
+    `hit player attaches the sidebar language track (got ${hitPlayer.trackLang})`,
+  );
+  await cdp.screenshot("extras-cutscenes.png");
+
+  const mediaNotes = await cdp.evaluate(`(() => {
+    const rest = document.querySelector('[data-testid="cutscene-rest"][data-clip="xos2502"]');
+    const taos = document.querySelector('[data-testid="cutscene-row"][data-group="taos010_bossstage"]');
+    const voa = document.querySelector('[data-testid="cutscene-row"][data-group="voa008_bossstage"]');
+    return {
+      restPlayer: Boolean(rest?.querySelector('video[data-testid="video-player"]')),
+      restTracks: rest?.querySelectorAll('[data-testid="video-track"]').length ?? -1,
+      restNote: rest?.querySelector('[data-testid="cutscene-rest-no-subtitle"]')?.textContent ?? '',
+      taosSilent: Boolean(taos?.querySelector('[data-testid="video-no-audio"]')),
+      taosOptions: [...(taos?.querySelectorAll('[data-testid="cutscene-audio"] option') ?? [])].map(
+        (option) => option.value,
+      ),
+      voaSilent: Boolean(voa?.querySelector('[data-testid="video-no-audio"]')),
+      voaPicker: Boolean(voa?.querySelector('[data-testid="cutscene-audio"]')),
+    };
+  })()`);
+  check(mediaNotes.restPlayer, "a rest clip without subtitles still plays");
+  check(mediaNotes.restTracks === 0, "a rest clip attaches no subtitle track");
+  check(
+    mediaNotes.restNote.trim().length > 0,
+    "a rest clip carries the no-subtitles note",
+  );
+  check(mediaNotes.taosSilent, "silent subtitled clip carries the no-audio note");
+  check(
+    mediaNotes.taosOptions.includes("taos010_bossstage|taos010_bossstage"),
+    `silent clip offers its muxed variant (got ${mediaNotes.taosOptions.join(", ")})`,
+  );
+  check(
+    mediaNotes.taosOptions.includes(""),
+    "silent clip keeps its silent variant selectable",
+  );
+  check(mediaNotes.voaSilent, "silent clip without a muxed variant still carries the note");
+  check(!mediaNotes.voaPicker, "silent clip without a muxed variant offers no picker");
+  await cdp.evaluate(`(() => {
+    const select = document.querySelector('[data-testid="cutscene-row"][data-group="taos010_bossstage"] [data-testid="cutscene-audio"]');
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
+    setter.call(select, 'taos010_bossstage|taos010_bossstage');
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return select.value;
+  })()`);
+  await cdp.waitFor(
+    `(() => {
+      const row = document.querySelector('[data-testid="cutscene-row"][data-group="taos010_bossstage"]');
+      const video = row.querySelector('video[data-testid="video-player"]');
+      const src = video?.getAttribute('src') ?? '';
+      return src.endsWith('/media/videos/taos010_bossstage__taos010_bossstage.mp4') &&
+        !row.querySelector('[data-testid="video-no-audio"]');
+    })()`,
+    "muxed variant replaces the silent clip and drops the no-audio note",
+    60000,
+  );
+  check(true, "the muxed player is offered and carries audio");
+
+  const subtitleStub = await cdp.call("Page.addScriptToEvaluateOnNewDocument", {
+    source: MISSING_SUBTITLE_CLIP_STUB,
+  });
+  await cdp.navigate(`${appBase}/extras/cutscenes`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="cutscene-row"][data-group="story04_2"] [data-testid="cutscene-no-video"]'))`,
+    "missing cutscene export renders the no-video note",
+    60000,
+  );
+  const noVideo = await cdp.evaluate(`(() => {
+    const row = document.querySelector('[data-testid="cutscene-row"][data-group="story04_2"]');
+    return {
+      clip: row?.dataset.clip ?? 'missing',
+      rows: document.querySelectorAll('[data-testid="cutscene-row"]').length,
+      videos: row?.querySelectorAll('video').length ?? -1,
+      text: row?.querySelector('[data-testid="cutscene-no-video"]')?.textContent ?? '',
+    };
+  })()`);
+  check(noVideo.clip === "", "a group without an exported clip reports no clip");
+  check(noVideo.rows === 55, "a missing export does not drop the subtitle group");
+  check(noVideo.videos === 0, "a missing export renders no <video> element");
+  check(noVideo.text.trim().length > 0, "the no-video note has copy");
+  await cdp.call("Page.removeScriptToEvaluateOnNewDocument", {
+    identifier: subtitleStub.identifier,
+  });
+  await cdp.navigate(`${appBase}/extras/cutscenes`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="cutscene-row"][data-group="story04_2"] video[data-testid="video-player"]'))`,
+    "cutscene row returns without the stub",
+    60000,
+  );
+  check(true, "removing the manifest stub restores the cutscene row");
 
   // ----------------------------------------------------------------- search
   await cdp.navigate(`${appBase}/search?q=paff`);

@@ -42,13 +42,6 @@ function isJson(value: unknown): value is Json {
   return typeof value === "object" && value !== null;
 }
 
-function stringArray(value: unknown): string[] | null {
-  if (!Array.isArray(value)) {
-    return null;
-  }
-  return value.filter((item): item is string => typeof item === "string");
-}
-
 export function recordOf(entity: BaseEntity): Json {
   return entity as unknown as Json;
 }
@@ -251,12 +244,6 @@ export function buildDatabase(
       charts.push(record);
     }
   }
-  // edges.py emits ``unlocks_chart`` only for charts that need an unlock
-  // (owning the song already grants the rest), so chart references follow the
-  // same rule here.
-  const chartIds = new Set(
-    charts.filter((chart) => chart.need_unlock).map((chart) => chart.id),
-  );
   const chartsBySong = new Map<string, ChartEntity[]>();
   for (const chart of charts) {
     const list = chartsBySong.get(chart.song_id);
@@ -285,24 +272,6 @@ export function buildDatabase(
     }
   }
 
-  const chartReferrers = new Map<string, string[]>();
-  for (const records of Object.values(projection.entities)) {
-    for (const record of records) {
-      const data = recordOf(record);
-      for (const field of ["charts", "chart_ids"]) {
-        const ids = stringArray(data[field]);
-        if (!ids) {
-          continue;
-        }
-        for (const id of ids) {
-          if (chartIds.has(id)) {
-            pushUnique(chartReferrers, id, record.id);
-          }
-        }
-      }
-    }
-  }
-
   return {
     projection,
     entityById,
@@ -319,7 +288,6 @@ export function buildDatabase(
     edgesFrom,
     edgesTo,
     unlockSourceIds,
-    chartReferrers,
   };
 }
 

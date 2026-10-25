@@ -997,6 +997,7 @@ try {
     "chart page shows NeedUnlock",
   );
   check(chartState.sources > 0, "chart page lists unlock sources from edges");
+  check(chartState.backlinks === 0, "chart page does not repeat unlock sources as backlinks");
   check(chartState.sourceHref === "/im/P0101", "unlock source links to /im/P0101");
   check(chartState.backHref === "/timeline", "chart page offers a timeline link");
   await cdp.screenshot("chart-view.png");

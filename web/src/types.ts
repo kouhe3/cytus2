@@ -527,8 +527,6 @@ export interface Database {
   readonly edgesTo: Map<string, Edge[]>;
   /** chart id -> entity ids whose `unlocks_chart` edge points at it */
   readonly unlockSourceIds: Map<string, string[]>;
-  /** chart id -> entity ids that list the chart in `charts`/`chart_ids` */
-  readonly chartReferrers: Map<string, string[]>;
 }
 
 export interface SearchHit {

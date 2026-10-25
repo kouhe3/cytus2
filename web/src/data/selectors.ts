@@ -618,18 +618,6 @@ export function unlockSourceEntities(db: Database, chartId: string): BaseEntity[
   return entities;
 }
 
-export function chartReferrerEntities(db: Database, chartId: string): BaseEntity[] {
-  const ids = db.chartReferrers.get(chartId) ?? [];
-  const entities: BaseEntity[] = [];
-  for (const id of ids) {
-    const entity = db.entityById.get(id);
-    if (entity) {
-      entities.push(entity);
-    }
-  }
-  return entities;
-}
-
 export function unlockedCharts(db: Database, entity: BaseEntity): ChartEntity[] {
   const chartIds = new Set<string>();
   for (const edge of db.edgesFrom.get(entity.id) ?? []) {

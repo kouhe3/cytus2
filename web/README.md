@@ -42,7 +42,7 @@ repository root when the default `python` does not have UnityPy;
 | `/extras/cutscenes` | cutscene subtitle library: all 55 subtitle groups paired with their exported clip (exact key, then a trailing `_N` removed), a dialogue search that lists every matching cue in every language (bounded per group/language and in total, with a hidden-match count) and seeks the paired clip to the clicked cue, muxed audio variants for silent clips in both rows and the cue player, and the 62 exported videos without subtitles |
 | `/search?q=<text>` | full-text search over iM posts, OS logs, OA documents and subtitle lines, grouped by type |
 | `/im/<gameId>`, `/os/<gameId>`, `/<type>/<gameId>` | entity detail with body text, type-specific facts, charts, and inbound/outbound edges; iM posts render their inbound replies as a full rich-text feed directly under the post body (one batched text request per language) while the neighbour list stays a navigation index, title-only iM posts carry an explicit note, and the four Bili-Wiki-confirmed posts carry a manual removed-after-reading note. An OS log with a first-open cutscene shows it as a 16:9 player above the body, with the sidebar language's subtitle track (or an explicit missing-subtitle note) |
-| `/song/<songId>@<Difficulty>` | chart detail: level, NeedUnlock, unlock sources from `unlocks_chart` edges, backlinks, sibling difficulties |
+| `/song/<songId>@<Difficulty>` | chart detail: level, NeedUnlock, unlock sources from `unlocks_chart` edges, sibling difficulties |
 
 History routing is used, so every URL can be opened or refreshed directly, and
 the browser back/forward buttons work. `Ctrl+K` (or `Cmd+K`) opens the command

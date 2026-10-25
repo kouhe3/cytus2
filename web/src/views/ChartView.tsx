@@ -4,7 +4,6 @@ import { TypeBadge } from "../components/ui";
 import { isSong, recordOf } from "../data/database";
 import { useI18n } from "../data/i18n";
 import {
-  chartReferrerEntities,
   entityHref,
   entityTitle,
   formatFieldValue,
@@ -61,7 +60,6 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
   const songName =
     song && isSong(song) ? song.name || song.game_id : chart.song_id;
   const sources = unlockSourceEntities(db, chart.id);
-  const referrers = chartReferrerEntities(db, chart.id);
   const outgoing = outgoingEdges(db, chart.id)
     .map((edge) => db.entityById.get(edge.target))
     .filter((entity): entity is BaseEntity => Boolean(entity));
@@ -164,17 +162,6 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
             />
           </section>
 
-          <section className="detail-section" data-testid="chart-backlinks">
-            <h2>{i18n.t("fact.backlinks")}</h2>
-            <p className="hint">{i18n.t("value.backlinksHint")}</p>
-            <SourceList
-              entities={referrers}
-              testId="chart-backlink"
-              db={db}
-              lang={lang}
-            />
-          </section>
-
           <section className="detail-section" data-testid="chart-outgoing">
             <h2>{i18n.t("entity.fact.outgoing")}</h2>
             <p className="hint">
@@ -240,10 +227,6 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
             <div className="fact">
               <dt>{i18n.t("fact.unlockSources")}</dt>
               <dd>{i18n.formatNumber(sources.length)}</dd>
-            </div>
-            <div className="fact">
-              <dt>{i18n.t("fact.backlinks")}</dt>
-              <dd>{i18n.formatNumber(referrers.length)}</dd>
             </div>
           </dl>
         </section>

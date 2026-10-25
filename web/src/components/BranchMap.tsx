@@ -111,11 +111,20 @@ export function BranchMap({
   for (const [key, bucket] of cells) {
     const [columnText, rowText] = key.split(":");
     const step = bucket.length > 1 ? STACK_STEP : 0;
-    bucket.forEach((node, index) => {
+    // Several nodes share a cell at the merge columns; the game stacks them by
+    // `ViewSetting.Order`, so position 19 reads 20 (1) above 21 (2) above 11
+    // (3) instead of by id.
+    const stacked = [...bucket].sort(
+      (left, right) =>
+        (left.order ?? Number.MAX_SAFE_INTEGER) -
+          (right.order ?? Number.MAX_SAFE_INTEGER) ||
+        left.game_id.localeCompare(right.game_id),
+    );
+    stacked.forEach((node, index) => {
       placed.set(node.id, {
         column: Number(columnText),
         row: Number(rowText),
-        offset: (index - (bucket.length - 1) / 2) * step,
+        offset: (index - (stacked.length - 1) / 2) * step,
       });
     });
   }
@@ -133,6 +142,12 @@ export function BranchMap({
     }
     const x1 = left(from) + nodeW;
     const y1 = top(from) + NODE_H / 2;
+    // A short elbow can bend in the gap between two columns; an edge that
+    // skips more than one column would otherwise run through the boxes of the
+    // row it starts in (and read as if it left the last visible node of that
+    // row). Those edges take a lane in the row gutter on the side the target
+    // sits on, so the detour never crosses the rows in between.
+    const gutter = Math.max(ROW_H - NODE_H - 14, 8);
     for (const nextId of node.next ?? []) {
       const to = placed.get(nextId);
       if (!to) {
@@ -140,6 +155,18 @@ export function BranchMap({
       }
       const x2 = left(to);
       const y2 = top(to) + NODE_H / 2;
+      if (Math.abs(to.column - from.column) > 1) {
+        const exitX = Math.round(x1 + 6);
+        const entryX = Math.round(x2 - 6);
+        const laneY =
+          y2 > y1 || from.row === 0
+            ? top(from) + NODE_H + gutter
+            : top(from) - gutter;
+        edges.push(
+          `M ${x1} ${y1} L ${exitX} ${y1} L ${exitX} ${laneY} L ${entryX} ${laneY} L ${entryX} ${y2} L ${x2} ${y2}`,
+        );
+        continue;
+      }
       // Mid-column elbow: the game draws Branching OS edges as square lines.
       const midX = Math.round((x1 + x2) / 2);
       edges.push(`M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`);

@@ -2573,6 +2573,41 @@ try {
     branchIndex.mapFit,
     "Branching OS graph fits its column at the desktop viewport",
   );
+  const branchLongEdges = await cdp.evaluate(`(() => {
+    const paths = [...document.querySelectorAll('.branch-edges path')].map((path) => path.getAttribute('d') ?? '');
+    const gutter = paths.filter((d) => (d.match(/L/g) ?? []).length >= 5);
+    return { total: paths.length, gutter: gutter.length, first: gutter[0] ?? '' };
+  })()`);
+  check(
+    branchLongEdges.gutter === 1,
+    `the one edge that skips more than a column takes a row gutter (got ${branchLongEdges.gutter} of ${branchLongEdges.total})`,
+  );
+  check(
+    branchLongEdges.first.includes(" L ") && branchLongEdges.first.split(" ").length >= 11,
+    "gutter edge leaves the source row before crossing it",
+  );
+  const branchLane = (() => {
+    const match = branchLongEdges.first.match(
+      /^M [\d.]+ ([\d.]+) L [\d.]+ [\d.]+ L [\d.]+ ([\d.]+)/,
+    );
+    return match ? Number(match[2]) > Number(match[1]) : false;
+  })();
+  check(
+    branchLane,
+    "the long edge detours on the target's side instead of crossing the rows",
+  );
+  const branchStack = await cdp.evaluate(`(() => {
+    const top = (id) => {
+      const rect = document.querySelector('[data-testid="branch-map-node"][data-node-id="story_node/' + id + '"] rect');
+      return Number(rect?.getAttribute('y') ?? NaN);
+    };
+    return { twenty: top('taos020'), twentyOne: top('taos021'), eleven: top('taos011') };
+  })()`);
+  check(
+    branchStack.twenty < branchStack.twentyOne &&
+      branchStack.twentyOne < branchStack.eleven,
+    `merge column stacks the ending stubs by the game order (got ${branchStack.twenty} < ${branchStack.twentyOne} < ${branchStack.eleven})`,
+  );
   check(
     branchIndex.rows === 48,
     `Branching OS list covers every node (got ${branchIndex.rows})`,

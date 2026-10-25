@@ -1857,6 +1857,7 @@ try {
       aiosLangs: (row('aios1701')?.dataset.languages ?? '').split(',').filter(Boolean).length,
       rest: rest.length,
       restClips: new Set(rest.map((item) => item.dataset.clip)).size,
+      restNotes: document.querySelectorAll('[data-testid="cutscene-rest-no-subtitle"]').length,
       stats: document.querySelector('[data-testid="cutscene-stats"]')?.textContent ?? '',
     };
   })()`);
@@ -1875,6 +1876,10 @@ try {
   check(library.aiosLangs === 5, "aios1701 lists its five languages");
   check(library.rest === 62, `rest section lists 62 exported videos (got ${library.rest})`);
   check(library.restClips === 62, "every rest row names its clip");
+  check(
+    library.restNotes === 62,
+    `every rest row explains its missing subtitles (got ${library.restNotes})`,
+  );
   check(library.stats.trim().length > 0, "cutscene library reports its counts");
 
   await cdp.waitFor(
@@ -2025,6 +2030,7 @@ try {
     return {
       restPlayer: Boolean(rest?.querySelector('video[data-testid="video-player"]')),
       restTracks: rest?.querySelectorAll('[data-testid="video-track"]').length ?? -1,
+      restNote: rest?.querySelector('[data-testid="cutscene-rest-no-subtitle"]')?.textContent ?? '',
       taosSilent: Boolean(taos?.querySelector('[data-testid="video-no-audio"]')),
       taosOptions: [...(taos?.querySelectorAll('[data-testid="cutscene-audio"] option') ?? [])].map(
         (option) => option.value,
@@ -2035,6 +2041,10 @@ try {
   })()`);
   check(mediaNotes.restPlayer, "a rest clip without subtitles still plays");
   check(mediaNotes.restTracks === 0, "a rest clip attaches no subtitle track");
+  check(
+    mediaNotes.restNote.trim().length > 0,
+    "a rest clip carries the no-subtitles note",
+  );
   check(mediaNotes.taosSilent, "silent subtitled clip carries the no-audio note");
   check(
     mediaNotes.taosOptions.includes("taos010_bossstage|taos010_bossstage"),

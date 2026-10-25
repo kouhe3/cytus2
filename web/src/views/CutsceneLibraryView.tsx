@@ -187,6 +187,7 @@ function CutsceneRow({
 }
 
 function RestClip({ manifest, clip }: { manifest: MediaManifest; clip: string }) {
+  const i18n = useI18n();
   const [audioKey, setAudioKey] = useState("");
   const variants = muxedVariants(manifest, clip);
   return (
@@ -201,6 +202,13 @@ function RestClip({ manifest, clip }: { manifest: MediaManifest; clip: string })
         label={clip}
         testId="cutscene-rest-player"
       />
+      <p
+        className="video-note"
+        data-testid="cutscene-rest-no-subtitle"
+        data-clip={clip}
+      >
+        {i18n.t("video.noSubtitle")}
+      </p>
       <p className="cutscene-meta">
         <code>{manifest.videos[clip]?.file ?? clip}</code>
       </p>

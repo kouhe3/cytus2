@@ -7,6 +7,7 @@ import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
 import { formatUnit } from "../data/messages";
 import { conditionLink, entityHref } from "../data/selectors";
+import { useMediaManifest } from "../data/useMedia";
 import type {
   AssistantDialogueEntity,
   Database,
@@ -48,6 +49,10 @@ export function ExtrasIndexView({ db }: { db: Database }) {
   const titles = titleEntities(db);
   const pages = assistants.reduce((sum, group) => sum + group.page_count, 0);
   const clips = titles.reduce((sum, title) => sum + title.video_clips.length, 0);
+  const { manifest } = useMediaManifest();
+  const songSelect = manifest?.songSelect;
+  const normalSongSelect = Object.keys(songSelect?.normal ?? {}).length;
+  const trueEndSongSelect = songSelect?.sceneOrder?.length ?? 0;
 
   return (
     <>
@@ -99,6 +104,28 @@ export function ExtrasIndexView({ db }: { db: Database }) {
             </span>
             <span className="collection-id">
               <code>titleinfodata</code>
+            </span>
+          </Link>
+          <Link
+            to="/extras/songselect"
+            className="collection-card"
+            data-testid="extras-songselect-card"
+          >
+            <span className="collection-title">
+              {i18n.t("extras.songSelectTitle")}
+            </span>
+            <span className="collection-meta">
+              {i18n.t("extras.songSelectMeta", {
+                normal: normalSongSelect
+                  ? i18n.formatNumber(normalSongSelect)
+                  : "—",
+                trueEnd: normalSongSelect
+                  ? i18n.formatNumber(trueEndSongSelect)
+                  : "—",
+              })}
+            </span>
+            <span className="collection-id">
+              <code>manifest.songSelect</code>
             </span>
           </Link>
           <Link

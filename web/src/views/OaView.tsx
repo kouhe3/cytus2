@@ -1,21 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { BackButton } from "../components/BackButton";
 import { EntityLink } from "../components/EntityLink";
 import { MediaImage } from "../components/Media";
-import { TextBody } from "../components/TextBody";
+import {
+  OaDescriptionWhen,
+  oaDescriptionStage,
+  oaDescriptionStageLabel,
+  oaDescriptionStageRank,
+} from "../components/OaDescriptionWhen";
 import { Avatar } from "../components/ui";
 import { VideoPlayer } from "../components/VideoPlayer";
 import { oaGroups, findOaGroup } from "../data/collections";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
 import { formatUnit } from "../data/messages";
-import { entityHref } from "../data/selectors";
+import { entityHref, entityTitle } from "../data/selectors";
 import { useMediaManifest } from "../data/useMedia";
 import type { I18n } from "../data/messages";
 import type { MediaManifest } from "../data/media";
 import type { OaGroup } from "../data/collections";
-import type { Database } from "../types";
+import type { Database, OaDescriptionEntity } from "../types";
 
 function oaStats(
   i18n: I18n,
@@ -125,52 +130,6 @@ function OaScenes({
   );
 }
 
-/** Object art = `<character>_objNNN` plus the three `oas_<character>_NNN_N` panels. */
-function OaObjectArt({
-  manifest,
-  characterId,
-  objectId,
-  i18n,
-}: {
-  manifest: MediaManifest | null;
-  characterId: string;
-  objectId: string;
-  i18n: I18n;
-}) {
-  const art = useMemo(() => {
-    if (!manifest) {
-      return [];
-    }
-    const index = objectId.split("obj")[1] ?? "";
-    return [
-      `${characterId}_obj${index}`,
-      ...[1, 2, 3].map((panel) => `oas_${characterId}_${index}_${panel}`),
-    ].flatMap((key) => {
-      const asset = manifest.oaAssets[key];
-      return asset ? [{ key, asset }] : [];
-    });
-  }, [manifest, characterId, objectId]);
-  if (art.length === 0) {
-    return null;
-  }
-  return (
-    <section className="oa-object-art" data-testid="oa-object-art">
-      <h3>{i18n.t("oa.objectArt")}</h3>
-      <div className="oa-art">
-        {art.map(({ key, asset }) => (
-          <figure key={key} className="oa-art-item">
-            <MediaImage id={key} kind="image" natural alt={key} />
-            <figcaption>
-              {asset.file.split("/").pop()?.replace(/\.png$/, "")} · {asset.w}×
-              {asset.h}
-            </figcaption>
-          </figure>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export function OaIndexView({ db }: { db: Database }) {
   const i18n = useI18n();
   const groups = oaGroups(db);
@@ -266,12 +225,7 @@ export function OaCharacterView({
   const { lang } = useLanguage();
   const i18n = useI18n();
   const group: OaGroup | null = findOaGroup(db, gameId);
-  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const { manifest } = useMediaManifest();
-
-  useEffect(() => {
-    setSelectedObjectId(null);
-  }, [gameId]);
 
   if (!group) {
     return (
@@ -289,13 +243,39 @@ export function OaCharacterView({
     );
   }
 
-  const activeObject =
-    group.objects.find((object) => object.id === selectedObjectId) ??
-    group.objects[0] ??
-    null;
-  const attachedDocuments = activeObject
-    ? group.documents.filter((document) => document.object_id === activeObject.id)
-    : group.documents.filter((document) => document.object_id === null);
+  // Documents live on their object's entity page; the archive only counts them.
+  const documentCounts = new Map<string, number>();
+  for (const document of group.documents) {
+    if (!document.object_id) continue;
+    documentCounts.set(
+      document.object_id,
+      (documentCounts.get(document.object_id) ?? 0) + 1,
+    );
+  }
+  // One hotspot (`DescriptionObjectId`) can have several conditional rows.
+  const descriptionGroups = new Map<string, OaDescriptionEntity[]>();
+  for (const description of group.descriptions) {
+    const groupId = description.description_object_id;
+    const variants = descriptionGroups.get(groupId);
+    if (variants) {
+      variants.push(description);
+    } else {
+      descriptionGroups.set(groupId, [description]);
+    }
+  }
+  const orderedDescriptionGroups = [...descriptionGroups.entries()]
+    .map(
+      ([groupId, variants]) =>
+        [
+          groupId,
+          [...variants].sort(
+            (left, right) =>
+              oaDescriptionStageRank(left) - oaDescriptionStageRank(right) ||
+              left.game_id.localeCompare(right.game_id),
+          ),
+        ] as const,
+    )
+    .sort((left, right) => left[0].localeCompare(right[0]));
   const galleryFolder = group.oa.gallery_folder_id
     ? db.entityById.get(group.oa.gallery_folder_id)
     : undefined;
@@ -326,96 +306,85 @@ export function OaCharacterView({
             i18n={i18n}
           />
 
-          <nav
-            className="tab-strip"
-            aria-label={i18n.t("oa.objectsAria")}
-            data-testid="oa-object-tabs"
-          >
-            {group.objects.map((object) => (
-              <button
-                key={object.id}
-                type="button"
-                className={
-                  activeObject?.id === object.id ? "tab active" : "tab"
-                }
-                aria-pressed={activeObject?.id === object.id}
-                data-testid="oa-object-tab"
-                data-object-id={object.id}
-                onClick={() => setSelectedObjectId(object.id)}
-              >
-                {object.game_id}
-              </button>
-            ))}
+          <section className="detail-section" data-testid="oa-object-list">
+            <h2>
+              {i18n.t("oa.objectsHeading", {
+                count: i18n.formatNumber(group.objects.length),
+              })}
+            </h2>
             {group.objects.length === 0 ? (
-              <span className="muted">{i18n.t("value.noClickableObjects")}</span>
-            ) : null}
-          </nav>
+              <p className="muted">{i18n.t("value.noClickableObjects")}</p>
+            ) : (
+              <ul
+                className="link-list"
+                aria-label={i18n.t("oa.objectsAria")}
+              >
+                {group.objects.map((object) => (
+                  <li key={object.id}>
+                    <EntityLink
+                      db={db}
+                      entity={object}
+                      lang={lang}
+                      testId="oa-object-link"
+                      meta={formatUnit(
+                        i18n,
+                        "documents",
+                        documentCounts.get(object.id) ?? 0,
+                      )}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-          {activeObject ? (
-            <section className="oa-object-panel" data-testid="oa-object-panel">
-              <header className="oa-object-head">
-                <h2>{activeObject.game_id}</h2>
-                <Link
-                  to={entityHref(activeObject.id)}
-                  className="inline-link"
-                  data-testid="oa-object-entity-link"
-                >
-                  {i18n.t("oa.objectDetail")}
-                </Link>
-              </header>
-              <TextBody textRef={activeObject.text_ref} lang={lang} />
-              <OaObjectArt
-                manifest={manifest}
-                characterId={group.oa.game_id}
-                objectId={activeObject.game_id}
-                i18n={i18n}
-              />
-              <h3>
-                {i18n.t("oa.documentsHeading", {
-                  count: i18n.formatNumber(attachedDocuments.length),
-                })}
-              </h3>
-              {attachedDocuments.length === 0 ? (
-                <p className="muted">{i18n.t("value.noAttachedDocument")}</p>
-              ) : (
-                <ul className="link-list">
-                  {attachedDocuments.map((document) => (
-                    <li key={document.id}>
-                      <EntityLink
+          <section className="detail-section" data-testid="oa-descriptions">
+            <h2>
+              {i18n.t("oa.descriptionGroupsHeading", {
+                groups: i18n.formatNumber(orderedDescriptionGroups.length),
+                variants: i18n.formatNumber(group.descriptions.length),
+              })}
+            </h2>
+            <p className="hint">{i18n.t("oa.descriptionVariantsHint")}</p>
+            {orderedDescriptionGroups.map(([groupId, variants]) => (
+              <section
+                key={groupId}
+                className="oa-desc-group"
+                data-testid="oa-description-group"
+                data-description-object-id={groupId}
+              >
+                <h3>
+                  {entityTitle(db, variants[0]!, lang, i18n)}
+                  <span className="mono">{groupId}</span>
+                </h3>
+                <ul className="oa-desc-variants">
+                  {variants.map((description) => (
+                    <li
+                      key={description.id}
+                      className="oa-desc-variant"
+                      data-testid="oa-description-variant"
+                      data-stage={oaDescriptionStage(description)}
+                    >
+                      <div className="oa-desc-variant-head">
+                        <Link
+                          to={entityHref(description.id)}
+                          className="inline-link"
+                          data-testid="oa-description-link"
+                        >
+                          {oaDescriptionStageLabel(description, i18n)}
+                        </Link>
+                        <code>{description.game_id}</code>
+                      </div>
+                      <OaDescriptionWhen
                         db={db}
-                        entity={document}
-                        lang={lang}
-                        testId="oa-document-link"
-                        meta={document.mission_id ?? undefined}
+                        description={description}
+                        i18n={i18n}
                       />
                     </li>
                   ))}
                 </ul>
-              )}
-            </section>
-          ) : null}
-
-          <section className="detail-section" data-testid="oa-descriptions">
-            <h2>
-              {i18n.t("oa.descriptionsHeading", {
-                count: i18n.formatNumber(group.descriptions.length),
-              })}
-            </h2>
-            <ul className="link-list">
-              {group.descriptions.map((description) => (
-                <li key={description.id}>
-                  <EntityLink
-                    db={db}
-                    entity={description}
-                    lang={lang}
-                    testId="oa-description-link"
-                    meta={i18n.t("value.weightMeta", {
-                      weight: description.weight,
-                    })}
-                  />
-                </li>
-              ))}
-            </ul>
+              </section>
+            ))}
           </section>
         </article>
       </main>

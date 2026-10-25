@@ -5,13 +5,15 @@ Output: viewer/public/media/**
   os-attachments/<id>.png     ##image=<id>  (OS 档案插图)
   im-attachments/<id>.png     iM 帖子附件
   videos/<clip>.mp4           ##movie=<id> / cutscenedata 的影片（原始 H.264+AAC 流）
+  videos/songselect/<clip>.mp4 角色选曲界面背景（video_songselect_*.ab）
   audio/sound/<name>.mp3      ##sound=<name>（ossounds.ab）
   audio/bgm/<name>.mp3        ##bgm=<name>（osbgms.ab）
   os-avatars/<name>.png       osavatars.ab（OS 聊天记录的发送者头像，Sprite 名 = msgs Avatar）
   os-stickers/<name>.png      osstickers.ab（OS 聊天记录的表情包，Sprite 名 = msgs Image）
   manifest.json               id -> 文件 / 尺寸 / 来源 bundle
+                              songSelect: normal / trueEnd 角色选曲媒体
 """
-import json, os, re, glob, subprocess, sys, shutil, fnmatch
+import json, os, re, glob, subprocess, sys, shutil, fnmatch, hashlib
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 # 仓库根目录（含 base.apk / split_*.apk）就是 cytus2_work 的上级
@@ -34,11 +36,20 @@ GROUPS = {
     "illustrations": ["illustration_*.ab", "broken_illustration_*.ab"],
     "images": ["osattachments_*.ab", "imattachments_*.ab"],
     "videos": ["video_story_*.ab", "video_trueend_*.ab", "video_endplay_*.ab", "video_oasystem_*.ab"],
+    "songselect": ["video_songselect_*.ab"],
     "titles": ["video_title_*.ab"],
     "covers": ["galleryimageviewer.ab"],
     "subtitles": ["srtfile_*.ab"],
     "audio": ["ossounds.ab", "osbgms.ab"],
 }
+
+# The true-end song-pack-select scene lists these 14 packs; bobo001 has a
+# duplicate video asset but is not in CharacterInfos in this build.
+SONG_SELECT_SCENE_ORDER = [
+    "paff001", "neko001", "robo001", "ivy001", "vanessa001", "xenon001",
+    "conner001", "cherry001", "joe001", "sagar001", "rin001", "paff002",
+    "neko002", "robo002",
+]
 
 def run(cmd):
     return subprocess.run(cmd, check=True, capture_output=True)
@@ -391,6 +402,104 @@ def export_videos(manifest):
     manifest["movies"] = movies
     print(f"videos: {len(videos)} clips")
 
+def _sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def export_song_select(manifest):
+    """Export the character background movies used by the song-select screens.
+
+    `video_songselect_*` are the normal per-pack backgrounds; the true-end
+    backgrounds already live in manifest["videos"] under the pack id.  Keep
+    both in a dedicated `songSelect` map so the cutscene library is not
+    flooded with 36 extra "videos without subtitles".
+    """
+    import UnityPy
+    out_dir = os.path.join(OUT, "videos", "songselect")
+    os.makedirs(out_dir, exist_ok=True)
+    normal = {}
+    for name in bundle_names("video_songselect_*.ab"):
+        path = os.path.join(TMP, name)
+        if not os.path.exists(path):
+            continue
+        try:
+            env = UnityPy.load(path)
+            clip_obj = next(o for o in env.objects if o.type.name == "VideoClip")
+            clip = clip_obj.read_typetree()
+            resource = clip["m_ExternalResources"]["m_Source"].split("/")[-1]
+            blob = bytes(env.file.files[resource].bytes)
+            offset = clip["m_ExternalResources"]["m_Offset"]
+            size = clip["m_ExternalResources"]["m_Size"]
+            data = blob[offset:offset + size]
+            clip_name = clip.get("m_Name") or name[:-3]
+            rel = f"videos/songselect/{clip_name}.mp4"
+            open(os.path.join(OUT, rel), "wb").write(data)
+            matched = re.match(
+                r"^([a-z]+\d{3})(?:_([a-z0-9]+))?_song_select$", clip_name
+            )
+            normal[clip_name] = {
+                "file": rel,
+                "w": clip.get("Width"),
+                "h": clip.get("Height"),
+                "fps": clip.get("m_FrameRate"),
+                "frames": clip.get("m_FrameCount"),
+                "bundle": name[:-3],
+                "bytes": len(data),
+                "pack": matched.group(1) if matched else clip_name,
+                "variant": (matched.group(2) if matched and matched.group(2) else "default"),
+                "mode": "normal",
+            }
+        except Exception as error:
+            print(f"  songselect FAIL {name}: {type(error).__name__} {error}")
+
+    normal_hashes = {}
+    for key, entry in normal.items():
+        normal_hashes.setdefault(_sha256(os.path.join(OUT, entry["file"])), []).append(key)
+    for keys in normal_hashes.values():
+        if len(keys) > 1:
+            for key in keys:
+                normal[key]["duplicateOf"] = [other for other in keys if other != key]
+
+    true_end = {}
+    for key, entry in (manifest.get("videos") or {}).items():
+        if not str(entry.get("bundle") or "").startswith("video_trueend_"):
+            continue
+        item = dict(entry)
+        item["mode"] = "trueEnd"
+        item["pack"] = key
+        item["inSceneList"] = key in SONG_SELECT_SCENE_ORDER
+        path = os.path.join(OUT, entry["file"])
+        if os.path.exists(path):
+            matches = normal_hashes.get(_sha256(path), [])
+            if matches:
+                item["contentMatches"] = matches
+        true_end[key] = item
+
+    true_end_hashes = {}
+    for key, entry in true_end.items():
+        path = os.path.join(OUT, entry["file"])
+        if os.path.exists(path):
+            true_end_hashes.setdefault(_sha256(path), []).append(key)
+    for keys in true_end_hashes.values():
+        if len(keys) > 1:
+            for key in keys:
+                true_end[key]["duplicateOf"] = [other for other in keys if other != key]
+
+    manifest["songSelect"] = {
+        "normal": normal,
+        "trueEnd": true_end,
+        "sceneOrder": SONG_SELECT_SCENE_ORDER,
+    }
+    print(
+        f"songSelect: {len(normal)} normal clips, "
+        f"{len(true_end)} true-end clips"
+    )
+
+
 def export_titles(manifest):
     import UnityPy
     os.makedirs(os.path.join(OUT, "titles"), exist_ok=True)
@@ -466,16 +575,24 @@ def export_audio(manifest):
 def annotate_audio(manifest):
     """给每段影片标注有无音轨（video_endplay_* / video_oasystem_* 本身只有 H.264，声音由曲目/音效另播）"""
     import subprocess
+
+    def annotate(entry):
+        path = os.path.join(OUT, entry["file"])
+        if not os.path.exists(path):
+            return
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "csv=p=0", path],
+            capture_output=True, text=True,
+        ).stdout
+        entry["hasAudio"] = "audio" in out.split()
+
     for group in ("videos", "titles"):
-        for name, entry in (manifest.get(group) or {}).items():
-            path = os.path.join(OUT, entry["file"])
-            if not os.path.exists(path):
-                continue
-            out = subprocess.run(
-                ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "csv=p=0", path],
-                capture_output=True, text=True,
-            ).stdout
-            entry["hasAudio"] = "audio" in out.split()
+        for entry in (manifest.get(group) or {}).values():
+            annotate(entry)
+    song_select = manifest.get("songSelect") or {}
+    for section in ("normal", "trueEnd"):
+        for entry in (song_select.get(section) or {}).values():
+            annotate(entry)
     print("audio flags written")
 
 
@@ -503,6 +620,8 @@ def main():
             export_images(manifest)
         elif kind == "videos":
             export_videos(manifest)
+        elif kind == "songselect":
+            export_song_select(manifest)
         elif kind == "titles":
             export_titles(manifest)
         elif kind == "covers":

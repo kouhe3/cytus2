@@ -32,14 +32,15 @@ repository root when the default `python` does not have UnityPy;
 | `/character/<gameId>` | character page: logo, every costume illustration and the bad-ending (`broken_illustration_*`) variant, then every OS log of that character via `OS → SORT BY VERSION`; PAFF / NEKO / ROBO add an IM tab linking to the account-filtered feed |
 | `/os` | OS archive index with the game's three groupings: chapter → folder (default; 17 chapters with logs, each split by `TimelineChapter.Folder`), character → version, and version → character. The chapter order follows the wiki-maintained game list (`Amiya` between `Decommission` and `cyTus`), not the table's `Id`. Every file carries the 1-based unlock level of its own character (`Lv N`, e.g. `Lv 36`); other characters' level conditions and the file-lock chain stay in the entity detail, and the list neither hides files nor marks them as locked. Staging chapters `test01` / `test02` stay out of the chapter view; the chosen mode persists in `sessionStorage` |
 | `/oa` | OA archive index: one card per character with object/document/description counts |
-| `/oa/<gameId>` | OA workspace: scene videos with scene LOGOs, object tabs, each object's color art plus three panel images, object text and documents, all hotspot descriptions |
+| `/oa/<gameId>` | OA archive: scene videos with scene LOGOs, every clickable object as a link into its own entity page, and hotspot descriptions grouped by `DescriptionObjectId`. Each description variant states its in-game enable/disable conditions (level lock, OS read, story clear), because one hotspot swaps text across story stages and the game picks one eligible variant at random. The object page (`/oa_object/<gameId>`) owns the object text, its color art plus three panel images, attached documents, unlock conditions and level locks; OA entity pages link back to their character's archive |
 | `/backup` | Backup Database folder index with per-folder gallery logos and media counts |
 | `/backup/<gameId>` | folder header logo, then items grouped as a media retrospective; kind filter, conditions, boss-stage links |
 | `/story` | story nodes ordered by reading order; level/version/chapter sort, event/Branching OS filter |
 | `/shop` | CAPSO packs, gacha machine and shop bundles; Black Market badge |
-| `/extras` | appendix hub: assistant dialogues, title-screen evolution and the cutscene subtitle library |
+| `/extras` | appendix hub: assistant dialogues, title-screen evolution, song-select media and the cutscene subtitle library |
 | `/extras/assistants` | iM assistant dialogue groups, pages and trigger/target, all five languages |
 | `/extras/titles` | 10 title screens with story unlocks and `video_title_*` playback; missing clips are marked |
+| `/extras/songselect` | song-select media: 36 normal `video_songselect_*` backgrounds grouped by the 27 packs (costume / story variants kept separate) and the 14 true-end scene entries in game order. Vanessa has no exclusive true-end scene (story design, its entry carries Miku's clip); Bo Bo's duplicate video is called out but not shown. Videos never autoplay |
 | `/extras/cutscenes` | cutscene subtitle library: all 55 subtitle groups paired with their exported clip (exact key, then a trailing `_N` removed), a dialogue search that lists every matching cue in every language (bounded per group/language and in total, with a hidden-match count) and seeks the paired clip to the clicked cue, muxed audio variants for silent clips in both rows and the cue player, and the 62 exported videos without subtitles |
 | `/search?q=<text>` | full-text search over iM posts, OS logs, OA documents and subtitle lines, grouped by type |
 | `/im/<gameId>`, `/os/<gameId>`, `/<type>/<gameId>` | entity detail with body text, type-specific facts, charts, and inbound/outbound edges; iM posts render their inbound replies as a full rich-text feed directly under the post body (one batched text request per language) while the neighbour list stays a navigation index, title-only iM posts carry an explicit note, and the four Bili-Wiki-confirmed posts carry a manual removed-after-reading note. An OS log with a first-open cutscene shows it as a 16:9 player above the body, with the sidebar language's subtitle track (or an explicit missing-subtitle note) |
@@ -81,13 +82,26 @@ posts remain in the global feed.
 | `GET /db/text.json` | snippet and name index derived from `build/text/*.jsonl` (`im_os`, `oa`, `story`, `extras`, `packs`, `subtitles`) |
 | `GET /db/text?ref=…&lang=…` | one full text record with `requested_lang` / `fallback` fields |
 | `GET /db/search?q=…&lang=…&limit=…` | full-text match groups for posts, logs, OA documents and subtitle lines |
-| `GET /media/<path>` | local media export (title clips under `titles/<clip>.mp4`, archive clips under `videos/<clip>.mp4`, subtitle files under `subs/<clip>.<lang>.vtt`), Range-capable |
+| `GET /media/<path>` | local media export (title clips under `titles/<clip>.mp4`, archive clips under `videos/<clip>.mp4`, character song-select backgrounds under `videos/songselect/<clip>.mp4`, subtitle files under `subs/<clip>.<lang>.vtt`), Range-capable |
 
 The text index also reads `build/text/extras.jsonl`; the extras routes use it
 through the same `text_ref` contract as the timeline. `/media/*` defaults to
 `viewer/public/media` and can be pointed elsewhere with `CYTUS2_MEDIA_DIR`.
 When a title clip is absent the page renders an explicit
 `title-video-missing` note instead of a broken player.
+
+`/media/manifest.json` carries a `songSelect` section next to `videos`:
+`normal` holds all 36 `video_songselect_*` backgrounds (27 packs plus costume /
+story variants; all but `ilka001_s001`, `joe001` and `miku001` are silent),
+`trueEnd` holds the 15 `video_trueend_*` backgrounds
+(14 in the scene's `sceneOrder`, with `bobo001` marked as a duplicate of
+`robo001`), and `sceneOrder` records the true-end pack order. Export facts are
+data-driven: `duplicateOf` lists byte-identical clips within a section, and
+`contentMatches` lists normal clips whose bytes equal a true-end clip.
+`vanessa001` matches `miku001_song_select` because Vanessa has no exclusive
+true-end scene (story design), so its bundle carries Miku's clip; this is
+metadata, not an export error. The song-select clips stay out of `videos` so
+the Cutscene Library does not list them as subtitle-less cutscenes.
 
 Every archive video — the OS cutscene section, OS/OA inline `##movie` blocks
 and OA scene clips — renders through the shared `VideoPlayer`

@@ -4,9 +4,29 @@ export interface MediaAsset {
   readonly file: string;
   readonly w?: number;
   readonly h?: number;
-  /** Only `videos` entries carry this flag; `movies` aliases never do. */
+  /** `videos` and `songSelect` entries carry this flag; `movies` aliases never do. */
   readonly hasAudio?: boolean;
   readonly song?: string;
+}
+
+export interface SongSelectClip extends MediaAsset {
+  readonly bundle?: string;
+  readonly fps?: number;
+  readonly frames?: number;
+  readonly bytes?: number;
+  readonly mode?: "normal" | "trueEnd";
+  readonly pack?: string;
+  readonly variant?: string;
+  readonly inSceneList?: boolean;
+  readonly duplicateOf?: readonly string[];
+  /** Normal clips whose bytes equal this clip (e.g. Vanessa -> Miku). */
+  readonly contentMatches?: readonly string[];
+}
+
+export interface SongSelectManifest {
+  readonly normal?: Record<string, SongSelectClip>;
+  readonly trueEnd?: Record<string, SongSelectClip>;
+  readonly sceneOrder?: readonly string[];
 }
 
 export interface SubtitleTrack {
@@ -27,6 +47,8 @@ export interface MediaManifest {
   readonly oaAssets: Record<string, MediaAsset>;
   readonly videos: Record<string, MediaAsset>;
   readonly movies: Record<string, MediaAsset>;
+  /** Character backgrounds used by the song-select screens. */
+  readonly songSelect?: SongSelectManifest;
   readonly logos?: Record<string, MediaAsset>;
   /** VTT files keyed by subtitle group, then by language. */
   readonly subtitles?: Record<string, Partial<Record<Lang, SubtitleTrack>>>;

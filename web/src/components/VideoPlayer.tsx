@@ -24,6 +24,8 @@ export function normalizeClipId(clip: string): string {
 export interface VideoPlayerProps {
   /** Bare manifest key; a trailing `.mp4` is stripped. */
   readonly clip: string;
+  /** Pre-resolved asset (song-select manifest entries are not in `videos`). */
+  readonly source?: MediaAsset;
   /** Exact subtitle group key. Defaults to the clip id; `null` never attaches a track. */
   readonly subtitleKey?: string | null;
   /** Seconds to seek to once metadata is available (subtitle-cue jumps). */
@@ -47,6 +49,7 @@ export interface VideoPlayerProps {
  */
 export function VideoPlayer({
   clip,
+  source,
   subtitleKey,
   startAt,
   audioKey,
@@ -68,7 +71,7 @@ export function VideoPlayer({
   const muxed: MediaAsset | null =
     audioKey && manifest?.videoAudio ? manifest.videoAudio[audioKey] ?? null : null;
   const asset: MediaAsset | null =
-    muxed ?? (manifest ? pickVideo(manifest, clipId) : null);
+    muxed ?? source ?? (manifest ? pickVideo(manifest, clipId) : null);
 
   const subtitleGroup = subtitleKey === null ? null : subtitleKey ?? clipId;
   const groupTracks =
@@ -82,7 +85,11 @@ export function VideoPlayer({
    * silent origin never paints the note under the muxed player. Only the
    * Cutscene Library opts in through `showAudioNote`.
    */
-  const silent = !muxed && manifest?.videos?.[clipId]?.hasAudio === false;
+  const silent =
+    !muxed &&
+    (source
+      ? source.hasAudio === false
+      : manifest?.videos?.[clipId]?.hasAudio === false);
 
   useEffect(() => {
     if (startAt === undefined) {

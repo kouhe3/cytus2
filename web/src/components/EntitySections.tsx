@@ -1,8 +1,14 @@
+import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ConditionList, LevelLockList } from "./Conditions";
 import { EntityLink, EntityList } from "./EntityLink";
 import { Fact, Facts } from "./Facts";
+import { MediaImage } from "./Media";
+import {
+  OaDescriptionWhen,
+  oaDescriptionStageLabel,
+} from "./OaDescriptionWhen";
 import { TextBody } from "./TextBody";
 import { normalizeClipId, VideoPlayer } from "./VideoPlayer";
 import { MediaKindBadge, StoryKindBadge } from "./ui";
@@ -16,6 +22,8 @@ import {
   resolveEntityRef,
 } from "../data/database";
 import { useI18n } from "../data/i18n";
+import { useMediaManifest } from "../data/useMedia";
+import type { I18n } from "../data/messages";
 import {
   bossStageForGalleryItem,
   bundleItemEntity,
@@ -251,6 +259,63 @@ export function OaCharacterDetails({
   );
 }
 
+/**
+ * Object textures are `<character>_objNNN` plus the three
+ * `oas_<character>_NNN_N` panels.  The bundle mixes case
+ * (`oas_Vanessa001_001_1` next to lowercase keys), so resolve
+ * case-insensitively instead of dropping the panel images.
+ */
+function OaObjectArt({
+  characterId,
+  objectId,
+  i18n,
+}: {
+  characterId: string;
+  objectId: string;
+  i18n: I18n;
+}) {
+  const { manifest } = useMediaManifest();
+  const art = useMemo(() => {
+    if (!manifest) {
+      return [];
+    }
+    const table = manifest.oaAssets;
+    const lower = new Map(
+      Object.keys(table).map((key) => [key.toLowerCase(), key]),
+    );
+    const resolve = (key: string) => {
+      const canonical = table[key] ? key : lower.get(key.toLowerCase());
+      return canonical ? { key: canonical, asset: table[canonical]! } : null;
+    };
+    const index = objectId.split("obj")[1] ?? "";
+    return [
+      `${characterId}_obj${index}`,
+      ...[1, 2, 3].map((panel) => `oas_${characterId}_${index}_${panel}`),
+    ].flatMap((key) => {
+      const hit = resolve(key);
+      return hit ? [hit] : [];
+    });
+  }, [manifest, characterId, objectId]);
+  if (art.length === 0) {
+    return null;
+  }
+  return (
+    <Section title={i18n.t("oa.objectArt")} testId="oa-object-art">
+      <div className="oa-art">
+        {art.map(({ key, asset }) => (
+          <figure key={key} className="oa-art-item">
+            <MediaImage id={key} kind="image" natural alt={key} />
+            <figcaption>
+              {asset.file.split("/").pop()?.replace(/\.png$/, "")} · {asset.w}×
+              {asset.h}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 export function OaObjectDetails({
   db,
   entity,
@@ -265,12 +330,26 @@ export function OaObjectDetails({
     (record): record is OaDocumentEntity =>
       isOaDocument(record) && record.object_id === entity.id,
   );
+  const character = db.entityById.get(entity.character_id);
+  const characterGameId =
+    character && "game_id" in character
+      ? String(character.game_id)
+      : entity.character_id.replace(/^character\//, "");
   return (
     <>
       <Section title={i18n.t("section.oaObject")} testId="oa-object-detail">
         <Facts>
           <Fact label={i18n.t("fact.character")}>
             <EntityById db={db} id={entity.character_id} lang={lang} />
+          </Fact>
+          <Fact label={i18n.t("oa.archive")}>
+            <Link
+              to={`/oa/${encodeURIComponent(characterGameId)}`}
+              className="inline-link"
+              data-testid="oa-object-archive-link"
+            >
+              <code>{characterGameId}</code>
+            </Link>
           </Fact>
           <Fact label={i18n.t("fact.analyzeType")}>{entity.analyze_type}</Fact>
           <Fact label={i18n.t("fact.analyzeTypeId")}>
@@ -284,6 +363,11 @@ export function OaObjectDetails({
           </Fact>
         </Facts>
       </Section>
+      <OaObjectArt
+        characterId={characterGameId}
+        objectId={entity.game_id}
+        i18n={i18n}
+      />
       <Section
         title={i18n.t("section.documentsAttached")}
         testId="oa-object-documents"
@@ -292,6 +376,7 @@ export function OaObjectDetails({
           db={db}
           entities={documents}
           lang={lang}
+          testId="oa-document-link"
           empty={i18n.t("value.noAttachedDocument")}
         />
       </Section>
@@ -344,32 +429,19 @@ export function OaDescriptionDetails({
       title={i18n.t("section.oaDescription")}
       testId="oa-description-detail"
     >
+      <p className="hint" data-testid="oa-description-stage">
+        {oaDescriptionStageLabel(entity, i18n)}
+      </p>
+      <OaDescriptionWhen db={db} description={entity} i18n={i18n} />
       <Facts>
         <Fact label={i18n.t("fact.character")}>
           <EntityById db={db} id={entity.character_id} lang={lang} />
         </Fact>
-        <Fact label={i18n.t("fact.descriptionObject")}>
-          <EntityRef
-            db={db}
-            lang={lang}
-            namespace="oa_object"
-            id={entity.description_object_id}
-          />
+        <Fact label={i18n.t("oa.descriptionGroup")}>
+          <code>{entity.description_object_id}</code>
         </Fact>
         <Fact label={i18n.t("fact.weight")}>{entity.weight}</Fact>
         <Fact label={i18n.t("fact.event")}>{entity.event}</Fact>
-        <Fact label={i18n.t("fact.enableLocks")}>
-          <LevelLockList db={db} locks={entity.enable_level_locks} />
-        </Fact>
-        <Fact label={i18n.t("fact.enableConditions")}>
-          <ConditionList db={db} conditions={entity.enable_conditions} />
-        </Fact>
-        <Fact label={i18n.t("fact.disableLocks")}>
-          <LevelLockList db={db} locks={entity.disable_level_locks} />
-        </Fact>
-        <Fact label={i18n.t("fact.disableConditions")}>
-          <ConditionList db={db} conditions={entity.disable_conditions} />
-        </Fact>
       </Facts>
     </Section>
   );

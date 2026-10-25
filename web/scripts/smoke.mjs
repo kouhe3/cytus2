@@ -1616,8 +1616,9 @@ try {
   );
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="oa-scene-video"]').length === 2 &&
-     document.querySelectorAll('[data-testid="oa-object-art"] img').length === 4`,
-    "OA scene and object assets load",
+     document.querySelectorAll('[data-testid="oa-object-link"]').length === 2 &&
+     !document.querySelector('[data-testid="oa-object-art"]')`,
+    "OA archive loads scenes and the object index",
   );
   const oaMedia = await cdp.evaluate(`(() => ({
     scenes: document.querySelectorAll('[data-testid="oa-scene-video"]').length,
@@ -1629,7 +1630,8 @@ try {
       '[data-testid="oa-scene-video"] [data-testid="video-no-audio"]',
     ).length,
     logos: document.querySelectorAll('[data-testid="oa-scene-logos"] img').length,
-    objectArt: document.querySelectorAll('[data-testid="oa-object-art"] img').length,
+    objects: document.querySelectorAll('[data-testid="oa-object-link"]').length,
+    objectArt: document.querySelectorAll('[data-testid="oa-object-art"]').length,
   }))()`);
   check(oaMedia.scenes === 2, `Alice OA shows both scene videos (got ${oaMedia.scenes})`);
   check(
@@ -1637,7 +1639,11 @@ try {
     `OA scene video resolves to its manifest file (got ${oaMedia.sceneSrc})`,
   );
   check(oaMedia.logos === 1, `Alice OA shows its scene LOGO (got ${oaMedia.logos})`);
-  check(oaMedia.objectArt === 4, `Alice object 1 shows 4 art panels (got ${oaMedia.objectArt})`);
+  check(oaMedia.objects === 2, `Alice OA links both objects (got ${oaMedia.objects})`);
+  check(
+    oaMedia.objectArt === 0,
+    `object art stays on the object page (got ${oaMedia.objectArt} art sections in the archive)`,
+  );
   check(
     oaMedia.sceneClips.length === 2 &&
       oaMedia.sceneClips.every((clip) => clip.endsWith("_oa_system")),
@@ -1647,33 +1653,71 @@ try {
     oaMedia.audioNotes === 0,
     `OA scene players keep the no-audio note out of the archive surfaces (got ${oaMedia.audioNotes})`,
   );
-  const oaTabCount = await cdp.evaluate(
-    `document.querySelectorAll('[data-testid="oa-object-tab"]').length`,
-  );
-  check(oaTabCount >= 2, `OA archive exposes object tabs (got ${oaTabCount})`);
-  const firstObjectText = await cdp.evaluate(
-    `document.querySelector('[data-testid="oa-object-panel"] .prose')?.textContent ?? ''`,
-  );
-  await cdp.evaluate(
-    `document.querySelectorAll('[data-testid="oa-object-tab"]')[1].click()`,
-  );
-  await cdp.waitFor(
-    `document.querySelectorAll('[data-testid="oa-object-tab"]')[1].classList.contains('active')`,
-    "second OA object tab becomes active",
-  );
-  const secondObjectText = await cdp.evaluate(
-    `document.querySelector('[data-testid="oa-object-panel"] .prose')?.textContent ?? ''`,
+  const oaAliceDescriptions = await cdp.evaluate(`(() => ({
+    groups: document.querySelectorAll('[data-testid="oa-description-group"]').length,
+    variants: document.querySelectorAll('[data-testid="oa-description-variant"]').length,
+    appears: document.querySelectorAll('[data-testid="oa-description-appears"]').length,
+    hidden: document.querySelectorAll('[data-testid="oa-description-hidden"]').length,
+    stage: document.querySelector('[data-testid="oa-description-group"] [data-testid="oa-description-link"]')?.textContent?.trim() ?? '',
+    appearText: document.querySelector('[data-testid="oa-description-appears"]')?.textContent?.trim() ?? '',
+  }))()`);
+  check(oaAliceDescriptions.groups === 5, `Alice OA groups its 5 hotspots (got ${oaAliceDescriptions.groups})`);
+  check(oaAliceDescriptions.variants === 5, `Alice OA renders 5 description versions (got ${oaAliceDescriptions.variants})`);
+  check(oaAliceDescriptions.appears === 5, `Alice OA states when every description appears (got ${oaAliceDescriptions.appears})`);
+  check(
+    oaAliceDescriptions.hidden === 0,
+    `Alice descriptions never disappear (got ${oaAliceDescriptions.hidden} hide lines)`,
   );
   check(
-    secondObjectText !== firstObjectText,
-    "OA object tabs switch the object text",
+    oaAliceDescriptions.stage.includes("初始"),
+    `Alice description labels its stage (got ${oaAliceDescriptions.stage})`,
   );
+  check(
+    oaAliceDescriptions.appearText.includes("Lv 4"),
+    `Alice description states its level gate (got ${oaAliceDescriptions.appearText})`,
+  );
+  await cdp.screenshot("oa-archive.png");
+  await cdp.evaluate(`document.querySelector('[data-testid="oa-object-link"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/oa_object/alice001_obj001' &&
+     Boolean(document.querySelector('[data-testid="entity-view"][data-entity-type="oa_object"]')) &&
+     document.querySelectorAll('[data-testid="oa-object-art"] img').length === 4 &&
+     (document.querySelector('[data-testid="entity-body"]')?.textContent ?? '').trim().length >= 10`,
+    "OA object page owns its art and text",
+  );
+  const oaObject = await cdp.evaluate(`(() => ({
+    path: location.pathname,
+    art: document.querySelectorAll('[data-testid="oa-object-art"] img').length,
+    bodyLength: (document.querySelector('[data-testid="entity-body"]')?.textContent ?? '').trim().length,
+    documents: document.querySelectorAll('[data-testid="oa-document-link"]').length,
+    backCollection: document.querySelector('[data-testid="back-to-collection"]')?.getAttribute('href') ?? '',
+    archiveLink: document.querySelector('[data-testid="oa-object-archive-link"]')?.getAttribute('href') ?? '',
+  }))()`);
+  check(oaObject.path === "/oa_object/alice001_obj001", "OA object link opens /oa_object/<id>");
+  check(oaObject.art === 4, `Alice object page shows 4 art panels (got ${oaObject.art})`);
+  check(
+    oaObject.bodyLength >= 10,
+    `OA object page renders its own text (got ${oaObject.bodyLength} chars)`,
+  );
+  check(
+    oaObject.documents >= 1,
+    `OA object page lists attached documents (got ${oaObject.documents})`,
+  );
+  check(
+    oaObject.backCollection === "/oa/alice001",
+    `OA object backlink targets its archive (got ${oaObject.backCollection})`,
+  );
+  check(
+    oaObject.archiveLink === "/oa/alice001",
+    `OA object summary links its archive (got ${oaObject.archiveLink})`,
+  );
+  await cdp.screenshot("oa-object.png");
   await cdp.evaluate(`document.querySelector('[data-testid="oa-document-link"]').click()`);
   await cdp.waitFor(
     `location.pathname.startsWith('/oa_document/') &&
      Boolean(document.querySelector('[data-testid="entity-view"][data-entity-type="oa_document"]')) &&
-     Boolean(document.querySelector('[data-testid="entity-body"]'))`,
-    "OA document detail loads",
+     (document.querySelector('[data-testid="entity-body"]')?.textContent ?? '').trim().length > 20`,
+    "OA document detail loads its body",
   );
   const oaDocument = await cdp.evaluate(`(() => ({
     path: location.pathname,
@@ -1692,14 +1736,105 @@ try {
     oaDocument.outgoing && oaDocument.incoming,
     "OA document shows inbound and outbound relation sections",
   );
-  check(oaDocument.backCollection === "/oa", "OA document links back to the OA index");
+  check(
+    oaDocument.backCollection === "/oa/alice001",
+    "OA document links back to its character archive",
+  );
   await cdp.screenshot("oa-document.png");
   await cdp.evaluate(`document.querySelector('[data-testid="back-button"]').click()`);
   await cdp.waitFor(
-    `location.pathname === '/oa/alice001' && Boolean(document.querySelector('[data-testid="oa-workspace"]'))`,
+    `location.pathname === '/oa_object/alice001_obj001' &&
+     Boolean(document.querySelector('[data-testid="entity-view"][data-entity-type="oa_object"]'))`,
     "back from OA document",
   );
-  check(true, "back button returns from an OA document to its archive");
+  check(true, "back button returns from an OA document to its object page");
+  await cdp.evaluate(`document.querySelector('[data-testid="back-to-collection"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/oa/alice001' && Boolean(document.querySelector('[data-testid="oa-workspace"]'))`,
+    "object backlink returns to the character archive",
+  );
+  check(true, "OA object page links back to its character archive");
+  await cdp.navigate(`${appBase}/oa/paff001`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="oa-description-group"]').length === 4 &&
+     document.querySelectorAll('[data-testid="oa-description-variant"]').length === 12`,
+    "PAFF OA groups its description variants",
+  );
+  const oaVariants = await cdp.evaluate(`(() => {
+    const group = document.querySelector('[data-testid="oa-description-group"]');
+    const variants = [...group.querySelectorAll('[data-testid="oa-description-variant"]')];
+    return {
+      stages: variants.map((el) => el.dataset.stage ?? ''),
+      labels: variants.map(
+        (el) => el.querySelector('[data-testid="oa-description-link"]')?.textContent?.trim() ?? '',
+      ),
+      appears: variants.map(
+        (el) => el.querySelector('[data-testid="oa-description-appears"]')?.textContent?.trim() ?? '',
+      ),
+      hidden: variants.map((el) => Boolean(el.querySelector('[data-testid="oa-description-hidden"]'))),
+    };
+  })()`);
+  check(
+    oaVariants.stages.join(",") === "level,os,ending",
+    `PAFF description variants are ordered by stage (got ${oaVariants.stages.join(",")})`,
+  );
+  check(
+    oaVariants.hidden.join(",") === "true,true,false",
+    `only the ending variant survives the ending swap (got ${oaVariants.hidden.join(",")})`,
+  );
+  check(
+    oaVariants.appears[0].includes("Lv 79"),
+    `PAFF base variant states its level gate (got ${oaVariants.appears[0]})`,
+  );
+  check(
+    oaVariants.labels[1].includes("pos078"),
+    `PAFF middle variant explains its OS read gate (got ${oaVariants.labels[1]})`,
+  );
+  check(
+    oaVariants.labels[2].includes("4.0"),
+    `PAFF ending variant explains its story gate (got ${oaVariants.labels[2]})`,
+  );
+  await cdp.screenshot("oa-description-variants.png");
+  await cdp.evaluate(
+    `document.querySelectorAll('[data-testid="oa-description-group"]')[0].querySelectorAll('[data-testid="oa-description-variant"]')[2].querySelector('[data-testid="oa-description-link"]').click()`,
+  );
+  await cdp.waitFor(
+    `location.pathname === '/oa_description/paff001_desc001_alt002' &&
+     Boolean(document.querySelector('[data-testid="entity-view"][data-entity-type="oa_description"]')) &&
+     Boolean(document.querySelector('[data-testid="oa-description-stage"]'))`,
+    "OA description detail loads its stage",
+  );
+  const oaDescription = await cdp.evaluate(`(() => ({
+    path: location.pathname,
+    stage: document.querySelector('[data-testid="oa-description-stage"]')?.textContent?.trim() ?? '',
+    appears: document.querySelector('[data-testid="oa-description-appears"]')?.textContent?.trim() ?? '',
+    hidden: Boolean(document.querySelector('[data-testid="oa-description-hidden"]')),
+    group: document.querySelector('[data-testid="oa-description-detail"] .facts')?.textContent?.includes('paff001_desc001') ?? false,
+  }))()`);
+  check(
+    oaDescription.path === "/oa_description/paff001_desc001_alt002",
+    `OA description variant keeps its own URL (got ${oaDescription.path})`,
+  );
+  check(
+    oaDescription.stage.includes("4.0"),
+    `OA description page names its stage (got ${oaDescription.stage})`,
+  );
+  check(
+    oaDescription.appears.includes("4.0"),
+    `OA description page explains its appearance (got ${oaDescription.appears})`,
+  );
+  check(
+    oaDescription.hidden === false,
+    "the ending variant is never hidden by the ending swap",
+  );
+  check(oaDescription.group, "OA description page keeps its hotspot group id");
+  await cdp.evaluate(`document.querySelector('[data-testid="back-button"]').click()`);
+  await cdp.waitFor(
+    `location.pathname === '/oa/paff001' &&
+     Boolean(document.querySelector('[data-testid="oa-workspace"]'))`,
+    "back from OA description",
+  );
+  check(true, "back button returns from an OA description to its archive");
 
   // ------------------------------------------------------- Backup Database
   await cdp.navigate(`${appBase}/backup`);
@@ -2348,10 +2483,11 @@ try {
     cards: document.querySelectorAll('[data-testid="extras-index"] .collection-card').length,
     assistantsHref: document.querySelector('[data-testid="extras-assistants-card"]')?.getAttribute('href'),
     titlesHref: document.querySelector('[data-testid="extras-titles-card"]')?.getAttribute('href'),
+    songSelectHref: document.querySelector('[data-testid="extras-songselect-card"]')?.getAttribute('href'),
     cutscenesHref: document.querySelector('[data-testid="extras-cutscenes-card"]')?.getAttribute('href'),
     stats: document.querySelector('[data-testid="extras-stats"]')?.textContent ?? '',
   }))()`);
-  check(extrasIndex.cards === 3, "extras hub links all three appendix families");
+  check(extrasIndex.cards === 4, `extras hub links all four appendix families (got ${extrasIndex.cards})`);
   check(
     extrasIndex.assistantsHref === "/extras/assistants",
     "extras hub links the assistant dialogues",
@@ -2359,6 +2495,10 @@ try {
   check(
     extrasIndex.titlesHref === "/extras/titles",
     "extras hub links the title screens",
+  );
+  check(
+    extrasIndex.songSelectHref === "/extras/songselect",
+    "extras hub links the song-select media",
   );
   check(
     extrasIndex.cutscenesHref === "/extras/cutscenes",
@@ -2463,6 +2603,64 @@ try {
     `titles render names through text_ref (got ${titleNames})`,
   );
   await cdp.screenshot("extras-titles.png");
+
+  // ------------------------------------------- song-select media (manifest)
+  await cdp.navigate(`${appBase}/extras/songselect`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="songselect-view"]')) &&
+     document.querySelectorAll('[data-testid="songselect-trueend-card"]').length === 14 &&
+     document.querySelectorAll('[data-testid="songselect-normal-card"]').length === 36`,
+    "song-select media view loads",
+    60000,
+  );
+  const songSelect = await cdp.evaluate(`(() => ({
+    stats: document.querySelector('[data-testid="songselect-stats"]')?.textContent?.trim() ?? '',
+    packs: document.querySelectorAll('[data-testid="songselect-pack"]').length,
+    normal: document.querySelectorAll('[data-testid="songselect-normal-card"]').length,
+    trueEnd: document.querySelectorAll('[data-testid="songselect-trueend-card"]').length,
+    firstPack: document.querySelector('[data-testid="songselect-trueend-card"]')?.dataset.pack ?? '',
+    firstSrc: document.querySelector('[data-testid="songselect-trueend-player"] video')?.getAttribute('src') ?? '',
+    normalSrc: document.querySelector('[data-testid="songselect-normal-player"] video')?.getAttribute('src') ?? '',
+    shared: document.querySelector('[data-testid="songselect-shared"]')?.textContent?.trim() ?? '',
+    unused: document.querySelector('[data-testid="songselect-unused"]')?.textContent?.trim() ?? '',
+    duplicate: document.querySelector('[data-testid="songselect-duplicate"]')?.textContent?.trim() ?? '',
+    videos: document.querySelectorAll('[data-testid="songselect-view"] video').length,
+    paused: [...document.querySelectorAll('[data-testid="songselect-view"] video')].every((video) => video.paused),
+  }))()`);
+  check(songSelect.trueEnd === 14, `song-select view lists 14 true-end entries (got ${songSelect.trueEnd})`);
+  check(songSelect.normal === 36, `song-select view lists 36 normal backgrounds (got ${songSelect.normal})`);
+  check(songSelect.packs === 27, `song-select view groups 27 packs (got ${songSelect.packs})`);
+  check(songSelect.firstPack === "paff001", `true-end order starts with PAFF (got ${songSelect.firstPack})`);
+  check(
+    songSelect.firstSrc.endsWith("/media/videos/paff001.mp4"),
+    `true-end clip resolves to its export (got ${songSelect.firstSrc})`,
+  );
+  check(
+    songSelect.normalSrc.includes("/media/videos/songselect/"),
+    `normal clip resolves to videos/songselect (got ${songSelect.normalSrc})`,
+  );
+  check(
+    songSelect.shared.includes("miku001_song_select"),
+    `Vanessa entry states its shared Miku scene (got ${songSelect.shared})`,
+  );
+  check(
+    songSelect.unused.includes("bobo001") && songSelect.unused.includes("robo001"),
+    `unused duplicate note names bobo and robo (got ${songSelect.unused})`,
+  );
+  check(
+    songSelect.duplicate.includes("xenon001_song_select"),
+    `normal duplicate note names its twin (got ${songSelect.duplicate})`,
+  );
+  check(songSelect.videos === 50, `song-select view renders 50 players (got ${songSelect.videos})`);
+  check(songSelect.paused, "song-select players never autoplay");
+  await cdp.waitFor(
+    `[...document.querySelectorAll('[data-testid="songselect-trueend-player"] video')]
+       .slice(0, 4)
+       .every((video) => video.readyState >= 1 || Boolean(video.error))`,
+    "song-select scenes ready for screenshot",
+    30000,
+  );
+  await cdp.screenshot("extras-songselect.png");
 
   // --------------------------------------- cutscene + subtitle library (#32)
   await cdp.navigate(`${appBase}/extras/cutscenes`);

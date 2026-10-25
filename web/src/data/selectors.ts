@@ -3,6 +3,7 @@ import {
   isChart,
   isGalleryItem,
   isImPost,
+  isOaCharacter,
   isOaDescription,
   isOaDocument,
   isOaObject,
@@ -868,6 +869,21 @@ export function relatedGalleryVideos(
 export function entityHome(
   entity: BaseEntity,
 ): { href: string; labelKey: MessageKey } | null {
+  // OA objects, documents and hotspots are read in the context of their
+  // character's archive, not the flat OA index.
+  if (
+    isOaCharacter(entity) ||
+    isOaObject(entity) ||
+    isOaDocument(entity) ||
+    isOaDescription(entity)
+  ) {
+    return {
+      href: `/oa/${encodeURIComponent(
+        entity.character_id.replace(/^character\//, ""),
+      )}`,
+      labelKey: "oa.archive",
+    };
+  }
   switch (entity.type) {
     case "im_post":
     case "os_log":
@@ -876,11 +892,6 @@ export function entityHome(
     case "spoiler_alert":
     case "reading_order":
       return { href: "/timeline", labelKey: "nav.timeline" };
-    case "oa_character":
-    case "oa_object":
-    case "oa_document":
-    case "oa_description":
-      return { href: "/oa", labelKey: "nav.oa" };
     case "gallery_item":
     case "gallery_folder":
     case "boss_stage":

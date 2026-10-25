@@ -108,6 +108,11 @@
         "pattern": "^asset/video/[^\\s]+$"
       }
     },
+    "cutscene": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_]+$",
+      "description": "Clip the game plays the first time this log is opened: text/cutscenedata/cutscene_data_os MovieFile without its .mp4 suffix. Resolve it through the media manifest (movies first, videos second). The property is absent when the log has no cutscene. A media reference, not an asset entity."
+    },
     "text_ref": {
       "type": "string",
       "pattern": "^os/[A-Za-z0-9_]+$"

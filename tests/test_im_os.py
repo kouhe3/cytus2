@@ -11,6 +11,8 @@ from conftest import FIXTURE_INPUT, copy_input, run_build
 from cytus2db.validate import SchemaValidator
 
 OVERLAY = Path(__file__).resolve().parent / "fixtures" / "im_os"
+CUTSCENE_OVERLAY = Path(__file__).resolve().parent / "fixtures" / "cutscene"
+CUTSCENE_LOCATOR = "text/cutscenedata/cutscene_data_os"
 LANGS = ("en", "ja", "zh-Hant", "ko", "zh-Hans")
 
 
@@ -298,3 +300,69 @@ def test_missing_post_source_exits_non_zero(tmp_path: Path) -> None:
     result = run_build(root, out)
     assert result.returncode != 0
     assert "P0201" in result.stderr
+
+
+# ------------------------------------------------------------ OS cutscenes
+@pytest.fixture(scope="module")
+def built_with_cutscene(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    root = tmp_path_factory.mktemp("cutscene") / "input"
+    copy_input(FIXTURE_INPUT, root)
+    shutil.copytree(OVERLAY, root, dirs_exist_ok=True)
+    shutil.copytree(CUTSCENE_OVERLAY, root, dirs_exist_ok=True)
+    out = tmp_path_factory.mktemp("cutscene_out")
+    result = run_build(root, out)
+    assert result.returncode == 0, result.stderr
+    return out
+
+
+def test_os_cutscene_maps_trigger_ids_and_skips_non_os_triggers(
+    built_with_cutscene: Path,
+) -> None:
+    logs = {log["game_id"]: log for log in load_entities(built_with_cutscene, "os_log")}
+    assert logs["aos001"]["cutscene"] == "aos0101"
+    assert logs["gos001"]["cutscene"] == "gos0101"
+    assert "cutscene" not in logs["aos002"]
+    assert "cutscene" not in logs["gos002"]
+    assert "cutscene" not in logs["bos001"]
+    # taos001a triggers a branching-OS cutscene; it is not an OS log id.
+    assert all(log.get("cutscene") != "taos0101" for log in logs.values())
+    assert {"kind": "text_asset", "locator": CUTSCENE_LOCATOR} in (
+        logs["aos001"]["provenance"]
+    )
+    assert len(logs["aos001"]["provenance"]) == 2
+    assert len(logs["aos002"]["provenance"]) == 1
+
+
+def test_os_cutscene_is_optional_and_typed(built_with_cutscene: Path) -> None:
+    validator = SchemaValidator()
+    logs = {log["game_id"]: log for log in load_entities(built_with_cutscene, "os_log")}
+    assert validator.errors("os_log", logs["aos002"]) == []  # absent is valid
+    nulled = dict(logs["aos002"], cutscene=None)  # null is not the contract
+    assert any("expected type string" in error for error in validator.errors("os_log", nulled))
+    bad = dict(logs["aos001"], cutscene="asset/video/aos0101")
+    assert any("does not match pattern" in error for error in validator.errors("os_log", bad))
+    assert validator.errors("os_log", logs["aos001"]) == []
+
+
+def test_spa_projection_carries_os_cutscene(built_with_cutscene: Path) -> None:
+    data = json.loads(
+        (built_with_cutscene / "spa" / "data.json").read_text(encoding="utf-8")
+    )
+    rows = {row["game_id"]: row for row in data["entities"]["os_log"]}
+    assert rows["aos001"]["cutscene"] == "aos0101"
+    assert "cutscene" not in rows["aos002"]
+    assert "video" not in data["entities"]  # the clip stays a reference, not an entity
+
+
+def test_cutscene_table_shape_is_enforced(tmp_path: Path) -> None:
+    root = tmp_path / "input"
+    copy_input(FIXTURE_INPUT, root)
+    path = root / "text" / "cutscenedata" / "cutscene_data_os"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"aos001": {"TriggerId": "aos001", "MovieFile": "aos0101.mov"}}),
+        encoding="utf-8",
+    )
+    result = run_build(root, tmp_path / "out")
+    assert result.returncode != 0
+    assert "MovieFile" in result.stderr

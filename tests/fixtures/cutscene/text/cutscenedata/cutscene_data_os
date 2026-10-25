@@ -1,0 +1,23 @@
+{
+  "aos001": {
+    "Type": 1,
+    "TriggerId": "aos001",
+    "MovieFile": "aos0101.mp4",
+    "IsIosDownloadOnly": false,
+    "IsAndroidDownloadOnly": false
+  },
+  "gos001": {
+    "Type": 1,
+    "TriggerId": "gos001",
+    "MovieFile": "gos0101.mp4",
+    "IsIosDownloadOnly": true,
+    "IsAndroidDownloadOnly": false
+  },
+  "taos001a": {
+    "Type": 0,
+    "TriggerId": "taos001a",
+    "MovieFile": "taos0101.mp4",
+    "IsIosDownloadOnly": false,
+    "IsAndroidDownloadOnly": false
+  }
+}

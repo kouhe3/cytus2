@@ -239,6 +239,28 @@ const MISSING_CLIP_STUB = `(() => {
   };
 })()`;
 
+// ---------------- story node movie stub (#30, ticket/30-story-movies block)
+// Drops the second story04 clip from the media maps but keeps its subtitle
+// group, so the missing-media note (not a subtitle note) must win.
+const STORY_MOVIE_MISSING_STUB = `(() => {
+  const realFetch = window.fetch;
+  window.fetch = async (input, init) => {
+    const url = typeof input === 'string' ? input : input.url;
+    const response = await realFetch(input, init);
+    if (!url.includes('/media/manifest.json')) {
+      return response;
+    }
+    const data = await response.clone().json();
+    if (data.movies) delete data.movies.story04_2;
+    if (data.videos) delete data.videos.story04_2;
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+})()`;
+// ------------------------------------------------ end story node movie stub
+
 /**
  * Backup Database negative path (#29): every gallery video exports today, so
  * the missing-media note is exercised by deleting one clip from the manifest
@@ -1646,6 +1668,189 @@ try {
     "back from story node",
   );
   check(true, "story node returns to the story index");
+
+  // ------------------------------------ story node movies (#30)
+  // ticket/30-story-movies: players for movie_files, chips stay as fallback.
+  await cdp.navigate(`${appBase}/story_node/story_ending03_main`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="story-movies"] video[data-testid="video-player"]'))`,
+    "story node movie player loads",
+  );
+  const storyMovie = await cdp.evaluate(`(() => {
+    const section = document.querySelector('[data-testid="story-movies"]');
+    const rows = [...section.querySelectorAll('[data-testid="story-movie"]')];
+    const first = rows[0];
+    const video = first?.querySelector('video[data-testid="video-player"]');
+    const track = first?.querySelector('[data-testid="video-track"]');
+    return {
+      heading: section.querySelector('h2')?.textContent ?? '',
+      rows: rows.length,
+      clip: first?.dataset.clip ?? null,
+      videoClip: video?.dataset.clip ?? null,
+      src: video ? new URL(video.getAttribute('src'), location.href).pathname : '',
+      controls: video?.controls ?? null,
+      autoplay: video?.autoplay ?? null,
+      paused: video?.paused ?? null,
+      trackLang: track?.srclang ?? null,
+      trackSrc: track ? new URL(track.getAttribute('src'), location.href).pathname : null,
+      chips: [...document.querySelectorAll('[data-testid="story-event-detail"] .code-chip')]
+        .map((chip) => chip.textContent),
+    };
+  })()`);
+  check(
+    storyMovie.rows === 1,
+    `story_ending03_main renders one movie row (got ${storyMovie.rows})`,
+  );
+  check(
+    storyMovie.heading.trim().length > 0,
+    "story movies section has a heading",
+  );
+  check(
+    storyMovie.clip === "IvyDieCutscene",
+    `story movie row strips the .mp4 suffix for the clip id (got ${storyMovie.clip})`,
+  );
+  check(
+    storyMovie.videoClip === "IvyDieCutscene",
+    `story movie player exposes its clip id (got ${storyMovie.videoClip})`,
+  );
+  check(
+    storyMovie.src.endsWith("/media/videos/IvyDieCutscene.mp4"),
+    `story movie resolves through the media manifest (got ${storyMovie.src})`,
+  );
+  check(storyMovie.controls === true, "story movie player shows native controls");
+  check(storyMovie.autoplay === false, "story movie player never autoplays");
+  check(storyMovie.paused === true, "story movie player starts paused");
+  check(
+    storyMovie.trackLang === "zh-Hans",
+    `story movie track follows the sidebar language (got ${storyMovie.trackLang})`,
+  );
+  check(
+    storyMovie.trackSrc.endsWith("/media/subs/IvyDieCutscene.zh-Hans.vtt"),
+    `story movie track points at the zh-Hans VTT (got ${storyMovie.trackSrc})`,
+  );
+  check(
+    storyMovie.chips.includes("IvyDieCutscene.mp4"),
+    "textual movie chips remain as the export fallback",
+  );
+
+  await cdp.navigate(`${appBase}/story_node/story04`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="story-movies"] [data-testid="story-movie"]').length === 2 &&
+     document.querySelectorAll('[data-testid="story-movies"] video[data-testid="video-player"]').length === 2`,
+    "story04 renders both movie players",
+  );
+  const storyMulti = await cdp.evaluate(`(() => {
+    const rows = [...document.querySelectorAll('[data-testid="story-movie"]')];
+    return {
+      clips: rows.map((row) => row.dataset.clip),
+      srcs: rows.map((row) => {
+        const video = row.querySelector('video[data-testid="video-player"]');
+        return video ? new URL(video.getAttribute('src'), location.href).pathname : null;
+      }),
+      tracks: rows.map((row) => row.querySelectorAll('[data-testid="video-track"]').length),
+      trackLangs: rows.map((row) => row.querySelector('[data-testid="video-track"]')?.srclang ?? null),
+      chips: [...document.querySelectorAll('[data-testid="story-event-detail"] .code-chip')]
+        .map((chip) => chip.textContent),
+    };
+  })()`);
+  check(
+    JSON.stringify(storyMulti.clips) === JSON.stringify(["story04_1", "story04_2"]),
+    `story04 lists both clips in movie_files order (got ${storyMulti.clips.join(",")})`,
+  );
+  check(
+    storyMulti.srcs.every((src) => src?.endsWith(".mp4") === true) === true,
+    "both story04 clips resolve through the media manifest",
+  );
+  check(
+    storyMulti.tracks[0] === 0,
+    "story04_1 renders no track (no stem-pairing fallback to story04_2 subtitles)",
+  );
+  check(
+    storyMulti.tracks[1] === 1 && storyMulti.trackLangs[1] === "zh-Hans",
+    `story04_2 renders exactly its own zh-Hans track (got ${storyMulti.tracks[1]}:${storyMulti.trackLangs[1]})`,
+  );
+  check(
+    storyMulti.chips.includes("story04_1.mp4") &&
+      storyMulti.chips.includes("story04_2.mp4"),
+    "story04 keeps both textual movie chips",
+  );
+
+  await cdp.navigate(`${appBase}/story_node/story01`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="story-event-detail"]'))`,
+    "story01 event detail loads",
+  );
+  check(
+    (await cdp.evaluate(
+      `document.querySelectorAll('[data-testid="story-movies"]').length`,
+    )) === 0,
+    "story node without movies renders no story-movies section",
+  );
+
+  const storyStub = await cdp.call("Page.addScriptToEvaluateOnNewDocument", {
+    source: STORY_MOVIE_MISSING_STUB,
+  });
+  await cdp.navigate(`${appBase}/story_node/story04`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="story-movies"] [data-testid="video-missing"][data-clip="story04_2"]'))`,
+    "missing story movie note renders",
+  );
+  const missingStoryMovie = await cdp.evaluate(`(() => {
+    const rows = [...document.querySelectorAll('[data-testid="story-movie"]')];
+    const row = rows.find((entry) => entry.dataset.clip === 'story04_2');
+    const note = row?.querySelector('[data-testid="video-missing"]');
+    return {
+      rows: rows.length,
+      noteClip: note?.dataset.clip ?? null,
+      noteReason: note?.dataset.reason ?? null,
+      noteText: note?.textContent ?? '',
+      rowVideos: row?.querySelectorAll('video[data-testid="video-player"]').length ?? -1,
+      otherVideos: rows
+        .filter((entry) => entry.dataset.clip !== 'story04_2')
+        .reduce((total, entry) => total + entry.querySelectorAll('video').length, 0),
+      chips: [...document.querySelectorAll('[data-testid="story-event-detail"] .code-chip')]
+        .map((chip) => chip.textContent),
+    };
+  })()`);
+  check(missingStoryMovie.rows === 2, "missing export keeps both story movie rows");
+  check(
+    missingStoryMovie.noteClip === "story04_2" &&
+      missingStoryMovie.noteReason === "missing",
+    `missing story clip renders the export note (got ${missingStoryMovie.noteReason})`,
+  );
+  check(
+    missingStoryMovie.noteText.trim().length > 0,
+    "missing story clip note has copy",
+  );
+  check(
+    missingStoryMovie.rowVideos === 0,
+    "missing story clip renders no <video> element",
+  );
+  check(
+    missingStoryMovie.otherVideos === 1,
+    "the exported story04_1 clip still plays next to the missing one",
+  );
+  check(
+    missingStoryMovie.chips.includes("story04_2.mp4"),
+    "textual chips still name the clip that has no export",
+  );
+  await cdp.call("Page.removeScriptToEvaluateOnNewDocument", {
+    identifier: storyStub.identifier,
+  });
+  await cdp.navigate(`${appBase}/story_node/story04`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="story-movies"] video[data-testid="video-player"]').length === 2`,
+    "story04 players return without the stub",
+  );
+  check(true, "removing the manifest stub restores both story movie players");
+
+  await cdp.navigate(`${appBase}/story_node/story_ending03_main`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="story-movies"] video[data-testid="video-player"]'))`,
+    "story movie player ready for screenshot",
+  );
+  await cdp.screenshot("story-movies.png");
+  // ---------------------------------- end story node movies (#30)
 
   // ------------------------------------------------------------------- shop
   await cdp.navigate(`${appBase}/shop`);

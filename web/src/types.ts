@@ -46,6 +46,12 @@ export interface StoryBossStageRef {
   readonly status: string;
 }
 
+/** `TRIGGER_GALLERY_FOLDER_ID` / `TRIGGER_GALLERY_FILE_LOCATION` pair. */
+export interface StoryGalleryRef {
+  readonly folder_id: string;
+  readonly location: string;
+}
+
 export interface BaseEntity {
   readonly id: string;
   readonly type: string;
@@ -263,7 +269,7 @@ export interface StoryNodeEntity extends BaseEntity {
   readonly trigger_topic_id?: string | null;
   readonly trigger_topics?: string[];
   readonly boss_stages?: StoryBossStageRef[];
-  readonly gallery_ref?: string | null;
+  readonly gallery_ref?: StoryGalleryRef | null;
   readonly movie_files?: string[];
   readonly charts?: string[];
   readonly level?: number;

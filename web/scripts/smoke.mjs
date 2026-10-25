@@ -1560,6 +1560,85 @@ try {
   check(true, "removing the gallery manifest stub restores the player");
   await cdp.screenshot("gallery-video.png");
 
+  // -------------------------------- OS log -> Backup videos index (#31)
+  await cdp.navigate(`${appBase}/os/aios017`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="os-related-videos"]'))`,
+    "OS related-videos section loads",
+  );
+  const osRelated = await cdp.evaluate(`(() => {
+    const section = document.querySelector('[data-testid="os-related-videos"]');
+    const rows = [...section.querySelectorAll('[data-testid="os-related-video"]')];
+    return {
+      heading: section.querySelector('h2')?.textContent?.trim() ?? '',
+      count: rows.length,
+      ids: rows.map(row => row.dataset.entityId),
+      hrefs: rows.map(row => row.getAttribute('href')),
+    };
+  })()`);
+  check(osRelated.heading.length > 0, "OS related-videos section has a heading");
+  check(
+    osRelated.count === 1,
+    `OS log lists exactly one related Backup video (got ${osRelated.count})`,
+  );
+  check(
+    osRelated.ids[0] === "gallery_item/ai001/aios1701",
+    `related row points at the gallery item (got ${osRelated.ids[0]})`,
+  );
+  check(
+    osRelated.hrefs[0] === "/gallery_item/ai001/aios1701",
+    `related row links to the Backup Database item (got ${osRelated.hrefs[0]})`,
+  );
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="os-related-video"]').click()`,
+  );
+  await cdp.waitFor(
+    `location.pathname === '/gallery_item/ai001/aios1701' && Boolean(document.querySelector('[data-testid="gallery-video"] video[data-testid="video-player"]'))`,
+    "related row opens the Backup Database video",
+  );
+  const relatedSrc = await cdp.evaluate(
+    `new URL(document.querySelector('[data-testid="gallery-video"] video[data-testid="video-player"]').getAttribute('src'), location.href).pathname`,
+  );
+  check(
+    relatedSrc.endsWith("/media/videos/aios1701.mp4"),
+    `shared player plays the related clip (got ${relatedSrc})`,
+  );
+  await cdp.navigate(`${appBase}/os/alos025`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="entity-view"]'))`,
+    "alos025 entity view loads for the related-video check",
+  );
+  check(
+    (await cdp.evaluate(
+      `document.querySelectorAll('[data-testid="os-related-videos"]').length`,
+    )) === 0,
+    "OS log without a related video renders no related-videos section",
+  );
+  await cdp.navigate(`${appBase}/os/chos031`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="os-related-videos"]'))`,
+    "chos031 related-videos section loads",
+  );
+  const chosRelated = await cdp.evaluate(`(() => ({
+    ids: [...document.querySelectorAll('[data-testid="os-related-video"]')].map(row => row.dataset.entityId),
+    cutscene: Boolean(document.querySelector('[data-testid="os-cutscene"]')),
+  }))()`);
+  check(
+    chosRelated.ids.length === 1 &&
+      chosRelated.ids[0] === "gallery_item/cherry001/chos3101",
+    `second anchor resolves its own video (got ${chosRelated.ids.join(", ")})`,
+  );
+  check(
+    chosRelated.cutscene === true,
+    "OS log with both sections keeps its cutscene",
+  );
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="os-related-videos"]').scrollIntoView({ block: 'center' })`,
+  );
+  await sleep(250);
+  await cdp.screenshot("os-related-videos.png");
+  // ------------------------------ end #31 OS log -> Backup videos index
+
   // ------------------------------------------------------------- story nodes
   await cdp.navigate(`${appBase}/story`);
   await cdp.waitFor(

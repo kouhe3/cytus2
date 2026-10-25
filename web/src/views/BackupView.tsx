@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BackButton } from "../components/BackButton";
 import { EntityLink } from "../components/EntityLink";
-import { Avatar, MediaKindBadge } from "../components/ui";
+import { MediaImage } from "../components/Media";
+import { MediaKindBadge } from "../components/ui";
 import { findGalleryGroup, galleryGroups } from "../data/collections";
 import { useI18n } from "../data/i18n";
 import { mediaKindLabel } from "../data/labels";
@@ -52,7 +53,12 @@ export function BackupIndexView({ db }: { db: Database }) {
               data-testid="backup-folder-card"
               data-folder-id={group.folder.id}
             >
-              <Avatar name={group.folder.name} />
+              <MediaImage
+                id={group.folder.avatar_id ?? group.folder.game_id}
+                kind="logo"
+                alt={group.folder.name}
+                className="collection-logo"
+              />
               <span className="collection-title">{group.folder.name}</span>
               <span className="collection-meta">
                 {i18n.t("backup.meta", {
@@ -185,6 +191,12 @@ export function BackupFolderView({
 
         <article className="detail" data-testid="backup-folder" data-folder-id={group.folder.id}>
           <header className="detail-head">
+            <MediaImage
+              id={group.folder.avatar_id ?? group.folder.game_id}
+              kind="logo"
+              alt={group.folder.name}
+              className="backup-folder-logo"
+            />
             <p className="eyebrow">
               {i18n.t("backup.folderEyebrow")} ·{" "}
               <code>{group.folder.game_id}</code>

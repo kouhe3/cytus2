@@ -32,8 +32,8 @@ repository root when the default `python` does not have UnityPy;
 | `/os` | OS archive index with the game's three groupings: chapter → folder (default; 17 chapters with logs, each split by `TimelineChapter.Folder`), character → version, and version → character. The chapter order follows the wiki-maintained game list (`Amiya` between `Decommission` and `cyTus`), not the table's `Id`. Every file carries the 1-based unlock level of its own character (`Lv N`, e.g. `Lv 36`); other characters' level conditions and the file-lock chain stay in the entity detail, and the list neither hides files nor marks them as locked. Staging chapters `test01` / `test02` stay out of the chapter view; the chosen mode persists in `sessionStorage` |
 | `/oa` | OA archive index: one card per character with object/document/description counts |
 | `/oa/<gameId>` | OA workspace: object tabs, each object's text and documents, all hotspot descriptions |
-| `/backup` | Backup Database folder index with per-folder media counts |
-| `/backup/<gameId>` | folder items grouped as a media retrospective; kind filter, conditions, boss-stage links |
+| `/backup` | Backup Database folder index with per-folder gallery logos and media counts |
+| `/backup/<gameId>` | folder header logo, then items grouped as a media retrospective; kind filter, conditions, boss-stage links |
 | `/story` | story nodes ordered by reading order; level/version/chapter sort, event/Branching OS filter |
 | `/shop` | CAPSO packs, gacha machine and shop bundles; Black Market badge |
 | `/extras` | appendix hub: assistant dialogues and title-screen evolution |

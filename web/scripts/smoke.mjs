@@ -966,12 +966,23 @@ try {
     `Boolean(document.querySelector('[data-testid="backup-index"]'))`,
     "Backup index loads",
   );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="backup-folder-card"] img.collection-logo').length === 25`,
+    "Backup folder logos load",
+  );
   const backupIndex = await cdp.evaluate(`(() => ({
     folders: document.querySelectorAll('[data-testid="backup-folder-card"]').length,
+    logos: document.querySelectorAll('[data-testid="backup-folder-card"] img.collection-logo').length,
+    mainLogo: document.querySelector('[data-testid="backup-folder-card"][data-folder-id="gallery_folder/misc"] img.collection-logo')?.getAttribute('src') ?? '',
     stats: document.querySelector('[data-testid="backup-stats"]')?.textContent ?? '',
     firstHref: document.querySelector('[data-testid="backup-folder-card"]')?.getAttribute('href'),
   }))()`);
   check(backupIndex.folders === 25, `Backup index lists 25 folders (got ${backupIndex.folders})`);
+  check(backupIndex.logos === 25, `Backup index shows 25 folder logos (got ${backupIndex.logos})`);
+  check(
+    backupIndex.mainLogo.endsWith("/media/gallery-icons/gallery.png"),
+    `Main_Folder uses its own logo (got ${backupIndex.mainLogo})`,
+  );
   check(
     backupIndex.stats.includes(formatUnit(zhHans, "entries", 84)),
     "Backup index counts 84 media entries",
@@ -982,12 +993,21 @@ try {
     `location.pathname === '/backup/alice001' && Boolean(document.querySelector('[data-testid="backup-folder"]'))`,
     "Backup folder opens",
   );
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="backup-folder"] img.backup-folder-logo'))`,
+    "Backup folder header logo loads",
+  );
   const backupFolder = await cdp.evaluate(`(() => ({
     items: document.querySelectorAll('[data-testid="backup-item-card"]').length,
+    logo: document.querySelector('[data-testid="backup-folder"] img.backup-folder-logo')?.getAttribute('src') ?? '',
     firstHref: document.querySelector('[data-testid="backup-item-card"]')?.getAttribute('href'),
     kinds: [...new Set([...document.querySelectorAll('[data-testid="backup-item-card"]')].map(card => card.dataset.kind))].sort(),
   }))()`);
   check(backupFolder.items === 3, `Backup folder shows its 3 entries (got ${backupFolder.items})`);
+  check(
+    backupFolder.logo.endsWith("/media/gallery-icons/alice001.png"),
+    `Backup folder header uses the folder logo (got ${backupFolder.logo})`,
+  );
   check(
     backupFolder.firstHref?.startsWith("/gallery_item/") === true,
     "Backup folder links gallery items",

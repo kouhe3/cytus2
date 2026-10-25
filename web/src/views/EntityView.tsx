@@ -27,6 +27,7 @@ import { MediaImage } from "../components/Media";
 import { RelationsSection } from "../components/Relations";
 import { TextBody } from "../components/TextBody";
 import { TypeBadge } from "../components/ui";
+import { VideoPlayer } from "../components/VideoPlayer";
 import { useI18n } from "../data/i18n";
 import {
   isBossStage,
@@ -448,6 +449,17 @@ export function EntityView({
           </header>
 
           <EntityMedia entity={entity} />
+
+          {isOsLog(entity) && entity.cutscene ? (
+            <section
+              className="detail-section"
+              data-testid="os-cutscene"
+              data-clip={entity.cutscene}
+            >
+              <h2>{i18n.t("section.osCutscene")}</h2>
+              <VideoPlayer clip={entity.cutscene} />
+            </section>
+          ) : null}
 
           {textRef ? <TextBody textRef={textRef} lang={lang} /> : null}
 

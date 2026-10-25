@@ -2,15 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BackButton } from "../components/BackButton";
 import { EntityLink } from "../components/EntityLink";
-import { MediaImage, MediaVideo } from "../components/Media";
+import { MediaImage } from "../components/Media";
 import { TextBody } from "../components/TextBody";
 import { Avatar } from "../components/ui";
+import { VideoPlayer } from "../components/VideoPlayer";
 import { oaGroups, findOaGroup } from "../data/collections";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
-import { loadMediaManifest } from "../data/media";
 import { formatUnit } from "../data/messages";
 import { entityHref } from "../data/selectors";
+import { useMediaManifest } from "../data/useMedia";
 import type { I18n } from "../data/messages";
 import type { MediaManifest } from "../data/media";
 import type { OaGroup } from "../data/collections";
@@ -29,24 +30,6 @@ function oaStats(
     documents: formatUnit(i18n, "documents", group.documents.length),
     descriptions: formatUnit(i18n, "descriptions", group.descriptions.length),
   });
-}
-
-function useMediaManifest(): MediaManifest | null {
-  const [manifest, setManifest] = useState<MediaManifest | null>(null);
-  useEffect(() => {
-    let active = true;
-    loadMediaManifest()
-      .then((data) => {
-        if (active) {
-          setManifest(data);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
-  return manifest;
 }
 
 /**
@@ -127,7 +110,12 @@ function OaScenes({
               data-testid="oa-scene-video"
               data-scene-id={key}
             >
-              <MediaVideo id={key} alt={label} />
+              <VideoPlayer
+                clip={key}
+                subtitleKey={null}
+                missing="hide"
+                label={label}
+              />
               <figcaption>{label}</figcaption>
             </figure>
           );
@@ -279,7 +267,7 @@ export function OaCharacterView({
   const i18n = useI18n();
   const group: OaGroup | null = findOaGroup(db, gameId);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
-  const manifest = useMediaManifest();
+  const { manifest } = useMediaManifest();
 
   useEffect(() => {
     setSelectedObjectId(null);

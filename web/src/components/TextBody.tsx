@@ -4,7 +4,8 @@ import { fallbackNotice } from "../data/labels";
 import { formatFieldValue } from "../data/selectors";
 import { loadTextRecord } from "../data/text";
 import { RichText } from "./InlineText";
-import { MediaAudio, MediaImage, MediaVideo } from "./Media";
+import { MediaAudio, MediaImage } from "./Media";
+import { VideoPlayer } from "./VideoPlayer";
 import type { Lang, TextBlock, TextRecord } from "../types";
 
 type TextState =
@@ -95,7 +96,11 @@ function Block({ block }: { block: TextBlock }) {
     case "movie":
       return (
         <div className="block media">
-          <MediaVideo id={readString(block, "id")} />
+          <VideoPlayer
+            clip={readString(block, "id")}
+            subtitleKey={null}
+            missing="hide"
+          />
         </div>
       );
     case "sound": {
@@ -364,7 +369,14 @@ export function TextBody({
               return <MediaImage key={index} id={node.id} kind="image" />;
             }
             if (node.kind === "movie") {
-              return <MediaVideo key={index} id={node.id} />;
+              return (
+                <VideoPlayer
+                  key={index}
+                  clip={node.id}
+                  subtitleKey={null}
+                  missing="hide"
+                />
+              );
             }
             if (node.kind === "hyperlink") {
               return (

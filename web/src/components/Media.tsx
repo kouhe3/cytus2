@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { loadMediaManifest, mediaUrl, pickAudio, pickImage, pickVideo, type MediaAsset } from "../data/media";
+import { loadMediaManifest, mediaUrl, pickAudio, pickImage, type MediaAsset } from "../data/media";
 
 type MediaProps = {
   readonly id: string;
@@ -70,39 +70,6 @@ export function MediaImage({
             }
           : undefined
       }
-    />
-  );
-}
-
-export function MediaVideo({ id, alt }: { readonly id: string; readonly alt?: string }) {
-  const [asset, setAsset] = useState<MediaAsset | null>(null);
-  useEffect(() => {
-    let active = true;
-    loadMediaManifest()
-      .then((manifest) => {
-        if (active) {
-          setAsset(pickVideo(manifest, id));
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setAsset(null);
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [id]);
-  if (!asset) {
-    return null;
-  }
-  return (
-    <video
-      className="media-video"
-      src={mediaUrl(asset.file)}
-      controls
-      preload="metadata"
-      aria-label={alt ?? id}
     />
   );
 }

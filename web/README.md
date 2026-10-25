@@ -36,9 +36,10 @@ repository root when the default `python` does not have UnityPy;
 | `/backup/<gameId>` | folder header logo, then items grouped as a media retrospective; kind filter, conditions, boss-stage links |
 | `/story` | story nodes ordered by reading order; level/version/chapter sort, event/Branching OS filter |
 | `/shop` | CAPSO packs, gacha machine and shop bundles; Black Market badge |
-| `/extras` | appendix hub: assistant dialogues and title-screen evolution |
+| `/extras` | appendix hub: assistant dialogues, title-screen evolution and the cutscene subtitle library |
 | `/extras/assistants` | iM assistant dialogue groups, pages and trigger/target, all five languages |
 | `/extras/titles` | 10 title screens with story unlocks and `video_title_*` playback; missing clips are marked |
+| `/extras/cutscenes` | cutscene subtitle library: all 55 subtitle groups paired with their exported clip (exact key, then a trailing `_N` removed), a dialogue search over every language that seeks the paired clip to the matched cue, muxed audio variants for silent clips, and the 62 exported videos without subtitles |
 | `/search?q=<text>` | full-text search over iM posts, OS logs, OA documents and subtitle lines, grouped by type |
 | `/im/<gameId>`, `/os/<gameId>`, `/<type>/<gameId>` | entity detail with body text, type-specific facts, charts, and inbound/outbound edges; title-only iM posts carry an explicit note, and the four Bili-Wiki-confirmed posts carry a manual removed-after-reading note. An OS log with a first-open cutscene shows it as a 16:9 player above the body, with the sidebar language's subtitle track (or an explicit missing-subtitle note) |
 | `/song/<songId>@<Difficulty>` | chart detail: level, NeedUnlock, unlock sources from `unlocks_chart` edges, backlinks, sibling difficulties |
@@ -124,7 +125,11 @@ chart → post → chart round trip, the OS chapter → folder index (17 chapter
 document views, a backup gallery item, a Branching OS node, a CAPSO pack and
 the Black Market bundle, the extras hub, all 19 assistant groups / 30 pages
 with their language switch, the 10 title screens and 13 video clips (or their
-missing-export notes), the OS cutscene player (resolved `videos/<clip>.mp4`
+missing-export notes), the cutscene subtitle library (55 group rows, 62
+videos without subtitles, the sidebar language switch and the two missing-en
+notes, the single `Waahhhh` hit that seeks its clip to 3.7s, the muxed
+`audioKey` swap that drops the no-audio note, and the missing-clip note), the
+OS cutscene player (resolved `videos/<clip>.mp4`
 source, no autoplay, 17 zh-Hans cues, the ja track swap without a page reload,
 the missing-subtitle and missing-clip notes and the 390px no-overflow layout),
 grouped search hits opened with the keyboard, and the

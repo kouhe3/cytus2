@@ -79,8 +79,12 @@ export function VideoPlayer({
       ? manifest.subtitles[subtitleGroup]
       : undefined;
   const track: SubtitleTrack | null = groupTracks?.[resolvedLang] ?? null;
-  /** `videos` is the only map with the flag; aliases and old manifests stay quiet. */
-  const silent = manifest?.videos?.[clipId]?.hasAudio === false;
+  /**
+   * `videos` is the only map with the flag; aliases and old manifests stay
+   * quiet. A resolved muxed variant is itself the audio-bearing copy, so a
+   * silent origin never paints the note under the muxed player.
+   */
+  const silent = !muxed && manifest?.videos?.[clipId]?.hasAudio === false;
 
   useEffect(() => {
     setFailed(false);

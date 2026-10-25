@@ -22,6 +22,11 @@ export const LANGUAGES: readonly LanguageOption[] = [
   { code: "zh-Hans", label: "简中", title: "简体中文" },
 ];
 
+/** Self-name of a language code; the one place that resolves `LANGUAGES`. */
+export function languageLabel(lang: Lang): string {
+  return LANGUAGES.find((option) => option.code === lang)?.title ?? lang;
+}
+
 export const LANG_LOCALES: Record<Lang, string> = {
   en: "en",
   ja: "ja-JP",
@@ -343,7 +348,6 @@ export const ZH_HANS = {
   "video.subtitleMissing": "所选语言（{lang}）没有字幕。",
   "video.noSubtitle": "此影片没有字幕。",
   "video.noAudio": "此影片没有音轨。",
-  "video.playbackError": "影片 {clip} 播放失败。",
 
   /* #32 cutscene + subtitle library */
   "extras.cutscenesCard": "过场影片与字幕",
@@ -359,6 +363,7 @@ export const ZH_HANS = {
   "extras.cutsceneSearchError": "字幕文件载入失败。",
   "extras.cutsceneSearchEmpty": "没有台词包含这个字串。",
   "extras.cutsceneSearchSummary": "在 {groups} 个字幕组中找到 {hits} 条台词（{lang} 优先）",
+  "extras.cutsceneSearchMore": "另有 {count} 条匹配未列出。",
   "extras.cutsceneLanguages": "语言",
   "extras.cutsceneNoVideo": "{group} · 影片未导出",
   "extras.cutsceneSelection": "字幕定位",
@@ -963,7 +968,6 @@ const EN: Messages = {
   "video.subtitleMissing": "No subtitles in {lang}.",
   "video.noSubtitle": "This clip has no subtitles.",
   "video.noAudio": "This clip has no audio track.",
-  "video.playbackError": "Video {clip} failed to play.",
 
   /* #32 cutscene + subtitle library */
   "extras.cutscenesCard": "Cutscenes & subtitles",
@@ -979,6 +983,7 @@ const EN: Messages = {
   "extras.cutsceneSearchError": "The subtitle files failed to load.",
   "extras.cutsceneSearchEmpty": "No line contains that text.",
   "extras.cutsceneSearchSummary": "{hits} in {groups} subtitle groups ({lang} first)",
+  "extras.cutsceneSearchMore": "{count} more matches are not listed.",
   "extras.cutsceneLanguages": "Languages",
   "extras.cutsceneNoVideo": "{group} · video not exported",
   "extras.cutsceneSelection": "Cue jump",
@@ -1580,7 +1585,6 @@ const JA: Messages = {
   "video.subtitleMissing": "{lang} の字幕はありません。",
   "video.noSubtitle": "この映像に字幕はありません。",
   "video.noAudio": "この映像に音声トラックはありません。",
-  "video.playbackError": "映像 {clip} の再生に失敗しました。",
 
   /* #32 cutscene + subtitle library */
   "extras.cutscenesCard": "カットシーンと字幕",
@@ -1596,6 +1600,7 @@ const JA: Messages = {
   "extras.cutsceneSearchError": "字幕ファイルの読み込みに失敗しました。",
   "extras.cutsceneSearchEmpty": "その文字列を含む台詞はありません。",
   "extras.cutsceneSearchSummary": "{groups} 字幕グループで {hits} 件（{lang} 優先）",
+  "extras.cutsceneSearchMore": "ほかに {count} 件の一致は表示していません。",
   "extras.cutsceneLanguages": "言語",
   "extras.cutsceneNoVideo": "{group} · 映像は未エクスポート",
   "extras.cutsceneSelection": "キューへ移動",
@@ -2197,7 +2202,6 @@ const ZH_HANT: Messages = {
   "video.subtitleMissing": "所選語言（{lang}）沒有字幕。",
   "video.noSubtitle": "此影片沒有字幕。",
   "video.noAudio": "此影片沒有音軌。",
-  "video.playbackError": "影片 {clip} 播放失敗。",
 
   /* #32 cutscene + subtitle library */
   "extras.cutscenesCard": "過場影片與字幕",
@@ -2213,6 +2217,7 @@ const ZH_HANT: Messages = {
   "extras.cutsceneSearchError": "字幕檔案載入失敗。",
   "extras.cutsceneSearchEmpty": "沒有台詞包含這個字串。",
   "extras.cutsceneSearchSummary": "在 {groups} 個字幕組中找到 {hits} 條台詞（{lang} 優先）",
+  "extras.cutsceneSearchMore": "另有 {count} 條符合未列出。",
   "extras.cutsceneLanguages": "語言",
   "extras.cutsceneNoVideo": "{group} · 影片未匯出",
   "extras.cutsceneSelection": "字幕定位",
@@ -2814,7 +2819,6 @@ const KO: Messages = {
   "video.subtitleMissing": "{lang} 자막이 없습니다.",
   "video.noSubtitle": "이 영상에는 자막이 없습니다.",
   "video.noAudio": "이 영상에는 오디오 트랙이 없습니다.",
-  "video.playbackError": "영상 {clip} 재생에 실패했습니다.",
 
   /* #32 cutscene + subtitle library */
   "extras.cutscenesCard": "컷신과 자막",
@@ -2830,6 +2834,7 @@ const KO: Messages = {
   "extras.cutsceneSearchError": "자막 파일을 불러오지 못했습니다.",
   "extras.cutsceneSearchEmpty": "해당 문자열을 포함한 대사가 없습니다.",
   "extras.cutsceneSearchSummary": "{groups}개 자막 그룹에서 {hits}건 ({lang} 우선)",
+  "extras.cutsceneSearchMore": "{count}개의 일치 항목이 더 있지만 표시하지 않았습니다.",
   "extras.cutsceneLanguages": "언어",
   "extras.cutsceneNoVideo": "{group} · 영상이 내보내지지 않음",
   "extras.cutsceneSelection": "큐 이동",

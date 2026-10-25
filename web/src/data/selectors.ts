@@ -1,6 +1,7 @@
 import {
   isCharacter,
   isChart,
+  isGalleryItem,
   isImPost,
   isOaDescription,
   isOaDocument,
@@ -21,6 +22,7 @@ import type {
   ConditionEntry,
   Database,
   Edge,
+  GalleryItemEntity,
   ImPostEntity,
   Lang,
   LocalizedText,
@@ -855,6 +857,24 @@ export function bossStageForGalleryItem(
     }
   }
   return null;
+}
+
+/**
+ * Backup Database videos that unlock from an OS log. There is no canonical edge
+ * for this direction: the reference lives in the gallery item's condition.
+ */
+export function relatedGalleryVideos(
+  db: Database,
+  osLogId: string,
+): GalleryItemEntity[] {
+  return (db.entitiesByType.get("gallery_item") ?? []).filter(
+    (record): record is GalleryItemEntity =>
+      isGalleryItem(record) &&
+      record.kind === "video" &&
+      record.conditions.some(
+        (condition) => condition.kind === "os" && condition.value === osLogId,
+      ),
+  );
 }
 
 export function entityHome(

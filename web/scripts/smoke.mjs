@@ -214,13 +214,31 @@ const SET_LANGUAGE = (code) => `(() => {
   return button.textContent;
 })()`;
 
+const SET_CUTSCENE_QUERY = (text) => `(() => {
+  const input = document.querySelector('[data-testid="cutscene-search"]');
+  if (!input) throw new Error('cutscene search missing');
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+  setter.call(input, ${JSON.stringify(text)});
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  return input.value;
+})()`;
+
 /**
  * Deterministic missing-export path: every real clip is exported today, so the
- * note is exercised by deleting one key from the manifest response before the
- * app boots. Installed through Page.addScriptToEvaluateOnNewDocument and
- * removed again after the assertion.
+ * notes are exercised by deleting keys from the manifest response before the app
+ * boots. Each install site lists only the maps it drops; the source is injected
+ * through Page.addScriptToEvaluateOnNewDocument and removed after the assertion.
  */
-const MISSING_CLIP_STUB = `(() => {
+function manifestStub({ movies = [], videos = [], subtitles = [] }) {
+  const deletions = [
+    ...movies.map((key) => `    if (data.movies) delete data.movies.${key};`),
+    ...videos.map((key) => `    if (data.videos) delete data.videos.${key};`),
+    ...subtitles.map(
+      (key) => `    if (data.subtitles) delete data.subtitles.${key};`,
+    ),
+  ].join('\n');
+  return `(() => {
   const realFetch = window.fetch;
   window.fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input.url;
@@ -229,84 +247,14 @@ const MISSING_CLIP_STUB = `(() => {
       return response;
     }
     const data = await response.clone().json();
-    if (data.movies) delete data.movies.aios1701;
-    if (data.videos) delete data.videos.aios1701;
-    if (data.subtitles) delete data.subtitles.aios1701;
+${deletions}
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { 'content-type': 'application/json' },
     });
   };
 })()`;
-
-// ---------------- story node movie stub (#30, ticket/30-story-movies block)
-// Drops the second story04 clip from the media maps but keeps its subtitle
-// group, so the missing-media note (not a subtitle note) must win.
-const STORY_MOVIE_MISSING_STUB = `(() => {
-  const realFetch = window.fetch;
-  window.fetch = async (input, init) => {
-    const url = typeof input === 'string' ? input : input.url;
-    const response = await realFetch(input, init);
-    if (!url.includes('/media/manifest.json')) {
-      return response;
-    }
-    const data = await response.clone().json();
-    if (data.movies) delete data.movies.story04_2;
-    if (data.videos) delete data.videos.story04_2;
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    });
-  };
-})()`;
-// ------------------------------------------------ end story node movie stub
-
-/**
- * Backup Database negative path (#29): every gallery video exports today, so
- * the missing-media note is exercised by deleting one clip from the manifest
- * response before the app boots. Kept separate from MISSING_CLIP_STUB so the
- * two tickets' stubs stay independent.
- */
-const GALLERY_MISSING_CLIP_STUB = `(() => {
-  const realFetch = window.fetch;
-  window.fetch = async (input, init) => {
-    const url = typeof input === 'string' ? input : input.url;
-    const response = await realFetch(input, init);
-    if (!url.includes('/media/manifest.json')) {
-      return response;
-    }
-    const data = await response.clone().json();
-    if (data.movies) delete data.movies.aios1701;
-    if (data.videos) delete data.videos.aios1701;
-    if (data.subtitles) delete data.subtitles.aios1701;
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    });
-  };
-})()`;
-
-/**
- * Cutscene library negative path (#32): drop `story04_2` from both clip maps
- * but keep its subtitle group, so the row has languages and no exported clip.
- */
-const MISSING_SUBTITLE_CLIP_STUB = `(() => {
-  const realFetch = window.fetch;
-  window.fetch = async (input, init) => {
-    const url = typeof input === 'string' ? input : input.url;
-    const response = await realFetch(input, init);
-    if (!url.includes('/media/manifest.json')) {
-      return response;
-    }
-    const data = await response.clone().json();
-    if (data.movies) delete data.movies.story04_2;
-    if (data.videos) delete data.videos.story04_2;
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    });
-  };
-})()`;
+}
 
 const TIMELINE_SNAPSHOT = `(() => {
   const cards = [...document.querySelectorAll('[data-testid="timeline-card"]')];
@@ -1046,8 +994,13 @@ try {
     "OS log without a cutscene renders no cutscene section",
   );
 
+  // #28 negative path: drop the OS log's cutscene clip from every media map.
   const stub = await cdp.call("Page.addScriptToEvaluateOnNewDocument", {
-    source: MISSING_CLIP_STUB,
+    source: manifestStub({
+      movies: ["aios1701"],
+      videos: ["aios1701"],
+      subtitles: ["aios1701"],
+    }),
   });
   await cdp.navigate(`${appBase}/os/aios017`);
   await cdp.waitFor(
@@ -1300,6 +1253,12 @@ try {
   const oaMedia = await cdp.evaluate(`(() => ({
     scenes: document.querySelectorAll('[data-testid="oa-scene-video"]').length,
     sceneSrc: document.querySelector('[data-testid="oa-scene-video"] video')?.getAttribute('src') ?? '',
+    sceneClips: [...document.querySelectorAll('[data-testid="oa-scene-video"] video')].map(
+      (video) => video.dataset.clip ?? '',
+    ),
+    audioNotes: document.querySelectorAll(
+      '[data-testid="oa-scene-video"] [data-testid="video-no-audio"]',
+    ).length,
     logos: document.querySelectorAll('[data-testid="oa-scene-logos"] img').length,
     objectArt: document.querySelectorAll('[data-testid="oa-object-art"] img').length,
   }))()`);
@@ -1310,6 +1269,15 @@ try {
   );
   check(oaMedia.logos === 1, `Alice OA shows its scene LOGO (got ${oaMedia.logos})`);
   check(oaMedia.objectArt === 4, `Alice object 1 shows 4 art panels (got ${oaMedia.objectArt})`);
+  check(
+    oaMedia.sceneClips.length === 2 &&
+      oaMedia.sceneClips.every((clip) => clip.endsWith("_oa_system")),
+    `OA scenes are the silent _oa_system clips (got ${oaMedia.sceneClips.join(", ")})`,
+  );
+  check(
+    oaMedia.audioNotes === 0,
+    `OA scene players keep the no-audio note out of the archive surfaces (got ${oaMedia.audioNotes})`,
+  );
   const oaTabCount = await cdp.evaluate(
     `document.querySelectorAll('[data-testid="oa-object-tab"]').length`,
   );
@@ -1560,8 +1528,13 @@ try {
     `gallery video keeps every metadata fact (got ${galleryVideo.labels.length})`,
   );
 
+  // #29 negative path: every gallery video is exported today, so delete one.
   const galleryStub = await cdp.call("Page.addScriptToEvaluateOnNewDocument", {
-    source: GALLERY_MISSING_CLIP_STUB,
+    source: manifestStub({
+      movies: ["aios1701"],
+      videos: ["aios1701"],
+      subtitles: ["aios1701"],
+    }),
   });
   await cdp.navigate(`${appBase}/gallery_item/ai001/aios1701`);
   await cdp.waitFor(
@@ -1866,8 +1839,13 @@ try {
     "story node without movies renders no story-movies section",
   );
 
+  // #30 negative path: drop the second story04 clip but keep its subtitle group,
+  // so the missing-media note (not a subtitle note) must win.
   const storyStub = await cdp.call("Page.addScriptToEvaluateOnNewDocument", {
-    source: STORY_MOVIE_MISSING_STUB,
+    source: manifestStub({
+      movies: ["story04_2"],
+      videos: ["story04_2"],
+    }),
   });
   await cdp.navigate(`${appBase}/story_node/story04`);
   await cdp.waitFor(
@@ -2243,15 +2221,7 @@ try {
   }
   await cdp.evaluate(SET_LANGUAGE("zh-Hans"));
 
-  const searchValue = await cdp.evaluate(`(() => {
-    const input = document.querySelector('[data-testid="cutscene-search"]');
-    if (!input) throw new Error('cutscene search missing');
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-    setter.call(input, 'Waahhhh');
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    return input.value;
-  })()`);
+  const searchValue = await cdp.evaluate(SET_CUTSCENE_QUERY("Waahhhh"));
   check(searchValue === "Waahhhh", "cutscene search accepts typed text");
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="cutscene-hit"]').length === 1`,
@@ -2304,6 +2274,216 @@ try {
     hitPlayer.trackLang === "zh-Hans" &&
       hitPlayer.trackSrc.endsWith("/media/subs/aios1701.zh-Hans.vtt"),
     `hit player attaches the sidebar language track (got ${hitPlayer.trackLang})`,
+  );
+
+  // #32 multi-cue search: a line repeated inside one group lists every cue, and
+  // each row keeps its own seek time.
+  const repeatedValue = await cdp.evaluate(SET_CUTSCENE_QUERY("choice is obvious"));
+  check(repeatedValue === "choice is obvious", "cutscene search accepts a repeated line");
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="cutscene-hit"]').length === 2`,
+    "subtitle search lists both cues of a repeated line",
+    60000,
+  );
+  const repeated = await cdp.evaluate(
+    `[...document.querySelectorAll('[data-testid="cutscene-hit"]')].map((node) => ({
+      group: node.dataset.group ?? '',
+      lang: node.dataset.lang ?? '',
+      time: node.dataset.time ?? '',
+      meta: node.querySelector('.cutscene-hit-meta')?.textContent ?? '',
+    }))`,
+  );
+  check(
+    repeated.length === 2 &&
+      repeated.every((row) => row.group === "taos010_bossstage" && row.lang === "en"),
+    `repeated line keeps its group and language (got ${JSON.stringify(repeated)})`,
+  );
+  check(
+    repeated.map((row) => row.time).join(",") === "7.7,16.9",
+    `repeated line exposes every cue time (got ${repeated.map((row) => row.time).join(",")})`,
+  );
+  check(
+    repeated[0].meta.includes("0:07.7") && repeated[1].meta.includes("0:16.9"),
+    `each cue row formats its own time (got ${repeated.map((row) => row.meta).join(" | ")})`,
+  );
+
+  // #32: opening a hit in a silent clip offers the library's muxed picker, with
+  // no variant preselected, and the no-audio note until one is chosen.
+  await cdp.evaluate(
+    `document.querySelectorAll('[data-testid="cutscene-hit"]')[0].click()`,
+  );
+  await cdp.waitFor(
+    `document.querySelector('[data-testid="cutscene-selection"]')?.dataset.time === '7.7' &&
+     Boolean(document.querySelector('[data-testid="cutscene-selection"] video[data-testid="video-player"]'))`,
+    "opening a repeated cue selects that cue",
+    60000,
+  );
+  const cueAudio = await cdp.evaluate(`(() => {
+    const selection = document.querySelector('[data-testid="cutscene-selection"]');
+    const video = selection.querySelector('video[data-testid="video-player"]');
+    const picker = selection.querySelector('[data-testid="cutscene-audio"]');
+    return {
+      group: selection.dataset.group ?? '',
+      src: video?.getAttribute('src') ?? '',
+      note: Boolean(selection.querySelector('[data-testid="video-no-audio"]')),
+      picker: Boolean(picker),
+      value: picker?.value ?? 'missing',
+      options: [...(picker?.querySelectorAll('option') ?? [])].map((option) => option.value),
+    };
+  })()`);
+  check(
+    cueAudio.group === "taos010_bossstage" &&
+      cueAudio.src.endsWith("/media/videos/taos010_bossstage.mp4"),
+    `a silent clip's cue player starts on the silent original (got ${cueAudio.src})`,
+  );
+  check(
+    cueAudio.note,
+    "the search-selected silent clip carries the no-audio note",
+  );
+  check(
+    cueAudio.picker &&
+      cueAudio.value === "" &&
+      cueAudio.options.includes("taos010_bossstage|taos010_bossstage"),
+    `the cue player offers a muxed picker without preselecting one (got ${cueAudio.value})`,
+  );
+  await cdp.evaluate(`(() => {
+    const select = document.querySelector('[data-testid="cutscene-selection"] [data-testid="cutscene-audio"]');
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
+    setter.call(select, 'taos010_bossstage|taos010_bossstage');
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return select.value;
+  })()`);
+  await cdp.waitFor(
+    `(() => {
+      const selection = document.querySelector('[data-testid="cutscene-selection"]');
+      const video = selection?.querySelector('video[data-testid="video-player"]');
+      return video?.getAttribute('src').endsWith('/media/videos/taos010_bossstage__taos010_bossstage.mp4') &&
+        !selection.querySelector('[data-testid="video-no-audio"]');
+    })()`,
+    "the cue player swaps to the muxed variant and drops the no-audio note",
+    60000,
+  );
+  check(true, "the search-selected player reuses the library's muxed picker");
+
+  await cdp.evaluate(
+    `document.querySelectorAll('[data-testid="cutscene-hit"]')[1].click()`,
+  );
+  await cdp.waitFor(
+    `(() => {
+      const selection = document.querySelector('[data-testid="cutscene-selection"]');
+      if (selection?.dataset.time !== '16.9') return false;
+      const video = selection.querySelector('video[data-testid="video-player"]');
+      return video?.getAttribute('src').endsWith('/media/videos/taos010_bossstage.mp4');
+    })()`,
+    "the second cue resets the picker and reloads the silent original",
+    60000,
+  );
+  await cdp.waitFor(
+    `(() => {
+      const video = document.querySelector('[data-testid="cutscene-selection"] video[data-testid="video-player"]');
+      return video.readyState >= 1 && Math.abs(video.currentTime - 16.9) < 0.5;
+    })()`,
+    "the second cue player seeks to 16.9s",
+    60000,
+  );
+  check(true, "every cue row opens its own seek time");
+
+  // #32: a group matching in several languages lists every language and cue.
+  const shelterValue = await cdp.evaluate(SET_CUTSCENE_QUERY("Shelter"));
+  check(shelterValue === "Shelter", "cutscene search accepts a multi-language phrase");
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="cutscene-hit"]').length === 10`,
+    "subtitle search lists every language's cues for one group",
+    60000,
+  );
+  const shelter = await cdp.evaluate(
+    `[...document.querySelectorAll('[data-testid="cutscene-hit"]')].map((node) => ({
+      group: node.dataset.group ?? '',
+      lang: node.dataset.lang ?? '',
+      time: node.dataset.time ?? '',
+    }))`,
+  );
+  check(
+    shelter.every((row) => row.group === "ilos6601"),
+    `a multi-language match keeps its group (got ${[...new Set(shelter.map((row) => row.group))].join(",")})`,
+  );
+  check(
+    [...new Set(shelter.map((row) => row.lang))].join(",") ===
+      "zh-Hans,en,ja,zh-Hant,ko",
+    `every language of the group is listed (got ${[...new Set(shelter.map((row) => row.lang))].join(",")})`,
+  );
+  check(
+    shelter.map((row) => row.time).join(",") ===
+      "0.8,4.5,0.8,4.5,0.8,4.5,0.8,4.5,0.8,4.5",
+    `every cue of every language is listed (got ${shelter.map((row) => row.time).join(",")})`,
+  );
+
+  // #32: cue formatting rounds the total tenths, so 97.95s prints as 1:38.0.
+  const shannonValue = await cdp.evaluate(SET_CUTSCENE_QUERY("Sister Shannon"));
+  check(shannonValue === "Sister Shannon", "cutscene search accepts the rounding phrase");
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="cutscene-hit"]').length === 2`,
+    "subtitle search finds the two Sister Shannon cues",
+    60000,
+  );
+  const shannon = await cdp.evaluate(
+    `[...document.querySelectorAll('[data-testid="cutscene-hit"]')].map((node) => ({
+      time: node.dataset.time ?? '',
+      meta: node.querySelector('.cutscene-hit-meta')?.textContent ?? '',
+    }))`,
+  );
+  check(
+    shannon.map((row) => row.time).join(",") === "97.95,97.95",
+    `a 97.95s cue keeps its exact start (got ${shannon.map((row) => row.time).join(",")})`,
+  );
+  check(
+    shannon.every((row) => row.meta.includes("1:38.0")),
+    `a cue at 97.95s rounds up to 1:38.0 (got ${shannon.map((row) => row.meta).join(" | ")})`,
+  );
+  check(
+    shannon.every((row) => !row.meta.includes("1:37.10")),
+    "cue formatting never prints a tenths overflow",
+  );
+
+  // #32: a common phrase stays bounded per group/language and in total, and the
+  // hidden matches stay visible as a count.
+  const nekoValue = await cdp.evaluate(SET_CUTSCENE_QUERY("neko"));
+  check(nekoValue === "neko", "cutscene search accepts a common word");
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="cutscene-hit"]').length === 40 &&
+     Boolean(document.querySelector('[data-testid="cutscene-hits-more"]'))`,
+    "a common phrase renders the bounded list with its N-more note",
+    120000,
+  );
+  const bounded = await cdp.evaluate(`(() => {
+    const rows = [...document.querySelectorAll('[data-testid="cutscene-hit"]')];
+    const counts = new Map();
+    for (const row of rows) {
+      const key = (row.dataset.group ?? '') + '|' + (row.dataset.lang ?? '');
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const more = document.querySelector('[data-testid="cutscene-hits-more"]');
+    return {
+      rows: rows.length,
+      maxPerTrack: Math.max(...counts.values()),
+      count: Number(more?.dataset.count ?? -1),
+      text: more?.textContent ?? '',
+      summary: document.querySelector('[data-testid="cutscene-search-summary"]')?.textContent ?? '',
+    };
+  })()`);
+  check(bounded.rows === 40, `a common phrase renders the bounded list (got ${bounded.rows})`);
+  check(
+    bounded.maxPerTrack <= 3,
+    `no group/language lists more than three cues (got ${bounded.maxPerTrack})`,
+  );
+  check(
+    bounded.count === 359,
+    `the N-more note counts every hidden match (got ${bounded.count})`,
+  );
+  check(bounded.text.includes("359"), "the hidden-match note shows its count");
+  check(
+    bounded.summary.includes("399"),
+    "the search summary counts every match, not just the rendered rows",
   );
   await cdp.screenshot("extras-cutscenes.png");
 
@@ -2360,8 +2540,13 @@ try {
   );
   check(true, "the muxed player is offered and carries audio");
 
+  // #32 negative path: drop story04_2 from both clip maps but keep its subtitle
+  // group, so the row has languages and no exported clip.
   const subtitleStub = await cdp.call("Page.addScriptToEvaluateOnNewDocument", {
-    source: MISSING_SUBTITLE_CLIP_STUB,
+    source: manifestStub({
+      movies: ["story04_2"],
+      videos: ["story04_2"],
+    }),
   });
   await cdp.navigate(`${appBase}/extras/cutscenes`);
   await cdp.waitFor(

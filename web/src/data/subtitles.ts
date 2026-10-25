@@ -30,6 +30,20 @@ export interface SubtitleHit {
   readonly text: string;
 }
 
+export interface SubtitleSearchResult {
+  /** Matching cues, sidebar language first; at most `HIT_LIMIT` rows. */
+  readonly hits: readonly SubtitleHit[];
+  /** Matches the caps left out, so the view can report how many remain. */
+  readonly omitted: number;
+  /** Subtitle groups with at least one matching cue, capped or not. */
+  readonly groups: number;
+}
+
+/** Cues listed per group and language, so a repeated line cannot flood the list. */
+const CUES_PER_TRACK = 3;
+/** Ceiling on cue rows handed to the view. */
+const HIT_LIMIT = 40;
+
 const TIMESTAMP = /(\d{2}):(\d{2}):(\d{2})\.(\d{3})/;
 const INLINE_TAG = /<[^>]*>/g;
 const CONCURRENCY = 8;
@@ -136,20 +150,21 @@ export function loadSubtitleIndex(
 }
 
 /**
- * Case-insensitive substring search over every cue in every language. Groups
- * yield at most one hit (the first matching cue in the preferred language) so a
- * common word cannot flood the list with hundreds of rows. The sidebar language
- * is searched first, then the remaining languages in `LANGUAGES` order; hits
- * keep that preference when sorted.
+ * Case-insensitive substring search over every cue in every language: one hit
+ * per matching cue, so a repeated line stays reachable at each of its times and
+ * a group matching in several languages lists every language. The sidebar
+ * language ranks first, then the remaining `LANGUAGES` order; the list is
+ * capped per group/language and in total, and `omitted` counts what the caps
+ * dropped so the view can say how many matches are hidden.
  */
 export function searchSubtitleIndex(
   index: SubtitleIndex,
   query: string,
   activeLang?: Lang,
-): SubtitleHit[] {
+): SubtitleSearchResult {
   const needle = query.trim().toLowerCase();
   if (!needle) {
-    return [];
+    return { hits: [], omitted: 0, groups: 0 };
   }
   const order: Lang[] = [
     ...(activeLang ? [activeLang] : []),
@@ -158,20 +173,39 @@ export function searchSubtitleIndex(
     ),
   ];
   const hits: SubtitleHit[] = [];
+  let omitted = 0;
+  let groups = 0;
   for (const [group, tracks] of Object.entries(index)) {
+    let matched = false;
     for (const lang of order) {
-      const cue = tracks[lang]?.find((entry) =>
+      const cues = (tracks[lang] ?? []).filter((entry) =>
         entry.text.toLowerCase().includes(needle),
       );
-      if (cue) {
-        hits.push({ group, lang, start: cue.start, text: cue.text });
-        break;
+      if (cues.length === 0) {
+        continue;
       }
+      matched = true;
+      for (const cue of cues.slice(0, CUES_PER_TRACK)) {
+        hits.push({ group, lang, start: cue.start, text: cue.text });
+      }
+      omitted += Math.max(0, cues.length - CUES_PER_TRACK);
+    }
+    if (matched) {
+      groups += 1;
     }
   }
-  return hits.sort(
+  const rank = new Map(order.map((code, index) => [code, index]));
+  hits.sort(
     (left, right) =>
-      Number(left.lang !== activeLang) - Number(right.lang !== activeLang) ||
-      (left.group < right.group ? -1 : left.group > right.group ? 1 : 0),
+      (rank.get(left.lang) ?? order.length) -
+        (rank.get(right.lang) ?? order.length) ||
+      (left.group < right.group ? -1 : left.group > right.group ? 1 : 0) ||
+      left.start - right.start ||
+      (left.text < right.text ? -1 : left.text > right.text ? 1 : 0),
   );
+  if (hits.length > HIT_LIMIT) {
+    omitted += hits.length - HIT_LIMIT;
+    hits.length = HIT_LIMIT;
+  }
+  return { hits, omitted, groups };
 }

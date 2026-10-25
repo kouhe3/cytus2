@@ -69,6 +69,7 @@ import {
   formatLevelLocks,
   incomingEdges,
   outgoingEdges,
+  relatedGalleryVideos,
   unlockedCharts,
 } from "../data/selectors";
 import type { I18n } from "../data/messages";
@@ -76,7 +77,6 @@ import type {
   BaseEntity,
   ChartEntity,
   Database,
-  GalleryItemEntity,
   Lang,
   LocalizedText,
 } from "../types";
@@ -330,22 +330,10 @@ export function EntityView({
   const outgoingCount = outgoingEdges(db, entity.id).length;
   const incomingCount = incomingEdges(db, entity.id).length;
 
-  // Read-only reverse index (no canonical edge): a Backup Database video points
-  // back at the OS log through its own unlock condition.
-  const relatedVideos = useMemo(() => {
-    if (!isOsLog(entity)) {
-      return [];
-    }
-    const logId = entity.game_id;
-    return (db.entitiesByType.get("gallery_item") ?? []).filter(
-      (record): record is GalleryItemEntity =>
-        isGalleryItem(record) &&
-        record.kind === "video" &&
-        record.conditions.some(
-          (condition) => condition.kind === "os" && condition.value === logId,
-        ),
-    );
-  }, [db, entity]);
+  const relatedVideos = useMemo(
+    () => (isOsLog(entity) ? relatedGalleryVideos(db, entity.game_id) : []),
+    [db, entity],
+  );
 
   const data = recordOf(entity);
   const genericFacts = GENERIC_FIELDS.map((field) => ({

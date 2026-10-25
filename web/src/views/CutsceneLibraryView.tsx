@@ -3,7 +3,7 @@ import { VideoPlayer } from "../components/VideoPlayer";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
 import type { MediaManifest } from "../data/media";
-import { formatUnit, LANGUAGES } from "../data/messages";
+import { formatUnit, LANGUAGES, languageLabel } from "../data/messages";
 import {
   loadSubtitleIndex,
   searchSubtitleIndex,
@@ -11,7 +11,6 @@ import {
   type SubtitleIndex,
 } from "../data/subtitles";
 import { useMediaManifest } from "../data/useMedia";
-import type { Lang } from "../types";
 
 /**
  * Extras cutscene library. It reads the media manifest and the exported VTT
@@ -74,17 +73,16 @@ function muxedVariants(
     );
 }
 
-function languageLabel(lang: Lang): string {
-  return LANGUAGES.find((option) => option.code === lang)?.title ?? lang;
-}
-
-/** `0:03.7` — cue times are seconds with millisecond precision in the VTT. */
+/**
+ * `0:03.7` — cue times are seconds with millisecond precision in the VTT.
+ * Rounding happens on the total tenths so `.95` carries into the next second
+ * (`1:38.0`, never `1:37.10`).
+ */
 function formatCueTime(seconds: number): string {
-  const whole = Math.floor(seconds);
-  const minutes = Math.floor(whole / 60);
-  const rest = whole % 60;
-  const tenths = Math.round((seconds - whole) * 10);
-  return `${minutes}:${String(rest).padStart(2, "0")}.${tenths}`;
+  const tenths = Math.round(seconds * 10);
+  const minutes = Math.floor(tenths / 600);
+  const rest = Math.floor((tenths % 600) / 10);
+  return `${minutes}:${String(rest).padStart(2, "0")}.${tenths % 10}`;
 }
 
 function AudioPicker({
@@ -165,6 +163,7 @@ function CutsceneRow({
             subtitleKey={group}
             audioKey={audioKey || undefined}
             label={clip}
+            showAudioNote
           />
           <AudioPicker
             clip={clip}
@@ -200,6 +199,7 @@ function RestClip({ manifest, clip }: { manifest: MediaManifest; clip: string })
         subtitleKey={null}
         audioKey={audioKey || undefined}
         label={clip}
+        showAudioNote
         testId="cutscene-rest-player"
       />
       <p
@@ -230,6 +230,7 @@ export function CutsceneLibraryView() {
   const [index, setIndex] = useState<SubtitleIndex | null>(null);
   const [indexError, setIndexError] = useState(false);
   const [selection, setSelection] = useState<SubtitleHit | null>(null);
+  const [selectionAudio, setSelectionAudio] = useState("");
 
   const groups = useMemo(
     () => Object.keys(manifest?.subtitles ?? {}).sort(),
@@ -279,11 +280,18 @@ export function CutsceneLibraryView() {
     };
   }, [manifest, query, index]);
 
-  const hits = useMemo(
-    () => (index && query.trim() ? searchSubtitleIndex(index, query, lang) : []),
+  const search = useMemo(
+    () =>
+      index && query.trim() ? searchSubtitleIndex(index, query, lang) : null,
     [index, query, lang],
   );
+  const hits = search?.hits ?? [];
+  const total = search ? hits.length + search.omitted : 0;
   const selectionClip = selection ? pairClip(manifest, selection.group) : null;
+  const selectionVariants =
+    manifest && selectionClip
+      ? muxedVariants(manifest, selectionClip, selection?.group)
+      : [];
 
   const summary = !query.trim()
     ? i18n.t("extras.cutsceneSearchHint")
@@ -291,13 +299,11 @@ export function CutsceneLibraryView() {
       ? i18n.t("extras.cutsceneSearchError")
       : !index
         ? i18n.t("extras.cutsceneSearchLoading")
-        : hits.length === 0
+        : total === 0
           ? i18n.t("extras.cutsceneSearchEmpty")
           : i18n.t("extras.cutsceneSearchSummary", {
-              hits: i18n.formatNumber(hits.length),
-              groups: i18n.formatNumber(
-                new Set(hits.map((hit) => hit.group)).size,
-              ),
+              hits: i18n.formatNumber(total),
+              groups: i18n.formatNumber(search?.groups ?? 0),
               lang: languageLabel(lang),
             });
 
@@ -362,16 +368,26 @@ export function CutsceneLibraryView() {
                   </header>
                   <p className="cutscene-hit-text">{selection.text}</p>
                   {selectionClip ? (
-                    <VideoPlayer
-                      testId="cutscene-hit-player"
-                      clip={selectionClip}
-                      subtitleKey={selection.group}
-                      startAt={selection.start}
-                      label={i18n.t("extras.cutsceneSelectionNote", {
-                        clip: selectionClip,
-                        time: formatCueTime(selection.start),
-                      })}
-                    />
+                    <>
+                      <VideoPlayer
+                        testId="cutscene-hit-player"
+                        clip={selectionClip}
+                        subtitleKey={selection.group}
+                        startAt={selection.start}
+                        audioKey={selectionAudio || undefined}
+                        label={i18n.t("extras.cutsceneSelectionNote", {
+                          clip: selectionClip,
+                          time: formatCueTime(selection.start),
+                        })}
+                        showAudioNote
+                      />
+                      <AudioPicker
+                        clip={selectionClip}
+                        variants={selectionVariants}
+                        value={selectionAudio}
+                        onChange={setSelectionAudio}
+                      />
+                    </>
                   ) : (
                     <p
                       className="video-note"
@@ -387,16 +403,19 @@ export function CutsceneLibraryView() {
               ) : null}
               {hits.length > 0 ? (
                 <div className="cutscene-hits">
-                  {hits.map((hit) => (
+                  {hits.map((hit, index) => (
                     <button
                       type="button"
-                      key={`${hit.group}:${hit.lang}:${hit.start}`}
+                      key={`${hit.group}:${hit.lang}:${hit.start}:${index}`}
                       className="cutscene-hit"
                       data-testid="cutscene-hit"
                       data-group={hit.group}
                       data-lang={hit.lang}
                       data-time={String(hit.start)}
-                      onClick={() => setSelection(hit)}
+                      onClick={() => {
+                        setSelection(hit);
+                        setSelectionAudio("");
+                      }}
                     >
                       <span className="cutscene-hit-meta">
                         <code>{hit.group}</code> · {languageLabel(hit.lang)} ·{" "}
@@ -405,6 +424,17 @@ export function CutsceneLibraryView() {
                       <span className="cutscene-hit-text">{hit.text}</span>
                     </button>
                   ))}
+                  {search && search.omitted > 0 ? (
+                    <p
+                      className="cutscene-more"
+                      data-testid="cutscene-hits-more"
+                      data-count={search.omitted}
+                    >
+                      {i18n.t("extras.cutsceneSearchMore", {
+                        count: i18n.formatNumber(search.omitted),
+                      })}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </section>

@@ -235,33 +235,38 @@ export function BackupFolderView({
 
           <div className="media-grid" data-testid="backup-items">
             {items.map((item) => (
-              <Link
-                key={item.id}
-                to={entityHref(item.id)}
-                className="media-card"
-                data-testid="backup-item-card"
-                data-kind={item.kind}
-                data-item-id={item.id}
-              >
-                <span className="media-icon" aria-hidden="true">
-                  {item.kind === "video" ? "▶" : item.kind === "image" ? "▧" : "★"}
-                </span>
-                <span className="media-title">{item.name}</span>
-                <span className="media-meta">
-                  <MediaKindBadge kind={item.kind} />
-                  {item.size ? (
-                    <span>
-                      {i18n.formatNumber(item.size[0])} ×{" "}
-                      {i18n.formatNumber(item.size[1])}
-                    </span>
-                  ) : (
-                    <span>{i18n.t("value.format", { format: item.format })}</span>
-                  )}
-                </span>
+              // The unlock conditions link to the OS log that unlocks the item,
+              // so they cannot live inside the card link: an <a> may not
+              // contain another <a>.  The card keeps the link on its own
+              // content and the condition line sits next to it.
+              <article className="media-card" key={item.id}>
+                <Link
+                  to={entityHref(item.id)}
+                  className="media-card-main"
+                  data-testid="backup-item-card"
+                  data-kind={item.kind}
+                  data-item-id={item.id}
+                >
+                  <span className="media-icon" aria-hidden="true">
+                    {item.kind === "video" ? "▶" : item.kind === "image" ? "▧" : "★"}
+                  </span>
+                  <span className="media-title">{item.name}</span>
+                  <span className="media-meta">
+                    <MediaKindBadge kind={item.kind} />
+                    {item.size ? (
+                      <span>
+                        {i18n.formatNumber(item.size[0])} ×{" "}
+                        {i18n.formatNumber(item.size[1])}
+                      </span>
+                    ) : (
+                      <span>{i18n.t("value.format", { format: item.format })}</span>
+                    )}
+                  </span>
+                </Link>
                 <span className="media-conditions">
                   <ConditionLine db={db} item={item} />
                 </span>
-              </Link>
+              </article>
             ))}
             {items.length === 0 ? (
               <div className="empty-state">{i18n.t("value.noEntriesOfKind")}</div>

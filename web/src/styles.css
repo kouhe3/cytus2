@@ -1506,6 +1506,13 @@ kbd {
   background: var(--panel-2);
 }
 
+.media-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
 .media-icon {
   font-size: 18px;
   color: var(--accent-dim);

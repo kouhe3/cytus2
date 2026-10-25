@@ -1692,13 +1692,31 @@ try {
     `Boolean(document.querySelector('[data-testid="oa-index"]'))`,
     "OA index loads",
   );
+  await cdp.waitFor(
+    `(() => {
+      const logos = [...document.querySelectorAll('[data-testid="oa-character-card"] img.collection-logo')];
+      return logos.length === 12 && logos.every((img) => img.complete && img.naturalWidth > 0);
+    })()`,
+    "OA index renders every character LOGO",
+  );
   const oaIndex = await cdp.evaluate(`(() => ({
     characters: document.querySelectorAll('[data-testid="oa-character-card"]').length,
     firstHref: document.querySelector('[data-testid="oa-character-card"]')?.getAttribute('href'),
+    logos: document.querySelectorAll('[data-testid="oa-character-card"] img.collection-logo').length,
+    firstLogoSrc:
+      document.querySelector('[data-testid="oa-character-card"] img.collection-logo')?.getAttribute('src') ?? '',
     stats: document.querySelector('[data-testid="oa-stats"]')?.textContent ?? '',
   }))()`);
   check(oaIndex.characters === 12, `OA index lists 12 characters (got ${oaIndex.characters})`);
   check(oaIndex.firstHref === "/oa/alice001", "OA index links a character archive");
+  check(
+    oaIndex.logos === 12,
+    `OA index shows a character LOGO on every card (got ${oaIndex.logos})`,
+  );
+  check(
+    oaIndex.firstLogoSrc.endsWith("/media/gallery-icons/alice001.png"),
+    `OA card LOGO resolves to the character logo file (got ${oaIndex.firstLogoSrc})`,
+  );
   check(
     oaIndex.stats.includes(formatUnit(zhHans, "documents", 101)),
     "OA index counts 101 documents",

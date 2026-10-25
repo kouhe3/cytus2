@@ -168,7 +168,13 @@ export function OaIndexView({ db }: { db: Database }) {
               data-testid="oa-character-card"
               data-oa-id={group.oa.id}
             >
-              <Avatar name={group.oa.name} />
+              <MediaImage
+                id={group.oa.game_id}
+                kind="logo"
+                alt={group.oa.name}
+                className="collection-logo"
+                fallback={<Avatar name={group.oa.name} />}
+              />
               <span className="collection-title">{group.oa.name}</span>
               <span className="collection-meta">
                 {formatUnit(i18n, "objects", group.objects.length)} ·{" "}

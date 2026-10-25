@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { EntityLink } from "../components/EntityLink";
 import { MediaImage } from "../components/Media";
@@ -45,16 +45,31 @@ function osFileMeta(i18n: I18n, entry: CharacterOsEntry): string {
 const OPEN_STORAGE = "os-index-open";
 const MODE_STORAGE = "os-index-mode";
 
-function initialOpen(): Set<string> {
+/** Groups stay collapsed until the reader opens them: sort order carries no
+ * reading order, so no group deserves a default expansion. */
+function readOpenGroups(): Set<string> {
   try {
     const raw = sessionStorage.getItem(OPEN_STORAGE);
     if (raw) {
-      return new Set(JSON.parse(raw) as string[]);
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return new Set(
+          parsed.filter((item): item is string => typeof item === "string"),
+        );
+      }
     }
   } catch {
     // ignore malformed storage
   }
   return new Set();
+}
+
+function writeOpenGroups(keys: ReadonlySet<string>): void {
+  try {
+    sessionStorage.setItem(OPEN_STORAGE, JSON.stringify([...keys]));
+  } catch {
+    // A blocked storage API only costs persistence, not the view.
+  }
 }
 
 function initialMode(): Mode {
@@ -66,7 +81,7 @@ export function OsIndexView({ db }: { readonly db: Database }) {
   const { lang } = useLanguage();
   const i18n = useI18n();
   const [mode, setMode] = useState(initialMode);
-  const [openGroups, setOpenGroups] = useState(initialOpen);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(readOpenGroups);
 
   const characters = useMemo(
     () =>
@@ -121,6 +136,10 @@ export function OsIndexView({ db }: { readonly db: Database }) {
 
   const chapters = useMemo(() => chapterOsGroups(db), [db]);
 
+  useEffect(() => {
+    writeOpenGroups(openGroups);
+  }, [openGroups]);
+
   const toggle = (key: string, open: boolean) => {
     setOpenGroups((current) => {
       const next = new Set(current);
@@ -129,7 +148,6 @@ export function OsIndexView({ db }: { readonly db: Database }) {
       } else {
         next.delete(key);
       }
-      sessionStorage.setItem(OPEN_STORAGE, JSON.stringify([...next]));
       return next;
     });
   };
@@ -192,12 +210,9 @@ export function OsIndexView({ db }: { readonly db: Database }) {
           </div>
 
           {mode === "chapter"
-            ? chapters.map((chapter, index) => {
+            ? chapters.map((chapter) => {
                 const key = `ch:${chapter.chapterId}`;
-                const open =
-                  [...openGroups].some((item) => item.startsWith("ch:"))
-                    ? openGroups.has(key)
-                    : index === 0;
+                const open = openGroups.has(key);
                 return (
                   <details
                     key={chapter.chapterId}
@@ -263,12 +278,9 @@ export function OsIndexView({ db }: { readonly db: Database }) {
             : null}
 
           {mode === "character"
-            ? characters.map(({ character, entries }, index) => {
+            ? characters.map(({ character, entries }) => {
                 const key = `c:${character.id}`;
-                const open =
-                  [...openGroups].some((item) => item.startsWith("c:"))
-                    ? openGroups.has(key)
-                    : index === 0;
+                const open = openGroups.has(key);
                 return (
                   <details
                     key={character.id}
@@ -327,12 +339,9 @@ export function OsIndexView({ db }: { readonly db: Database }) {
             : null}
 
           {mode === "version"
-            ? versions.map(({ version, entries, characters: groups }, index) => {
+            ? versions.map(({ version, entries, characters: groups }) => {
                 const key = `v:${version}`;
-                const open =
-                  [...openGroups].some((item) => item.startsWith("v:"))
-                    ? openGroups.has(key)
-                    : index === 0;
+                const open = openGroups.has(key);
                 return (
                   <details
                     key={version || "unknown"}

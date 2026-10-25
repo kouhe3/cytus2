@@ -1482,7 +1482,10 @@ try {
     chapterIndex.names.slice(0, 4).join("|") === "Architects|Decommission|Amiya|cyTus",
     `chapter order follows the game, not the table id (got ${chapterIndex.names.slice(0, 4).join(" → ")})`,
   );
-  check(chapterIndex.firstOpen, "the first chapter opens its folders");
+  check(
+    !chapterIndex.firstOpen,
+    "chapters start collapsed: sort order carries no reading order",
+  );
   check(
     chapterIndex.firstFolder === "Ivy & Vanessa",
     `chapter 0 groups its files under Ivy & Vanessa (got ${chapterIndex.firstFolder})`,
@@ -1536,6 +1539,72 @@ try {
     (await cdp.evaluate(`sessionStorage.getItem('os-index-mode')`)) === "version",
     "OS grouping persists in sessionStorage",
   );
+
+  // No group opens by default (sort order carries no reading order), and a
+  // reload keeps both the collapsed state and the scroll position.
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="os-mode-character"]').click()`,
+  );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="os-character-group"]').length > 0`,
+    "character grouping renders for the collapse check",
+  );
+  check(
+    (await cdp.evaluate(
+      `[...document.querySelectorAll('[data-testid="os-character-group"]')].every(
+        (group) => group.open === false,
+      )`,
+    )) === true,
+    "character groups start collapsed",
+  );
+  await cdp.evaluate(
+    `document.querySelectorAll('[data-testid="os-character-group"]')[4].querySelector('summary').click()`,
+  );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="os-character-group"]')[4].open === true`,
+    "a character group opens",
+  );
+  await cdp.evaluate(
+    `document.querySelectorAll('[data-testid="os-character-group"]')[4].querySelector('summary').click()`,
+  );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="os-character-group"]')[4].open === false`,
+    "the character group closes again",
+  );
+  check(
+    (await cdp.evaluate(
+      `[...document.querySelectorAll('[data-testid="os-character-group"]')].every(
+        (group) => group.open === false,
+      )`,
+    )) === true,
+    "closing the last open group leaves every group collapsed",
+  );
+
+  await cdp.evaluate(`window.scrollTo(0, 600)`);
+  await cdp.waitFor(`window.scrollY >= 500`, "the OS index scrolls");
+  await cdp.call("Page.reload", {});
+  await cdp.waitFor(`document.readyState === 'complete'`, "OS index reloads");
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="os-index"]')) &&
+     document.querySelectorAll('[data-testid="os-character-group"]').length > 0`,
+    "OS index renders after the reload",
+  );
+  await sleep(600);
+  const reloadedOs = await cdp.evaluate(`(() => ({
+    openCount: [...document.querySelectorAll('[data-testid="os-character-group"]')]
+      .filter((group) => group.open).length,
+    scrollY: Math.round(window.scrollY),
+  }))()`);
+  check(
+    reloadedOs.openCount === 0,
+    "a reload keeps every OS group collapsed",
+  );
+  check(
+    reloadedOs.scrollY >= 400,
+    `a reload restores the OS index scroll position (got ${reloadedOs.scrollY})`,
+  );
+  await cdp.screenshot("os-collapse-reload.png");
+
   await cdp.evaluate(
     `document.querySelector('[data-testid="os-mode-chapter"]').click()`,
   );

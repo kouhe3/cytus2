@@ -30,7 +30,7 @@ repository root when the default `python` does not have UnityPy;
 | `/timeline` | global unlock timeline: all 323 iM posts + the 501 main-seven OS logs (`timeline_scope=timeline`) ordered by `reading_order.order`; level slider, type, tier and iM account filters |
 | `/characters` | character index: one card per character (27) with its gallery icon, name, OS-log count and game id, sorted by name; each card opens the character page |
 | `/character/<gameId>` | character page: logo, every costume illustration and the bad-ending (`broken_illustration_*`) variant, then every OS log of that character via `OS → SORT BY VERSION`; PAFF / NEKO / ROBO add an IM tab linking to the account-filtered feed |
-| `/os` | OS archive index with the game's three groupings: chapter → folder (default; 17 chapters with logs, each split by `TimelineChapter.Folder`), character → version, and version → character. The chapter order follows the wiki-maintained game list (`Amiya` between `Decommission` and `cyTus`), not the table's `Id`. Every file carries the 1-based unlock level of its own character (`Lv N`, e.g. `Lv 36`); other characters' level conditions and the file-lock chain stay in the entity detail, and the list neither hides files nor marks them as locked. Staging chapters `test01` / `test02` stay out of the chapter view; the chosen mode persists in `sessionStorage` |
+| `/os` | OS archive index with the game's three groupings: chapter → folder (default; 17 chapters with logs, each split by `TimelineChapter.Folder`), character → version, and version → character. The chapter order follows the wiki-maintained game list (`Amiya` between `Decommission` and `cyTus`), not the table's `Id`. Every file carries the 1-based unlock level of its own character (`Lv N`, e.g. `Lv 36`); other characters' level conditions and the file-lock chain stay in the entity detail, and the list neither hides files nor marks them as locked. Staging chapters `test01` / `test02` stay out of the chapter view. Every group starts collapsed — sort order carries no reading order — and the reader's expansions plus the chosen mode persist in `sessionStorage` |
 | `/oa` | OA archive index: one card per character with object/document/description counts |
 | `/oa/<gameId>` | OA archive: scene videos with scene LOGOs, every clickable object as a link into its own entity page, and hotspot descriptions grouped by `DescriptionObjectId`. Each description variant states its in-game enable/disable conditions (level lock, OS read, story clear), because one hotspot swaps text across story stages and the game picks one eligible variant at random. The object page (`/oa_object/<gameId>`) owns the object text, its color art plus three panel images, attached documents, unlock conditions and level locks; OA entity pages link back to their character's archive |
 | `/backup` | Backup Database folder index with per-folder gallery logos and media counts |
@@ -146,7 +146,9 @@ the IM tab limited to PAFF / NEKO / ROBO, the PΛFF note, the slider/filter
 behaviour, the Ctrl+K palette, a chart opened from an entity link, an
 unlock-source jump, direct chart deep links, the return to the timeline, the
 chart → post → chart round trip, the OS chapter → folder index (17 chapters,
-54 folders, 1032 logs) and its three-way grouping switch, the OA archive and
+54 folders, 1032 logs) and its three-way grouping switch, the OS groups that
+start collapsed and stay collapsed (with the scroll position) across a reload,
+the OA archive and
 document views (whose silent `_oa_system` scene players stay free of the
 library's no-audio note), a backup gallery item, a Branching OS node, a CAPSO
 pack and the Black Market bundle, the extras hub, all 19 assistant groups / 30

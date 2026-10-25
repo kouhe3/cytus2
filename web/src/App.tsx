@@ -57,24 +57,60 @@ function ScrollToTop() {
 
   useEffect(() => {
     const storageKey = `scroll:${location.key}`;
-    lastScroll.current = 0;
-    const stored =
-      navigationType === "POP" ? sessionStorage.getItem(storageKey) : null;
-    if (stored !== null) {
+    const persist = () => {
+      try {
+        sessionStorage.setItem(storageKey, String(lastScroll.current));
+      } catch {
+        // A blocked storage API only costs scroll restoration.
+      }
+    };
+    let stored: string | null = null;
+    if (navigationType === "POP") {
+      try {
+        stored = sessionStorage.getItem(storageKey);
+      } catch {
+        stored = null;
+      }
+    }
+    const restore = stored === null ? null : Number(stored);
+    // Seed the ref with the value we are about to restore: StrictMode runs the
+    // cleanup before the second setup, and a cleanup that writes the initial 0
+    // would erase the stored position before it is ever applied.
+    lastScroll.current =
+      restore !== null && Number.isFinite(restore) ? restore : 0;
+    if (restore !== null && Number.isFinite(restore)) {
       requestAnimationFrame(() => {
-        window.scrollTo(0, Number(stored));
-        lastScroll.current = Number(stored);
+        window.scrollTo(0, restore);
       });
     } else {
       window.scrollTo(0, 0);
     }
+    let frame: number | null = null;
     const onScroll = () => {
       lastScroll.current = window.scrollY;
+      if (frame !== null) {
+        return;
+      }
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        persist();
+      });
+    };
+    // A reload never runs the effect cleanup, so the position must already be
+    // on disk when the document goes away.
+    const onPageHide = () => {
+      lastScroll.current = window.scrollY;
+      persist();
     };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("pagehide", onPageHide);
     return () => {
-      sessionStorage.setItem(storageKey, String(lastScroll.current));
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+      }
+      persist();
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pagehide", onPageHide);
     };
   }, [location.key, navigationType]);
   return null;

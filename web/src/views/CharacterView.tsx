@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { BackButton } from "../components/BackButton";
@@ -8,6 +8,8 @@ import { TypeBadge } from "../components/ui";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
 import { isIllustration } from "../data/database";
+import { loadMediaManifest, mediaUrl, pickImage } from "../data/media";
+import type { MediaAsset } from "../data/media";
 import {
   characterImAccount,
   characterOsEntries,
@@ -61,6 +63,55 @@ function PackFact({
         )}
       </dd>
     </div>
+  );
+}
+
+/** The bad-ending illustration lives only in the media export, not as an entity. */
+function BrokenIllustration({
+  gameId,
+  name,
+}: {
+  gameId: string;
+  name: string;
+}) {
+  const i18n = useI18n();
+  const key = `broken_illustration_${gameId}`;
+  const [asset, setAsset] = useState<MediaAsset | null | undefined>(undefined);
+  useEffect(() => {
+    let active = true;
+    loadMediaManifest()
+      .then((manifest) => {
+        if (active) {
+          setAsset(pickImage(manifest, key, "auto"));
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setAsset(null);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [key]);
+  if (!asset) {
+    return null;
+  }
+  return (
+    <figure
+      className="character-illustration-item"
+      data-testid="character-broken-illustration"
+      data-illustration-id={key}
+    >
+      <img
+        className="character-illustration"
+        src={mediaUrl(asset.file)}
+        alt={`${name} · ${i18n.t("character.brokenIllustration")}`}
+        loading="lazy"
+        decoding="async"
+      />
+      <figcaption>{i18n.t("character.brokenIllustration")}</figcaption>
+    </figure>
   );
 }
 
@@ -167,6 +218,10 @@ export function CharacterView({
                     <figcaption>{item.costume || item.game_id}</figcaption>
                   </figure>
                 ))}
+                <BrokenIllustration
+                  gameId={character.game_id}
+                  name={character.name}
+                />
               </div>
             ) : null}
           </div>

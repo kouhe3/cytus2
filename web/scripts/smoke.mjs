@@ -476,6 +476,9 @@ try {
     const illustrations = document.querySelectorAll(
       '[data-testid="character-illustration"] img',
     ).length;
+    const brokenIllustrations = document.querySelectorAll(
+      '[data-testid="character-broken-illustration"] img',
+    ).length;
     return {
       osEntries: orders.length,
       versions,
@@ -485,6 +488,7 @@ try {
       levels: levelLabels.length,
       firstLevel: levelLabels[0] ?? null,
       illustrations,
+      brokenIllustrations,
       imTab: Boolean(imTab),
       imHref: imTab?.getAttribute('href') ?? null,
       paffNote:
@@ -505,6 +509,10 @@ try {
     `document.querySelectorAll('[data-testid="character-illustration"] img').length === 4`,
     "PAFF illustrations load",
   );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="character-broken-illustration"] img').length === 1`,
+    "PAFF broken illustration loads",
+  );
   const paffPage = await cdp.evaluate(CHARACTER_SNAPSHOT);
   check(paffPage.characterId === "character/paff001", "PAFF character page loads");
   check(paffPage.osEntries === 81, `PAFF lists all 81 OS logs (got ${paffPage.osEntries})`);
@@ -512,6 +520,10 @@ try {
   check(paffPage.levels === 81, `PAFF marks all 81 owner unlock levels (got ${paffPage.levels})`);
   check(paffPage.firstLevel === "Lv 36", `PAFF's first OS file marks Lv 36 (got ${paffPage.firstLevel})`);
   check(paffPage.illustrations === 4, `PAFF shows all 4 illustrations (got ${paffPage.illustrations})`);
+  check(
+    paffPage.brokenIllustrations === 1,
+    `PAFF shows its bad-ending illustration (got ${paffPage.brokenIllustrations})`,
+  );
   check(paffPage.imTab, "PAFF character page has an IM tab");
   check(
     paffPage.imHref === "/timeline?account=paff001",
@@ -574,6 +586,10 @@ try {
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="character-illustration"] img').length === 9`,
     "NEKO illustrations load",
+  );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="character-broken-illustration"] img').length === 1`,
+    "NEKO broken illustration loads",
   );
   check(true, "NEKO character page lists all 9 illustrations");
 

@@ -133,6 +133,7 @@ export const ZH_HANS = {
   "character.osHeading": "OS · 按版本",
   "character.osLede": "该角色的全部 OS 档案按版本排序。付费与支线档案只在这里出现，不进入全局解锁时间线。",
   "character.osCount": "{count} 条 OS",
+  "character.brokenIllustration": "全灭结局",
   "character.osEmpty": "该角色没有 OS 档案。",
   "character.paffNote": "PΛFF 在游戏内没有 iM 账号入口：它的帖子是复刻主角后的「回应」，仍会出现在全局 iM feed 中。",
 
@@ -712,6 +713,7 @@ const EN: Messages = {
   "character.osHeading": "OS · SORT BY VERSION",
   "character.osLede": "Every OS log owned by this character, sorted by version. Paid and side archives appear only here, never in the global unlock timeline.",
   "character.osCount": "{count} OS logs",
+  "character.brokenIllustration": "Bad ending",
   "character.osEmpty": "This character has no OS logs.",
   "character.paffNote": "PΛFF has no in-game iM account entry: its posts are epilogue responses and still appear in the global iM feed.",
 
@@ -1288,6 +1290,7 @@ const JA: Messages = {
   "character.osHeading": "OS · バージョン順",
   "character.osLede": "このキャラクターの OS をすべてバージョン順に並べています。有料・サイドのアーカイブはここにのみ表示され、グローバルな解放タイムラインには入りません。",
   "character.osCount": "{count} 件の OS",
+  "character.brokenIllustration": "バッドエンド",
   "character.osEmpty": "このキャラクターの OS はありません。",
   "character.paffNote": "PΛFF にはゲーム内の iM アカウント入口がありません。投稿は主人公を復刻した「返信」であり、グローバル iM フィードには引き続き表示されます。",
 
@@ -1864,6 +1867,7 @@ const ZH_HANT: Messages = {
   "character.osHeading": "OS · 按版本",
   "character.osLede": "此角色的全部 OS 檔案，按版本排序。付費與支線檔案只在此出現，不進入全域解鎖時間線。",
   "character.osCount": "{count} 條 OS",
+  "character.brokenIllustration": "全滅結局",
   "character.osEmpty": "此角色沒有 OS 檔案。",
   "character.paffNote": "PΛFF 在遊戲內沒有 iM 帳號入口：它的貼文是復刻主角後的「回應」，仍會出現在全域 iM feed 中。",
 
@@ -2440,6 +2444,7 @@ const KO: Messages = {
   "character.osHeading": "OS · 버전순",
   "character.osLede": "이 캐릭터의 모든 OS를 버전순으로 정렬했습니다. 유료 및 사이드 아카이브는 여기에서만 표시되며 전역 해금 타임라인에는 들어가지 않습니다.",
   "character.osCount": "OS {count}개",
+  "character.brokenIllustration": "배드 엔딩",
   "character.osEmpty": "이 캐릭터에는 OS가 없습니다.",
   "character.paffNote": "PΛFF는 게임 내 iM 계정 입구가 없습니다. 게시물은 주인공을 복각한 '응답'이며 전역 iM 피드에는 계속 표시됩니다.",
 

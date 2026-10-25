@@ -247,7 +247,8 @@ def render_document(
     """
     blocks = list(blocks)
     if poem_prose and not any(
-        block.get("kind") in ("dialogue", "sound", "movie", "booklet", "imageviewer")
+        block.get("kind")
+        in ("dialogue", "sound", "movie", "booklet", "imageviewer", "msgs")
         for block in blocks
     ):
         body = render_prose(blocks)
@@ -313,6 +314,26 @@ def render_blocks(
             booklet = _booklet(block)
             if booklet:
                 add_line(booklet)
+        elif kind == "msgs":
+            # The OS phone transcript: keep one line per bubble.  Speaker names
+            # only exist for the other party, so the avatar id stands in when
+            # the game leaves it out, and stickers have no wiki file to link.
+            for message in block.get("messages") or ():
+                if not isinstance(message, dict):
+                    continue
+                body = str(message.get("text") or "").strip("\n")
+                image = one_line(message.get("image"))
+                if body:
+                    speaker = one_line(message.get("name")) or one_line(
+                        message.get("avatar")
+                    )
+                    stamp = one_line(message.get("time"))
+                    prefix = (
+                        f"{speaker}（{stamp}）" if speaker and stamp else speaker
+                    )
+                    add_line(f"{prefix}：{body}" if prefix else body)
+                elif image:
+                    add_line(f"（图片：{image}）")
         elif kind == "movie":
             conflicts.append(
                 Conflict("unrendered_movie", f"{one_line(block.get('id'))} has no BV mapping")

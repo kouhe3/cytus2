@@ -17,6 +17,10 @@ export interface SubtitleTrack {
 export interface MediaManifest {
   readonly images: Record<string, readonly MediaAsset[]>;
   readonly avatars: Record<string, MediaAsset>;
+  /** OS phone transcripts: sender icons keyed by the `msgs` Avatar id. */
+  readonly osAvatars?: Record<string, MediaAsset>;
+  /** OS phone transcripts: stickers keyed by the `msgs` Image id. */
+  readonly osStickers?: Record<string, MediaAsset>;
   readonly illustrations: Record<string, MediaAsset>;
   readonly covers: Record<string, MediaAsset>;
   readonly galleryIcons: Record<string, MediaAsset>;
@@ -64,7 +68,15 @@ function stripExtension(value: string): string {
 export function pickImage(
   manifest: MediaManifest,
   id: string,
-  kind: "auto" | "image" | "viewer" | "avatar" | "illustration" | "logo" = "auto",
+  kind:
+    | "auto"
+    | "image"
+    | "viewer"
+    | "avatar"
+    | "osAvatar"
+    | "sticker"
+    | "illustration"
+    | "logo" = "auto",
 ): MediaAsset | null {
   const key = stripExtension(id.trim());
   if (!key) {
@@ -72,6 +84,14 @@ export function pickImage(
   }
   if (kind === "avatar") {
     return manifest.avatars[key] ?? { file: `avatars/${key}.png` };
+  }
+  if (kind === "osAvatar") {
+    // The asset bundle names these lowercase (`linda_os_01`) while the chat
+    // payload keeps its own casing (`Linda_os_01`).
+    return manifest.osAvatars?.[key.toLowerCase()] ?? null;
+  }
+  if (kind === "sticker") {
+    return manifest.osStickers?.[key] ?? null;
   }
   if (kind === "illustration") {
     return manifest.illustrations[`illustration_${key}`] ?? manifest.illustrations[key] ?? null;

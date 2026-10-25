@@ -1108,6 +1108,84 @@ try {
   );
   check(true, "gallery OS log renders every referenced image");
 
+  // -------------------------------------------- OS phone transcripts (`msgs`)
+  await cdp.navigate(`${appBase}/os/nos021`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="os-msgs"]'))`,
+    "phone-transcript OS log renders its chat",
+  );
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="os-msgs"]')?.scrollIntoView({ block: 'start' })`,
+  );
+  await cdp.waitFor(
+    `[...document.querySelectorAll('[data-testid="os-msgs"] .msgs-sticker')].some((img) => img.complete && img.naturalWidth === 139)`,
+    "sticker sprite loads",
+  );
+  await cdp.waitFor(
+    `[...document.querySelectorAll('[data-testid="os-msgs"] .msgs-avatar')].some((img) => img.complete && img.naturalWidth === 80)`,
+    "chat avatar sprite loads",
+  );
+  const msgsLog = await cdp.evaluate(`(() => {
+    const chat = document.querySelector('[data-testid="os-msgs"]');
+    return {
+      bubbles: chat.querySelectorAll('.msgs-row').length,
+      outgoing: chat.querySelectorAll('.msgs-row.outgoing').length,
+      incoming: chat.querySelectorAll('.msgs-row.incoming').length,
+      system: chat.querySelectorAll('.msgs-system').length,
+      avatars: [...chat.querySelectorAll('.msgs-avatar')].map((el) => el.getAttribute('src')),
+      stickers: [...chat.querySelectorAll('.msgs-sticker')].map((el) => el.getAttribute('src')),
+      attachmentFallbacks: chat.querySelectorAll('.msgs-attachment').length,
+      firstText: chat.querySelector('.msgs-text')?.textContent ?? '',
+      body: document.querySelector('[data-testid="entity-body"]')?.textContent ?? '',
+    };
+  })()`);
+  check(
+    msgsLog.bubbles === 29,
+    `phone transcript keeps all 29 bubbles (got ${msgsLog.bubbles})`,
+  );
+  check(
+    msgsLog.outgoing === 20 && msgsLog.incoming === 9,
+    `phone transcript keeps both sides (got ${msgsLog.outgoing}/${msgsLog.incoming})`,
+  );
+  check(
+    msgsLog.avatars.length === 29 &&
+      msgsLog.avatars[0].endsWith("/media/os-avatars/linda_os_01.png") &&
+      msgsLog.avatars[1].endsWith("/media/os-avatars/neko_os_01.png"),
+    `every bubble carries its sender avatar (got ${msgsLog.avatars.length})`,
+  );
+  check(
+    msgsLog.stickers.join(",") ===
+      "/media/os-stickers/07_CatXD.png,/media/os-stickers/07_CatXD.png,/media/os-stickers/08_CatQQ.png,/media/os-stickers/08_CatQQ.png",
+    `sticker messages render their sprite (got ${msgsLog.stickers.join(",")})`,
+  );
+  check(
+    msgsLog.attachmentFallbacks === 0,
+    `sticker sprites never fall back to raw ids (got ${msgsLog.attachmentFallbacks})`,
+  );
+  check(msgsLog.firstText === "在吗", `transcript starts with the first message (got ${msgsLog.firstText})`);
+  check(
+    !msgsLog.body.includes("MessageType") && !/\bmsgs\b/.test(msgsLog.body),
+    "the raw msgs payload never leaks into the body",
+  );
+  await cdp.screenshot("os-msgs-transcript.png");
+
+  await cdp.navigate(`${appBase}/os/cpos035`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="os-msgs"]'))`,
+    "second phone transcript renders",
+  );
+  const systemLine = await cdp.evaluate(`(() => {
+    const chat = document.querySelector('[data-testid="os-msgs"]');
+    return {
+      system: chat.querySelectorAll('.msgs-system').length,
+      systemText: chat.querySelector('.msgs-system')?.textContent ?? '',
+    };
+  })()`);
+  check(
+    systemLine.system === 1 && systemLine.systemText.length > 0,
+    `system lines render as their own row (got ${systemLine.system})`,
+  );
+
   await cdp.navigate(`${appBase}/timeline`);
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="timeline-card"]').length === ${home.count}`,

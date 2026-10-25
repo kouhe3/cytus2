@@ -768,6 +768,79 @@ kbd {
   font-size: 11px;
 }
 
+/* ------------------------------------------------------- OS phone transcript */
+.block.msgs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.msgs-system {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.msgs-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.msgs-row.outgoing {
+  /* Reverse the axis so the owner's avatar sits on the right; with a reversed
+     main axis `flex-end` would push the row back to the left. */
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+
+.msgs-avatar {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #05070a;
+}
+
+.msgs-bubble {
+  max-width: 76%;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.msgs-row.outgoing .msgs-bubble {
+  border-color: var(--accent-dim);
+  background: var(--panel-2);
+}
+
+.msgs-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msgs-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.msgs-sticker {
+  display: block;
+  width: 118px;
+  height: auto;
+}
+
+.msgs-attachment {
+  font-size: 11px;
+  color: var(--muted);
+}
+
 .detail-section {
   margin-top: 26px;
 }

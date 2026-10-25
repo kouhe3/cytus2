@@ -396,6 +396,50 @@ def test_source_blank_line_is_preserved() -> None:
     assert text == "{{os/对话|Mayu|第一行}}\n\n{{os/对话|Mayu|第二行}}"
 
 
+def test_msgs_block_renders_one_line_per_bubble() -> None:
+    from cytus2db.wiki.pages._content import render_blocks
+
+    text, conflicts = render_blocks(
+        [
+            {
+                "kind": "msgs",
+                "messages": [
+                    {
+                        "side": "incoming",
+                        "text": "You there",
+                        "name": "Linda",
+                        "avatar": "Linda_os_01",
+                        "time": "PM 03:43",
+                    },
+                    {
+                        "side": "outgoing",
+                        "text": "YEP",
+                        "avatar": "neko_os_01",
+                        "time": "PM 03:44",
+                    },
+                    {
+                        "side": "outgoing",
+                        "image": "07_CatXD",
+                        "avatar": "neko_os_01",
+                        "time": "PM 03:44",
+                    },
+                    {"side": "system", "text": "[JOE is offline]"},
+                ],
+            }
+        ],
+        dialogue_template="os/对话",
+        sound_template="os/声音",
+    )
+
+    assert conflicts == []
+    assert text.split("\n") == [
+        "Linda（PM 03:43）：You there",
+        "neko_os_01（PM 03:44）：YEP",
+        "（图片：07_CatXD）",
+        "[JOE is offline]",
+    ]
+
+
 def test_unlock_song_lists_uppercase_difficulties() -> None:
     from cytus2db.wiki.db import Database, Edge
     from cytus2db.wiki.pages.os_logs import _unlock_fields

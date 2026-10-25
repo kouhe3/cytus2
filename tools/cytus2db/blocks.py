@@ -21,7 +21,51 @@ def one_line(value: Any) -> str:
     return " ".join(str(value or "").split())
 
 
-_JSON_DECODER = json.JSONDecoder()
+# The game ships raw line breaks inside ``msgs`` message content ("Hello
+# Simon, it's been a while⏎If you see this message..."), which strict JSON
+# rejects.  Tolerating control characters keeps those bodies parseable.
+_JSON_DECODER = json.JSONDecoder(strict=False)
+
+# ``MessageType`` is the phone bubble kind: 0 is a system line such as
+# "[JOE is offline]", 1/3 are the phone owner's text/image, 2/4 the other
+# party's.  Sides drive the chat layout, so the mapping is not cosmetic.
+_MSGS_SIDES = {0: "system", 1: "outgoing", 2: "incoming", 3: "outgoing", 4: "incoming"}
+
+_MSGS_FIELDS = (
+    ("Content", "text"),
+    ("Image", "image"),
+    ("UserName", "name"),
+    ("Avatar", "avatar"),
+    ("Time", "time"),
+)
+
+
+def _msgs_messages(payload: Any) -> list[dict[str, Any]]:
+    if not isinstance(payload, list):
+        return []
+    messages: list[dict[str, Any]] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        try:
+            message_type = int(item.get("MessageType"))
+        except (TypeError, ValueError):
+            message_type = 2
+        message: dict[str, Any] = {
+            "side": _MSGS_SIDES.get(message_type, "incoming")
+        }
+        for source, target in _MSGS_FIELDS:
+            value = item.get(source)
+            if not isinstance(value, str):
+                continue
+            if target == "text":
+                if value.strip():
+                    message[target] = value
+            elif value.strip():
+                message[target] = value.strip()
+        if "text" in message or "image" in message:
+            messages.append(message)
+    return messages
 
 
 def _consume_json(lines: list[str], start: int) -> tuple[Any, int, bool]:
@@ -59,6 +103,10 @@ def _consume_json(lines: list[str], start: int) -> tuple[Any, int, bool]:
 
 def _json_blocks(viewer: str, payload: Any) -> list[dict[str, Any]]:
     """Turn one ``##json=<viewer>`` payload into blocks."""
+    if viewer == "msgs" and isinstance(payload, list):
+        messages = _msgs_messages(payload)
+        if messages:
+            return [{"kind": "msgs", "messages": messages}]
     if viewer == "gallery" and isinstance(payload, list):
         blocks: list[dict[str, Any]] = []
         for item in payload:

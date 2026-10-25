@@ -36,6 +36,47 @@ function readMarkup(block: TextBlock, key: string): string {
   return typeof value === "string" ? value.replace(/&nbsp;/g, " ") : "";
 }
 
+interface MsgsMessage {
+  readonly side: "system" | "incoming" | "outgoing";
+  readonly text: string;
+  readonly image: string;
+  readonly avatar: string;
+  readonly name: string;
+  readonly time: string;
+}
+
+/** ``msgs`` blocks carry the game's phone transcript as structured bubbles. */
+function readMessages(block: TextBlock): MsgsMessage[] {
+  const raw = block["messages"];
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const messages: MsgsMessage[] = [];
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) {
+      continue;
+    }
+    const record = item as Record<string, unknown>;
+    const text = typeof record["text"] === "string" ? record["text"] : "";
+    const image = typeof record["image"] === "string" ? record["image"] : "";
+    if (!text && !image) {
+      continue;
+    }
+    messages.push({
+      side:
+        record["side"] === "system" || record["side"] === "outgoing"
+          ? record["side"]
+          : "incoming",
+      text,
+      image,
+      avatar: typeof record["avatar"] === "string" ? record["avatar"] : "",
+      name: typeof record["name"] === "string" ? record["name"] : "",
+      time: typeof record["time"] === "string" ? record["time"] : "",
+    });
+  }
+  return messages;
+}
+
 function Block({ block }: { block: TextBlock }) {
   const i18n = useI18n();
   switch (block.kind) {
@@ -137,6 +178,58 @@ function Block({ block }: { block: TextBlock }) {
             ))}
           </div>
         </section>
+      );
+    }
+    case "msgs": {
+      const messages = readMessages(block);
+      if (messages.length === 0) {
+        return null;
+      }
+      return (
+        <div className="block msgs" data-testid="os-msgs">
+          {messages.map((message, index) => {
+            if (message.side === "system") {
+              return (
+                <p key={index} className="msgs-system">
+                  {message.text}
+                </p>
+              );
+            }
+            const meta = [message.name, message.time]
+              .filter(Boolean)
+              .join(" · ");
+            return (
+              <div key={index} className={`msgs-row ${message.side}`}>
+                <MediaImage
+                  id={message.avatar}
+                  kind="osAvatar"
+                  alt={message.name || message.avatar}
+                  className="msgs-avatar"
+                />
+                <div className="msgs-bubble">
+                  {message.image ? (
+                    <MediaImage
+                      id={message.image}
+                      kind="sticker"
+                      alt={message.image}
+                      className="msgs-sticker"
+                      fallback={
+                        <code className="msgs-attachment">
+                          {message.image}
+                        </code>
+                      }
+                    />
+                  ) : (
+                    <p className="msgs-text">
+                      <RichText text={message.text} />
+                    </p>
+                  )}
+                  {meta ? <span className="msgs-meta">{meta}</span> : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       );
     }
     case "note":

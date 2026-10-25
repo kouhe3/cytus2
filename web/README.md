@@ -101,6 +101,13 @@ into #32's no-audio note with `showAudioNote`, and a resolved muxed
 `videoAudio` variant suppresses it; the OS/gallery/story/OA players never show
 it.
 
+OS phone transcripts (`##json=msgs`, e.g. `os/nos021`) render as a chat: every
+message keeps its side (`MessageType` 1/3 is the phone owner, 2/4 the other
+party, 0 a system line), its sender avatar, timestamp and sticker. The export
+puts `osavatars.ab` / `osstickers.ab` under `os-avatars/` and `os-stickers/`
+(`osAvatars` / `osStickers` in `/media/manifest.json`); a message whose sprite
+is missing shows its attachment id instead of disappearing.
+
 Subtitle cues and pack descriptions follow the same contract: the entity only
 carries `text_ref`, and their localized text is read from
 `build/text/subtitles.jsonl` / `build/text/packs.jsonl`. Title names are

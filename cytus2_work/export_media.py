@@ -7,6 +7,8 @@ Output: viewer/public/media/**
   videos/<clip>.mp4           ##movie=<id> / cutscenedata 的影片（原始 H.264+AAC 流）
   audio/sound/<name>.mp3      ##sound=<name>（ossounds.ab）
   audio/bgm/<name>.mp3        ##bgm=<name>（osbgms.ab）
+  os-avatars/<name>.png       osavatars.ab（OS 聊天记录的发送者头像，Sprite 名 = msgs Avatar）
+  os-stickers/<name>.png      osstickers.ab（OS 聊天记录的表情包，Sprite 名 = msgs Image）
   manifest.json               id -> 文件 / 尺寸 / 来源 bundle
 """
 import json, os, re, glob, subprocess, sys, shutil, fnmatch
@@ -26,6 +28,8 @@ PACKS = {
 
 GROUPS = {
     "avatars": ["imavatars.ab"],
+    "osAvatars": ["osavatars.ab"],
+    "osStickers": ["osstickers.ab"],
     "galleryIcons": ["galleryicons.ab"],
     "illustrations": ["illustration_*.ab", "broken_illustration_*.ab"],
     "images": ["osattachments_*.ab", "imattachments_*.ab"],
@@ -122,6 +126,35 @@ def export_gallery_icons(manifest):
             }
     manifest["galleryIcons"] = icons
     print(f"galleryIcons: {len(icons)}")
+
+def export_sprite_bundle(manifest, bundle, folder, key):
+    """Export a single-sprite bundle: OS chat avatars and the sticker set.
+
+    ``osavatars.ab`` names match the ``msgs`` block's ``Avatar`` ids and
+    ``osstickers.ab`` names match its ``Image`` ids, so the SPA can resolve a
+    transcript bubble to its icon and sticker without a lookup table.
+    """
+    import UnityPy
+    os.makedirs(os.path.join(OUT, folder), exist_ok=True)
+    entries = {}
+    path = os.path.join(TMP, bundle)
+    if os.path.exists(path):
+        env = UnityPy.load(path)
+        for o in env.objects:
+            if o.type.name != "Sprite":
+                continue
+            sprite = o.read()
+            img = sprite.image
+            rel = f"{folder}/{sprite.m_Name}.png"
+            img.save(os.path.join(OUT, rel), optimize=True)
+            entries[sprite.m_Name] = {
+                "file": rel,
+                "w": img.width,
+                "h": img.height,
+                "bundle": bundle[:-3],
+            }
+    manifest[key] = entries
+    print(f"{key}: {len(entries)}")
 
 def export_illustrations(manifest):
     import UnityPy
@@ -460,6 +493,10 @@ def main():
             extract(pat)
         if kind == "avatars":
             export_avatars(manifest)
+        elif kind == "osAvatars":
+            export_sprite_bundle(manifest, "osavatars.ab", "os-avatars", "osAvatars")
+        elif kind == "osStickers":
+            export_sprite_bundle(manifest, "osstickers.ab", "os-stickers", "osStickers")
         elif kind == "illustrations":
             export_illustrations(manifest)
         elif kind == "images":

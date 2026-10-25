@@ -1,13 +1,24 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { loadMediaManifest, mediaUrl, pickAudio, pickImage, type MediaAsset } from "../data/media";
 
 type MediaProps = {
   readonly id: string;
-  readonly kind?: "auto" | "image" | "viewer" | "avatar" | "illustration" | "logo";
+  readonly kind?:
+    | "auto"
+    | "image"
+    | "viewer"
+    | "avatar"
+    | "osAvatar"
+    | "sticker"
+    | "illustration"
+    | "logo";
   readonly alt?: string;
   readonly className?: string;
   /** Skip the inline 3:2 game frame and keep the asset's own aspect ratio. */
   readonly natural?: boolean;
+  /** Shown instead of nothing when the manifest has no file for `id`. */
+  readonly fallback?: ReactNode;
 };
 
 /** Game inline images use a 240x160 (3:2) frame scaled by the texture ratio. */
@@ -42,14 +53,17 @@ export function MediaImage({
   alt,
   className,
   natural = false,
+  fallback,
 }: MediaProps) {
   const asset = useImage(id, kind);
   if (!asset) {
-    return null;
+    return <>{fallback}</>;
   }
   const stretch =
     !natural &&
     kind !== "avatar" &&
+    kind !== "osAvatar" &&
+    kind !== "sticker" &&
     kind !== "logo" &&
     kind !== "illustration" &&
     asset.w &&

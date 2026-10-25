@@ -121,6 +121,8 @@ export interface ChartEntity extends BaseEntity {
   readonly level: string;
   readonly need_unlock: boolean;
   readonly music_id: string;
+  /** Length of the chart's own AudioClip; absent when no audio ships. */
+  readonly duration_seconds?: number;
   readonly provenance: ProvenanceEntry[];
 }
 

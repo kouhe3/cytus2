@@ -44,6 +44,10 @@
     "music_id": {
       "type": "string"
     },
+    "duration_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
     "provenance": {
       "$ref": "common.schema.json#/$defs/provenance"
     }

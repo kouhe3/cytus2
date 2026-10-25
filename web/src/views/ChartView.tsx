@@ -6,6 +6,7 @@ import { useI18n } from "../data/i18n";
 import {
   entityHref,
   entityTitle,
+  formatChartDuration,
   formatFieldValue,
   outgoingEdges,
   unlockSourceEntities,
@@ -147,6 +148,15 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
                 )}
               </dd>
             </div>
+            <div className="fact">
+              <dt>{i18n.t("fact.audio")}</dt>
+              <dd data-testid="chart-audio">
+                {chart.music_id ? <code>{chart.music_id}</code> : "—"}
+                {chart.duration_seconds === undefined
+                  ? ""
+                  : ` · ${formatChartDuration(chart.duration_seconds)}`}
+              </dd>
+            </div>
           </dl>
 
           <section className="detail-section" data-testid="unlock-sources">
@@ -219,10 +229,6 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
               <dd>
                 <code>{chart.game_id}</code>
               </dd>
-            </div>
-            <div className="fact">
-              <dt>{i18n.t("fact.musicId")}</dt>
-              <dd>{chart.music_id || "—"}</dd>
             </div>
             <div className="fact">
               <dt>{i18n.t("fact.unlockSources")}</dt>

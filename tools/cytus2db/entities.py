@@ -12,6 +12,7 @@ left to the tickets that own those entities.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from .errors import BuildError, InputError
@@ -47,6 +48,7 @@ def build_catalog(
     source: InputSource,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     table = source.song_catalog()
+    audio_lengths = source.song_audio_lengths()
     data = table.data
     if not isinstance(data, dict):
         raise InputError(f"{table.locator} must be a JSON object")
@@ -91,7 +93,9 @@ def build_catalog(
             song_locator = f"{pack_locator}.song_info_list[{song_index}]"
             if not isinstance(raw_song, dict):
                 raise BuildError(f"{song_locator}: must be an object")
-            song, song_charts = song_and_charts(raw_song, pack_id, song_locator)
+            song, song_charts = song_and_charts(
+                raw_song, pack_id, song_locator, audio_lengths=audio_lengths
+            )
             songs.append(song)
             charts.extend(song_charts)
 
@@ -109,6 +113,7 @@ def song_and_charts(
     pack_id: str,
     song_locator: str,
     expansion_pack_id: str | None = None,
+    audio_lengths: Mapping[str, Mapping[str, float]] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Build one ``song`` record and its ``chart`` records from catalog JSON."""
     song_id = str(_require(raw_song, "song_id", song_locator))
@@ -149,20 +154,42 @@ def song_and_charts(
         level = raw_chart.get("Level")
         if level is None or str(level).strip() == "":
             raise BuildError(f"{chart_locator}: missing Level")
-        charts.append(
-            {
-                "id": identifier,
-                "type": "chart",
-                "game_id": f"{song_id}@{difficulty}",
-                "song_id": song_key(song_id),
-                "difficulty": difficulty,
-                "level": str(level),
-                "need_unlock": bool(raw_chart.get("NeedUnlock")),
-                "music_id": str(raw_chart.get("MusicID") or ""),
-                "provenance": [_text_asset(chart_locator)],
-            }
-        )
+        music_id = str(raw_chart.get("MusicID") or "")
+        chart: dict[str, Any] = {
+            "id": identifier,
+            "type": "chart",
+            "game_id": f"{song_id}@{difficulty}",
+            "song_id": song_key(song_id),
+            "difficulty": difficulty,
+            "level": str(level),
+            "need_unlock": bool(raw_chart.get("NeedUnlock")),
+            "music_id": music_id,
+            "provenance": [_text_asset(chart_locator)],
+        }
+        duration = _audio_seconds(audio_lengths, song_id, music_id)
+        if duration is not None:
+            chart["duration_seconds"] = duration
+        charts.append(chart)
     return song, charts
+
+
+def _audio_seconds(
+    audio_lengths: Mapping[str, Mapping[str, float]] | None,
+    song_id: str,
+    music_id: str,
+) -> float | None:
+    """Length of the chart's own AudioClip.
+
+    A chart plays ``music_id`` when the catalog names one; otherwise it plays
+    the song's default clip.  Charts whose song audio is not shipped in the
+    APK (DLC) stay without a duration rather than inherit a guess.
+    """
+    if not audio_lengths:
+        return None
+    clips = audio_lengths.get(song_id.lower())
+    if not clips:
+        return None
+    return clips.get((music_id or song_id).lower())
 
 
 # ---------------------------------------------------------------- exp tables

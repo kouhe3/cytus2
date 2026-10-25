@@ -1054,6 +1054,31 @@ try {
   );
   check(true, "chart page returns to the timeline");
 
+  // ------------------------------------------- chart audio variant duration
+  for (const [difficulty, duration] of [
+    ["Easy", "1:20"],
+    ["Hard", "1:07"],
+    ["Chaos", "2:18"],
+  ]) {
+    await cdp.navigate(`${appBase}/song/vanessa001_022@${difficulty}`);
+    await cdp.waitFor(
+      `Boolean(document.querySelector('[data-testid="chart-view"]'))`,
+      `THE BEGINNING ${difficulty} chart loads`,
+    );
+    const audio = await cdp.evaluate(
+      `document.querySelector('[data-testid="chart-audio"]')?.textContent?.trim() ?? ''`,
+    );
+    check(
+      audio.includes("vanessa001_022_") && audio.includes(duration),
+      `chart ${difficulty} shows its own audio variant (${duration}, got ${audio})`,
+    );
+  }
+  await cdp.navigate(`${appBase}/timeline`);
+  await cdp.waitFor(
+    `location.pathname === '/timeline' && document.querySelectorAll('[data-testid="timeline-card"]').length > 0`,
+    "timeline returns after the chart audio checks",
+  );
+
   // ---------------------------------------------------------- OS log detail
   const osHref = await cdp.evaluate(
     `document.querySelector('[data-testid="timeline-card"][data-type="os_log"]').getAttribute('href')`,

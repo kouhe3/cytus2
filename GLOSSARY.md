@@ -59,7 +59,7 @@ _Avoid_: 把角色包（`pack`）叫 Song Pack；把 Expansion Pack 当成新角
 _Avoid_: 曲子、track
 
 **Chart** (`chart`):
-某首曲目在某难度下的谱面，主键 `song/<songId>@<Difficulty>`；拥有独立的 `NeedUnlock`、等级与解锁来源。
+某首曲目在某难度下的谱面，主键 `song/<songId>@<Difficulty>`；拥有独立的 `NeedUnlock`、等级与解锁来源。每张谱面自带 `music_id`（该难度播放的音源）与 `duration_seconds`（该 AudioClip 的时长，取自 `songdata_<songId>.ab`）；同一 Song 的不同难度可以是不同音源（THE BEGINNING 的 Easy/Hard/Chaos 为 1:20 / 1:07 / 2:18），所以谱面的音频属于谱面，Song 不是 Chart 的父节点。APK 未随包的 DLC 音频没有时长字段。
 _Avoid_: 难度（作为 song 的字段）、谱面文件
 
 **Difficulty**:

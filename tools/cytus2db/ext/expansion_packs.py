@@ -24,6 +24,7 @@ def build(source: InputSource) -> dict[str, list[dict[str, Any]]]:
     table = source.expansion_packs()
     if table is None:
         return {}
+    audio_lengths = source.song_audio_lengths()
     data = table.data
     if not isinstance(data, dict):
         raise InputError(f"{table.locator} must be a JSON object")
@@ -74,6 +75,7 @@ def build(source: InputSource) -> dict[str, list[dict[str, Any]]]:
                 song_pack_id,
                 song_where,
                 expansion_pack_id=game_id,
+                audio_lengths=audio_lengths,
             )
             song_ids.append(song["id"])
             character_id = entity_key("character", song_pack_id)

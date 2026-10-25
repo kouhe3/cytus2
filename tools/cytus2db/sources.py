@@ -46,6 +46,7 @@ class InputSource:
             raise InputError(f"input directory does not exist: {self.root}")
         self.text_dir = self.root / "text"
         self.media_dir = self.root / "media_bundles"
+        self._song_audio: dict[str, dict[str, float]] | None = None
 
     # ------------------------------------------------------------------ text
     def text_json(self, *relative: str) -> Table | None:
@@ -72,6 +73,51 @@ class InputSource:
             "sharedassets0.assets",
             "song_pack_data",
         )
+
+    def song_audio_lengths(self) -> dict[str, dict[str, float]]:
+        """Return ``{song_id: {clip_name: seconds}}`` from ``songdata_*.ab``.
+
+        Every song bundle carries one AudioClip per playable audio track: the
+        song's default clip (``<song_id>``) plus, for songs whose charts use a
+        different track, the chart's ``MusicID`` clip (THE BEGINNING:
+        ``vanessa001_022_0`` / ``_1`` / ``_2``).  Catalog song ids and bundle
+        names differ in case, so both keys are stored lowercased.  DLC audio
+        that does not ship in the APK has no bundle and therefore no entry.
+        """
+        if self._song_audio is not None:
+            return self._song_audio
+        lengths: dict[str, dict[str, float]] = {}
+        paths = (
+            sorted(self.media_dir.glob("songdata_*.ab"))
+            if self.media_dir.is_dir()
+            else []
+        )
+        if not paths:
+            self._song_audio = lengths
+            return lengths
+        try:
+            import UnityPy  # type: ignore[import-not-found]
+        except ImportError as exc:
+            raise InputError(
+                "UnityPy is required to read AudioClip lengths from the songdata "
+                "bundles; install it or remove media_bundles/"
+            ) from exc
+        for path in paths:
+            song_id = path.name[len("songdata_") : -len(".ab")].lower()
+            clips: dict[str, float] = {}
+            for obj in UnityPy.load(str(path)).objects:
+                if obj.type.name != "AudioClip":
+                    continue
+                data = obj.read()
+                name = str(getattr(data, "m_Name", "") or "")
+                seconds = getattr(data, "m_Length", None)
+                if not name or seconds is None:
+                    continue
+                clips[name.lower()] = round(float(seconds), 2)
+            if clips:
+                lengths[song_id] = clips
+        self._song_audio = lengths
+        return lengths
 
     def expansion_packs(self) -> Table | None:
         """``expansion_pack_data``: song-only packs sold separately."""

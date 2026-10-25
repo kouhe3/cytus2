@@ -1,7 +1,20 @@
+import type { Lang } from "../types";
+
 export interface MediaAsset {
   readonly file: string;
   readonly w?: number;
   readonly h?: number;
+  readonly fps?: number;
+  readonly frames?: number;
+  readonly bytes?: number;
+  /** Only `videos` entries carry this flag; `movies` aliases never do. */
+  readonly hasAudio?: boolean;
+  readonly song?: string;
+}
+
+export interface SubtitleTrack {
+  readonly file: string;
+  readonly cues: number;
 }
 
 export interface MediaManifest {
@@ -14,21 +27,33 @@ export interface MediaManifest {
   readonly videos: Record<string, MediaAsset>;
   readonly movies: Record<string, MediaAsset>;
   readonly logos?: Record<string, MediaAsset>;
+  readonly titles?: Record<string, MediaAsset>;
+  /** VTT files keyed by subtitle group, then by language. */
+  readonly subtitles?: Record<string, Partial<Record<Lang, SubtitleTrack>>>;
+  /** Muxed variants keyed `<clip>|<song>`. */
+  readonly videoAudio?: Record<string, MediaAsset>;
   readonly audio: {
-    readonly sound?: Record<string, MediaAsset>;
     readonly bgm?: Record<string, MediaAsset>;
+    readonly sound?: Record<string, MediaAsset>;
   };
 }
 
 let manifestPromise: Promise<MediaManifest> | null = null;
 
 export function loadMediaManifest(): Promise<MediaManifest> {
-  manifestPromise ??= fetch("/media/manifest.json").then(async (response) => {
-    if (!response.ok) {
-      throw new Error(`media manifest ${response.status}`);
-    }
-    return (await response.json()) as MediaManifest;
-  });
+  manifestPromise ??= fetch("/media/manifest.json")
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`media manifest ${response.status}`);
+      }
+      return (await response.json()) as MediaManifest;
+    })
+    .catch((error: unknown) => {
+      // A rejected promise must not stay cached: the manifest may come back
+      // after a rebuild, and the player surfaces the failure as a note.
+      manifestPromise = null;
+      throw error;
+    });
   return manifestPromise;
 }
 

@@ -214,6 +214,31 @@ const SET_LANGUAGE = (code) => `(() => {
   return button.textContent;
 })()`;
 
+/**
+ * Deterministic missing-export path: every real clip is exported today, so the
+ * note is exercised by deleting one key from the manifest response before the
+ * app boots. Installed through Page.addScriptToEvaluateOnNewDocument and
+ * removed again after the assertion.
+ */
+const MISSING_CLIP_STUB = `(() => {
+  const realFetch = window.fetch;
+  window.fetch = async (input, init) => {
+    const url = typeof input === 'string' ? input : input.url;
+    const response = await realFetch(input, init);
+    if (!url.includes('/media/manifest.json')) {
+      return response;
+    }
+    const data = await response.clone().json();
+    if (data.movies) delete data.movies.aios1701;
+    if (data.videos) delete data.videos.aios1701;
+    if (data.subtitles) delete data.subtitles.aios1701;
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+})()`;
+
 const TIMELINE_SNAPSHOT = `(() => {
   const cards = [...document.querySelectorAll('[data-testid="timeline-card"]')];
   const orders = cards.map((card) => Number(card.dataset.order));
@@ -818,6 +843,219 @@ try {
     `location.pathname === '/timeline' && document.querySelectorAll('[data-testid="timeline-card"]').length > 0`,
     "OS detail returns to the timeline",
   );
+
+  // ------------------------------------------- OS cutscene player (#28)
+  await cdp.navigate(`${appBase}/os/aios017`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="os-cutscene"] video[data-testid="video-player"]'))`,
+    "OS cutscene player loads",
+  );
+  const cutscene = await cdp.evaluate(`(() => {
+    const section = document.querySelector('[data-testid="os-cutscene"]');
+    const video = section.querySelector('video[data-testid="video-player"]');
+    const track = section.querySelector('[data-testid="video-track"]');
+    return {
+      sectionClip: section.dataset.clip,
+      heading: section.querySelector('h2')?.textContent ?? '',
+      clip: video.dataset.clip,
+      src: new URL(video.getAttribute('src'), location.href).pathname,
+      controls: video.controls,
+      autoplay: video.autoplay,
+      paused: video.paused,
+      trackLang: track?.srclang ?? null,
+      trackSrc: track ? new URL(track.getAttribute('src'), location.href).pathname : null,
+      tracks: section.querySelectorAll('[data-testid="video-track"]').length,
+    };
+  })()`);
+  check(
+    cutscene.sectionClip === "aios1701",
+    `OS cutscene section carries the clip id (got ${cutscene.sectionClip})`,
+  );
+  check(Boolean(cutscene.heading), "OS cutscene section has a heading");
+  check(
+    cutscene.clip === "aios1701",
+    `cutscene player exposes its clip id (got ${cutscene.clip})`,
+  );
+  check(
+    cutscene.src.endsWith("/media/videos/aios1701.mp4"),
+    `cutscene resolves through the media manifest (got ${cutscene.src})`,
+  );
+  check(cutscene.controls === true, "cutscene player shows native controls");
+  check(cutscene.autoplay === false, "cutscene player never autoplays");
+  check(cutscene.paused === true, "cutscene player starts paused");
+  check(
+    cutscene.tracks === 1,
+    `cutscene renders exactly one subtitle track (got ${cutscene.tracks})`,
+  );
+  check(
+    cutscene.trackLang === "zh-Hans",
+    `cutscene track follows the sidebar language (got ${cutscene.trackLang})`,
+  );
+  check(
+    cutscene.trackSrc.endsWith("/media/subs/aios1701.zh-Hans.vtt"),
+    `cutscene track points at the zh-Hans VTT (got ${cutscene.trackSrc})`,
+  );
+  const zhCueCount = await cdp.waitFor(
+    `(() => {
+      const track = document.querySelector('[data-testid="os-cutscene"] [data-testid="video-track"]');
+      return track && track.readyState === 2 && track.track?.cues ? track.track.cues.length : 0;
+    })()`,
+    "zh-Hans subtitle cues load",
+  );
+  check(zhCueCount === 17, `zh-Hans cutscene subtitles expose 17 cues (got ${zhCueCount})`);
+  const zhCue = await cdp.evaluate(
+    `document.querySelector('[data-testid="os-cutscene"] [data-testid="video-track"]').track.cues[0].text`,
+  );
+  check(Boolean(zhCue), "zh-Hans subtitle cue 1 has text");
+  await cdp.evaluate(`window.__cutsceneMarker = 'kept'`);
+  await cdp.evaluate(SET_LANGUAGE("ja"));
+  const jaCue = await cdp.waitFor(
+    `(() => {
+      const track = document.querySelector('[data-testid="os-cutscene"] [data-testid="video-track"]');
+      if (!track || track.srclang !== 'ja' || track.readyState !== 2) return false;
+      const cue = track.track?.cues?.[0]?.text ?? '';
+      return cue && cue !== ${JSON.stringify(zhCue)} ? cue : false;
+    })()`,
+    "ja subtitle track loads",
+  );
+  check(jaCue !== zhCue, "switching to ja swaps the subtitle track text");
+  check(
+    (await cdp.evaluate(`window.__cutsceneMarker`)) === "kept",
+    "language switch reuses the loaded page (no reload)",
+  );
+  await cdp.evaluate(SET_LANGUAGE("zh-Hans"));
+  await cdp.waitFor(
+    `document.querySelector('[data-testid="os-cutscene"] [data-testid="video-track"]')?.srclang === 'zh-Hans'`,
+    "zh-Hans track returns",
+  );
+
+  await cdp.navigate(`${appBase}/os/xos025`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="os-cutscene"] video[data-testid="video-player"]'))`,
+    "xos025 cutscene player loads",
+  );
+  const noSubtitles = await cdp.evaluate(`(() => {
+    const section = document.querySelector('[data-testid="os-cutscene"]');
+    const note = section.querySelector('[data-testid="video-subtitle-missing"]');
+    return {
+      clip: section.dataset.clip,
+      src: new URL(section.querySelector('video').getAttribute('src'), location.href).pathname,
+      tracks: section.querySelectorAll('[data-testid="video-track"]').length,
+      note: Boolean(note),
+      noteLang: note?.dataset.lang ?? null,
+      noteText: note?.textContent ?? '',
+    };
+  })()`);
+  check(
+    noSubtitles.clip === "xos2502",
+    `OS log without a subtitle group still shows its cutscene (got ${noSubtitles.clip})`,
+  );
+  check(
+    noSubtitles.src.endsWith("/media/videos/xos2502.mp4"),
+    `xos025 cutscene resolves through the manifest (got ${noSubtitles.src})`,
+  );
+  check(noSubtitles.tracks === 0, "clip without a subtitle group renders no track");
+  check(
+    noSubtitles.note === true,
+    "clip without a subtitle group explains the missing subtitles",
+  );
+  check(
+    noSubtitles.noteLang === "zh-Hans",
+    `missing-subtitle note names the active language (got ${noSubtitles.noteLang})`,
+  );
+  check(noSubtitles.noteText.trim().length > 0, "missing-subtitle note has copy");
+
+  await cdp.navigate(`${appBase}/os/alos025`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="entity-view"]'))`,
+    "alos025 entity view loads",
+  );
+  check(
+    (await cdp.evaluate(
+      `document.querySelectorAll('[data-testid="os-cutscene"]').length`,
+    )) === 0,
+    "OS log without a cutscene renders no cutscene section",
+  );
+
+  const stub = await cdp.call("Page.addScriptToEvaluateOnNewDocument", {
+    source: MISSING_CLIP_STUB,
+  });
+  await cdp.navigate(`${appBase}/os/aios017`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="video-missing"]'))`,
+    "missing-clip note renders",
+  );
+  const missingClip = await cdp.evaluate(`(() => {
+    const note = document.querySelector('[data-testid="video-missing"]');
+    return {
+      clip: note.dataset.clip,
+      text: note.textContent ?? '',
+      players: document.querySelectorAll('[data-testid="os-cutscene"] video[data-testid="video-player"]').length,
+    };
+  })()`);
+  check(
+    missingClip.clip === "aios1701",
+    `missing-clip note names the clip (got ${missingClip.clip})`,
+  );
+  check(missingClip.players === 0, "missing clip renders no <video> element");
+  check(missingClip.text.trim().length > 0, "missing-clip note has copy");
+  await cdp.call("Page.removeScriptToEvaluateOnNewDocument", {
+    identifier: stub.identifier,
+  });
+  await cdp.navigate(`${appBase}/os/aios017`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="os-cutscene"] video[data-testid="video-player"]'))`,
+    "cutscene player returns without the stub",
+  );
+  check(true, "removing the manifest stub restores the cutscene player");
+
+  await cdp.call("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  const narrow = await cdp.waitFor(
+    `(() => {
+      const frame = document.querySelector('[data-testid="os-cutscene"] .video-frame');
+      const content = document.querySelector('.content');
+      if (!frame || !content) return false;
+      const box = frame.getBoundingClientRect();
+      if (box.width < 100) return false;
+      const video = frame.querySelector('video');
+      return {
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+        videoWidth: Math.round(video.getBoundingClientRect().width),
+        contentWidth: Math.round(content.clientWidth),
+        ratio: Number((box.height / box.width).toFixed(3)),
+      };
+    })()`,
+    "narrow viewport cutscene frame",
+  );
+  check(
+    narrow.scrollWidth <= narrow.clientWidth + 1,
+    `cutscene does not overflow the narrow viewport (scroll ${narrow.scrollWidth} vs client ${narrow.clientWidth})`,
+  );
+  check(
+    narrow.videoWidth <= narrow.contentWidth,
+    `cutscene video fits the content column (${narrow.videoWidth} <= ${narrow.contentWidth})`,
+  );
+  check(
+    Math.abs(narrow.ratio - 9 / 16) <= 0.02,
+    `cutscene frame keeps the 16:9 ratio (got ${narrow.ratio})`,
+  );
+  await cdp.call("Emulation.setDeviceMetricsOverride", {
+    width: 1440,
+    height: 1000,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="os-cutscene"] .video-frame'))`,
+    "cutscene frame survives the viewport restore",
+  );
+  await cdp.screenshot("os-cutscene.png");
 
   // -------------------------------------------- OS index: chapter → folder
   await cdp.navigate(`${appBase}/os`);

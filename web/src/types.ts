@@ -100,6 +100,8 @@ export interface OsLogEntity extends BaseEntity {
   readonly file_lock: string | null;
   readonly level_locks: LevelLock[];
   readonly movies: string[];
+  /** First-open cutscene clip, a bare media-manifest key; absent on most logs. */
+  readonly cutscene?: string;
   readonly text_ref: string;
   readonly missing_languages: Lang[];
   readonly provenance: ProvenanceEntry[];

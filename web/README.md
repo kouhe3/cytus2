@@ -40,7 +40,7 @@ repository root when the default `python` does not have UnityPy;
 | `/extras/assistants` | iM assistant dialogue groups, pages and trigger/target, all five languages |
 | `/extras/titles` | 10 title screens with story unlocks and `video_title_*` playback; missing clips are marked |
 | `/search?q=<text>` | full-text search over iM posts, OS logs, OA documents and subtitle lines, grouped by type |
-| `/im/<gameId>`, `/os/<gameId>`, `/<type>/<gameId>` | entity detail with body text, type-specific facts, charts, and inbound/outbound edges; title-only iM posts carry an explicit note, and the four Bili-Wiki-confirmed posts carry a manual removed-after-reading note |
+| `/im/<gameId>`, `/os/<gameId>`, `/<type>/<gameId>` | entity detail with body text, type-specific facts, charts, and inbound/outbound edges; title-only iM posts carry an explicit note, and the four Bili-Wiki-confirmed posts carry a manual removed-after-reading note. An OS log with a first-open cutscene shows it as a 16:9 player above the body, with the sidebar language's subtitle track (or an explicit missing-subtitle note) |
 | `/song/<songId>@<Difficulty>` | chart detail: level, NeedUnlock, unlock sources from `unlocks_chart` edges, backlinks, sibling difficulties |
 
 History routing is used, so every URL can be opened or refreshed directly, and
@@ -79,13 +79,22 @@ posts remain in the global feed.
 | `GET /db/text.json` | snippet and name index derived from `build/text/*.jsonl` (`im_os`, `oa`, `story`, `extras`, `packs`, `subtitles`) |
 | `GET /db/text?ref=…&lang=…` | one full text record with `requested_lang` / `fallback` fields |
 | `GET /db/search?q=…&lang=…&limit=…` | full-text match groups for posts, logs, OA documents and subtitle lines |
-| `GET /media/<path>` | local media export (title clips under `titles/<clip>.mp4`), Range-capable |
+| `GET /media/<path>` | local media export (title clips under `titles/<clip>.mp4`, archive clips under `videos/<clip>.mp4`, subtitle files under `subs/<clip>.<lang>.vtt`), Range-capable |
 
 The text index also reads `build/text/extras.jsonl`; the extras routes use it
 through the same `text_ref` contract as the timeline. `/media/*` defaults to
 `viewer/public/media` and can be pointed elsewhere with `CYTUS2_MEDIA_DIR`.
 When a title clip is absent the page renders an explicit
 `title-video-missing` note instead of a broken player.
+
+Every archive video — the OS cutscene section, OS/OA inline `##movie` blocks
+and OA scene clips — renders through the shared `VideoPlayer`
+(`src/components/VideoPlayer.tsx`). It resolves the clip through
+`/media/manifest.json` (`movies` first, then `videos`), attaches the exact
+subtitle group's VTT for the active language, never autoplays, and explains a
+missing clip or a missing language track with a note instead of a broken
+element. Inline movies and OA scenes pass `subtitleKey={null} missing="hide"`,
+which keeps their previous no-note behaviour.
 
 Subtitle cues and pack descriptions follow the same contract: the entity only
 carries `text_ref`, and their localized text is read from
@@ -115,7 +124,10 @@ chart → post → chart round trip, the OS chapter → folder index (17 chapter
 document views, a backup gallery item, a Branching OS node, a CAPSO pack and
 the Black Market bundle, the extras hub, all 19 assistant groups / 30 pages
 with their language switch, the 10 title screens and 13 video clips (or their
-missing-export notes), grouped search hits opened with the keyboard, and the
+missing-export notes), the OS cutscene player (resolved `videos/<clip>.mp4`
+source, no autoplay, 17 zh-Hans cues, the ja track swap without a page reload,
+the missing-subtitle and missing-clip notes and the 390px no-overflow layout),
+grouped search hits opened with the keyboard, and the
 five-language switch
 including the explicit missing-language fallback. The switch checks assert the
 sidebar label, timeline heading/filter/level gate/account heading, character

@@ -13,7 +13,7 @@ _Avoid_: 帖子、article、topic
 _Avoid_: 楼中楼、嵌套回复
 
 **OS Log** (`os_log`):
-OS 档案中的一条记录：所属文件、编号、日期、正文 blocks、影片引用、`position`（osdata 数组内顺序）与 `level_lock_display`。
+OS 档案中的一条记录：所属文件、编号、日期、正文 blocks、影片引用、`position`（osdata 数组内顺序）与 `level_lock_display`。首次打开该档案时播放的过场以可选 `cutscene` 引用：`text/cutscenedata/cutscene_data_os` 的 `MovieFile` 去掉 `.mp4` 的裸片段名，无过场的记录不带该字段。
 _Avoid_: OS 文件、entry、archive（泛指文件时）
 
 **OS 锁定态**（来自 `OSFile.GetLockStatus`）:

@@ -118,6 +118,10 @@ class InputSource:
     def title_info(self) -> Table | None:
         return self.text_json("titleinfodata", "title_info")
 
+    def cutscene_os(self) -> Table | None:
+        """``cutscene_data_os``: TriggerId -> first-open OS cutscene MovieFile."""
+        return self.text_json("cutscenedata", "cutscene_data_os")
+
     def os_tables(self) -> list[Table]:
         directory = self.text_dir / "osdata"
         if not directory.is_dir():

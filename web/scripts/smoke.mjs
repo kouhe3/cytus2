@@ -2529,7 +2529,11 @@ try {
   await cdp.navigate(`${appBase}/branch`);
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="branch-row"]').length === 48 &&
-     Boolean(document.querySelector('[data-testid="branch-map"]'))`,
+     Boolean(document.querySelector('[data-testid="branch-map"]')) &&
+     (() => {
+       const wrap = document.querySelector('.branch-map-wrap');
+       return wrap ? wrap.scrollWidth <= wrap.clientWidth + 1 : false;
+     })()`,
     "Branching OS view loads",
   );
   const branchIndex = await cdp.evaluate(`(() => ({
@@ -2537,12 +2541,16 @@ try {
     activeNav: document.querySelector('.nav-link.active')?.textContent?.trim() ?? '',
     groups: document.querySelectorAll('[data-testid="branch-group"]').length,
     source: document.querySelector('[data-testid="branch-group"]')?.getAttribute('data-source') ?? '',
-    mapNodes: document.querySelectorAll('[data-testid="branch-map"] [data-testid="branch-node"]').length,
+    mapNodes: document.querySelectorAll('[data-testid="branch-map-node"]').length,
     edges: document.querySelectorAll('.branch-edges path').length,
     rows: document.querySelectorAll('[data-testid="branch-row"]').length,
     stats: document.querySelector('[data-testid="branch-stats"]')?.textContent ?? '',
     firstRowHref: document.querySelector('[data-testid="branch-row"]')?.getAttribute('href') ?? '',
     firstRowLevel: document.querySelector('[data-testid="branch-row"] .level-badge')?.textContent ?? '',
+    mapFit: (() => {
+      const wrap = document.querySelector('.branch-map-wrap');
+      return wrap ? wrap.scrollWidth <= wrap.clientWidth + 1 : false;
+    })(),
   }))()`);
   check(branchIndex.navHref === "/branch", "sidebar links the Branching OS view");
   check(
@@ -2560,6 +2568,10 @@ try {
   check(
     branchIndex.edges === 50,
     `Branching OS graph draws the LinkedFileIds edges (got ${branchIndex.edges})`,
+  );
+  check(
+    branchIndex.mapFit,
+    "Branching OS graph fits its column at the desktop viewport",
   );
   check(
     branchIndex.rows === 48,
@@ -2580,12 +2592,14 @@ try {
   await cdp.screenshot("branch-index.png");
 
   await cdp.evaluate(
-    `document.querySelector('[data-testid="branch-node"][data-node-id="story_node/taos010"]')
+    `document.querySelector('[data-testid="branch-map-node"][data-node-id="story_node/taos010"]')
       .dispatchEvent(new MouseEvent('click', { bubbles: true }))`,
   );
   await cdp.waitFor(
     `location.pathname === '/branch/taos010' &&
-     Boolean(document.querySelector('[data-testid="branch-node"]'))`,
+     document.querySelector('article[data-testid="branch-node"]')
+       ?.getAttribute('data-node-id') === 'story_node/taos010' &&
+     Boolean(document.querySelector('[data-testid="branch-node-facts"]'))`,
     "Branching OS graph opens a node",
   );
   const branchMerge = await cdp.evaluate(`(() => ({

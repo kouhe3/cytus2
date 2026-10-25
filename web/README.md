@@ -36,7 +36,7 @@ repository root when the default `python` does not have UnityPy;
 | `/backup` | Backup Database folder index with per-folder gallery logos and media counts |
 | `/backup/<gameId>` | folder header logo, then items grouped as a media retrospective; kind filter, conditions, boss-stage links |
 | `/story` | story nodes ordered by reading order; level/version/chapter sort, event/Branching OS filter |
-| `/branch` | Branching OS view: every `story_node(kind=branch)` grouped by its `source_file`, drawn as the game's branch graph (columns = `position`, rows = the id's track suffix, edges = `next` / `LinkedFileIds`) with merge nodes stacked on the middle row, then the same nodes as a list with position, 1-based unlock level, `state_id` / `state_value` and a text snippet |
+| `/branch` | Branching OS view: every `story_node(kind=branch)` grouped by its `source_file`, drawn as the game's branch graph (columns = `position`, rows = the id's track suffix, `next` / `LinkedFileIds` edges routed as right-angle elbows like the in-game graph) with merge nodes stacked on the middle row; the columns size themselves to the reader's width so the whole graph stays visible, and the same nodes follow as a list with position, 1-based unlock level, `state_id` / `state_value` and a text snippet |
 | `/branch/<gameId>` | Branching OS node reader: the graph with the open node highlighted, the node text, its position/order/level/state/level-lock facts, predecessors and successors as in-view links (no jump back to `/story_node/...`), and the charts the node unlocks |
 | `/shop` | CAPSO packs, gacha machine and shop bundles; Black Market badge |
 | `/extras` | appendix hub: assistant dialogues, title-screen evolution, song-select media and the cutscene subtitle library |

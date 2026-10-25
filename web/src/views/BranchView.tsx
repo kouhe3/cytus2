@@ -63,7 +63,7 @@ function BranchAside({
             <dd>{i18n.formatNumber(tracks)}</dd>
           </div>
           <div className="fact">
-            <dt>{i18n.t("branch.chartsTitle")}</dt>
+            <dt>{i18n.t("sidebar.stats.charts")}</dt>
             <dd>{i18n.formatNumber(charts)}</dd>
           </div>
         </dl>
@@ -123,9 +123,7 @@ export function BranchIndexView({ db }: { db: Database }) {
                 : i18n.t("branch.title")}
             </h2>
             <p className="hint">{i18n.t("branch.mapHint")}</p>
-            <div className="branch-map-wrap">
-              <BranchMap nodes={group.nodes} onOpen={openNode} />
-            </div>
+            <BranchMap nodes={group.nodes} onOpen={openNode} />
             <h3>{i18n.t("branch.listTitle")}</h3>
             <ol className="branch-list" data-testid="branch-list">
               {group.nodes.map((node) => {
@@ -249,13 +247,11 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
           </header>
 
           {group ? (
-            <div className="branch-map-wrap">
-              <BranchMap
-                nodes={group.nodes}
-                activeId={node.id}
-                onOpen={openNode}
-              />
-            </div>
+            <BranchMap
+              nodes={group.nodes}
+              activeId={node.id}
+              onOpen={openNode}
+            />
           ) : null}
 
           <section className="detail-section" data-testid="branch-node-body">

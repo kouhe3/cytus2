@@ -247,7 +247,24 @@ def test_os_text_blocks_preserve_script_structure(built: Path) -> None:
     assert japanese["blocks"] == []
 
 
-def test_schema_rejects_nested_replies_and_incomplete_records(built: Path) -> None:
+def test_os_gallery_json_blocks_render_images() -> None:
+    from cytus2db.blocks import parse_blocks
+
+    single = '\n##json=gallery\n[{\n    "Id": "ivos0301",\n    "Type": 0\n}]\n'
+    assert parse_blocks(single) == [{"kind": "image", "id": "ivos0301"}]
+
+    multi = (
+        '##json=gallery\n[{"Id": "ivos2601", "Type": 0}, '
+        '{"Id": "ivos2602", "Type": 0}, {"Id": "ivos2603", "Type": 0}]'
+    )
+    assert [block["id"] for block in parse_blocks(multi)] == [
+        "ivos2601",
+        "ivos2602",
+        "ivos2603",
+    ]
+
+
+def test_os_records_validate_against_schema(built: Path) -> None:
     validator = SchemaValidator()
     posts = load_entities(built, "im_post")
     replies = load_entities(built, "im_reply")

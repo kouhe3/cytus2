@@ -2525,6 +2525,154 @@ try {
   await cdp.screenshot("story-movies.png");
   // ---------------------------------- end story node movies (#30)
 
+  // ---------------------------------------------------------- Branching OS
+  await cdp.navigate(`${appBase}/branch`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="branch-row"]').length === 48 &&
+     Boolean(document.querySelector('[data-testid="branch-map"]'))`,
+    "Branching OS view loads",
+  );
+  const branchIndex = await cdp.evaluate(`(() => ({
+    navHref: document.querySelector('[data-testid="nav-branch"]')?.getAttribute('href') ?? '',
+    activeNav: document.querySelector('.nav-link.active')?.textContent?.trim() ?? '',
+    groups: document.querySelectorAll('[data-testid="branch-group"]').length,
+    source: document.querySelector('[data-testid="branch-group"]')?.getAttribute('data-source') ?? '',
+    mapNodes: document.querySelectorAll('[data-testid="branch-map"] [data-testid="branch-node"]').length,
+    edges: document.querySelectorAll('.branch-edges path').length,
+    rows: document.querySelectorAll('[data-testid="branch-row"]').length,
+    stats: document.querySelector('[data-testid="branch-stats"]')?.textContent ?? '',
+    firstRowHref: document.querySelector('[data-testid="branch-row"]')?.getAttribute('href') ?? '',
+    firstRowLevel: document.querySelector('[data-testid="branch-row"] .level-badge')?.textContent ?? '',
+  }))()`);
+  check(branchIndex.navHref === "/branch", "sidebar links the Branching OS view");
+  check(
+    branchIndex.activeNav === translate("zh-Hans", "nav.branch"),
+    "sidebar marks the Branching OS view as current",
+  );
+  check(
+    branchIndex.groups === 1 && branchIndex.source === "tairitsu001",
+    `Branching OS groups its nodes by source file (got ${branchIndex.groups}/${branchIndex.source})`,
+  );
+  check(
+    branchIndex.mapNodes === 48,
+    `Branching OS graph draws every node (got ${branchIndex.mapNodes})`,
+  );
+  check(
+    branchIndex.edges === 50,
+    `Branching OS graph draws the LinkedFileIds edges (got ${branchIndex.edges})`,
+  );
+  check(
+    branchIndex.rows === 48,
+    `Branching OS list covers every node (got ${branchIndex.rows})`,
+  );
+  check(
+    branchIndex.stats.includes(formatUnit(zhHans, "nodes", 48)),
+    "Branching OS stats count 48 nodes",
+  );
+  check(
+    branchIndex.firstRowHref === "/branch/taos001a",
+    "Branching OS list links a node reader",
+  );
+  check(
+    branchIndex.firstRowLevel === "Lv 2",
+    `Branching OS list shows the 1-based unlock level (got ${branchIndex.firstRowLevel})`,
+  );
+  await cdp.screenshot("branch-index.png");
+
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="branch-node"][data-node-id="story_node/taos010"]')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }))`,
+  );
+  await cdp.waitFor(
+    `location.pathname === '/branch/taos010' &&
+     Boolean(document.querySelector('[data-testid="branch-node"]'))`,
+    "Branching OS graph opens a node",
+  );
+  const branchMerge = await cdp.evaluate(`(() => ({
+    id: document.querySelector('[data-testid="branch-node"]')?.getAttribute('data-node-id') ?? '',
+    prev: document.querySelectorAll('[data-testid="branch-prev-link"]').length,
+    next: document.querySelectorAll('[data-testid="branch-next-link"]').length,
+    state: [...document.querySelectorAll('[data-testid="branch-node-facts"] .fact')]
+      .find((fact) => fact.textContent.startsWith(${JSON.stringify(translate("zh-Hans", "fact.state"))}))?.textContent ?? '',
+    active: document.querySelectorAll('.branch-node.is-active').length,
+  }))()`);
+  check(
+    branchMerge.id === "story_node/taos010",
+    "Branching OS reader opens the clicked node",
+  );
+  check(
+    branchMerge.prev === 3,
+    `merge node lists its three predecessors (got ${branchMerge.prev})`,
+  );
+  check(
+    branchMerge.next === 3,
+    `merge node lists its three successors (got ${branchMerge.next})`,
+  );
+  check(
+    branchMerge.state.includes("-1"),
+    `merge node states its branch state (got ${branchMerge.state})`,
+  );
+  check(
+    branchMerge.active === 1,
+    "graph highlights the open node",
+  );
+
+  await cdp.navigate(`${appBase}/branch/taos001a`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="entity-body"]'))`,
+    "Branching OS node text loads",
+  );
+  const branchText = await cdp.evaluate(`(() => ({
+    chars: document.querySelector('[data-testid="entity-body"]')?.textContent?.trim().length ?? 0,
+    prev: document.querySelectorAll('[data-testid="branch-prev-link"]').length,
+    prevNote: document.querySelector('[data-testid="branch-prev"]')?.textContent ?? '',
+    next: [...document.querySelectorAll('[data-testid="branch-next-link"]')].map((link) => link.getAttribute('href')),
+    back: document.querySelector('[data-testid="back-to-branch"]')?.getAttribute('href') ?? '',
+  }))()`);
+  check(
+    branchText.chars > 100,
+    `branch node reader renders its text body (got ${branchText.chars} chars)`,
+  );
+  check(branchText.prev === 0, "branch start node has no predecessors");
+  check(
+    branchText.prevNote.includes(translate("zh-Hans", "branch.noPrev")),
+    "branch start node explains the missing predecessor",
+  );
+  check(
+    branchText.next[0] === "/branch/taos002a",
+    "branch node links its successor inside the same view",
+  );
+  check(branchText.back === "/branch", "branch reader links back to the graph");
+
+  await cdp.navigate(`${appBase}/branch/taos008a`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="branch-chart-link"]'))`,
+    "Branching OS node charts load",
+  );
+  const branchCharts = await cdp.evaluate(`(() => ({
+    charts: [...document.querySelectorAll('[data-testid="branch-chart-link"]')].map((link) => link.getAttribute('href')),
+    level: document.querySelector('.byline .level-badge')?.textContent ?? '',
+    factLevel: [...document.querySelectorAll('[data-testid="branch-node-facts"] .fact')]
+      .find((fact) => fact.textContent.startsWith(${JSON.stringify(translate("zh-Hans", "fact.level"))}))?.textContent ?? '',
+  }))()`);
+  check(
+    branchCharts.charts.length === 3,
+    `branch node lists its three charts (got ${branchCharts.charts.length})`,
+  );
+  check(
+    branchCharts.charts.every((href) => href?.startsWith("/song/tairitsu001_006@")),
+    "branch node links its own chart variants",
+  );
+  check(
+    branchCharts.level === "Lv 6",
+    `branch node shows the 1-based level (got ${branchCharts.level})`,
+  );
+  check(
+    branchCharts.factLevel.includes("Lv 6"),
+    `branch node facts use the display level (got ${branchCharts.factLevel})`,
+  );
+  // ------------------------------------------ end Branching OS view (#31)
+
   // ------------------------------------------------------------------- shop
   await cdp.navigate(`${appBase}/shop`);
   await cdp.waitFor(

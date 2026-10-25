@@ -36,6 +36,8 @@ repository root when the default `python` does not have UnityPy;
 | `/backup` | Backup Database folder index with per-folder gallery logos and media counts |
 | `/backup/<gameId>` | folder header logo, then items grouped as a media retrospective; kind filter, conditions, boss-stage links |
 | `/story` | story nodes ordered by reading order; level/version/chapter sort, event/Branching OS filter |
+| `/branch` | Branching OS view: every `story_node(kind=branch)` grouped by its `source_file`, drawn as the game's branch graph (columns = `position`, rows = the id's track suffix, edges = `next` / `LinkedFileIds`) with merge nodes stacked on the middle row, then the same nodes as a list with position, 1-based unlock level, `state_id` / `state_value` and a text snippet |
+| `/branch/<gameId>` | Branching OS node reader: the graph with the open node highlighted, the node text, its position/order/level/state/level-lock facts, predecessors and successors as in-view links (no jump back to `/story_node/...`), and the charts the node unlocks |
 | `/shop` | CAPSO packs, gacha machine and shop bundles; Black Market badge |
 | `/extras` | appendix hub: assistant dialogues, title-screen evolution, song-select media and the cutscene subtitle library |
 | `/extras/assistants` | iM assistant dialogue groups, pages and trigger/target, all five languages |
@@ -150,7 +152,10 @@ chart → post → chart round trip, the OS chapter → folder index (17 chapter
 start collapsed and stay collapsed (with the scroll position) across a reload,
 the OA archive and
 document views (whose silent `_oa_system` scene players stay free of the
-library's no-audio note), a backup gallery item, a Branching OS node, a CAPSO
+library's no-audio note), a backup gallery item, the Branching OS graph and its
+node reader (48 nodes, 50 `LinkedFileIds` edges, the merge node's three
+predecessors and successors, in-view node links, the node's three chart
+variants), a CAPSO
 pack and the Black Market bundle, the extras hub, all 19 assistant groups / 30
 pages with their language switch, the 10 title screens and 13 video clips (or
 their missing-export notes), the cutscene subtitle library (55 group rows, 62

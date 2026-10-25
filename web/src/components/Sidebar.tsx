@@ -16,6 +16,7 @@ const NAV_ITEMS: readonly {
   { to: "/oa", labelKey: "nav.oa", testId: "nav-oa" },
   { to: "/backup", labelKey: "nav.backup", testId: "nav-backup" },
   { to: "/story", labelKey: "nav.story", testId: "nav-story" },
+  { to: "/branch", labelKey: "nav.branch", testId: "nav-branch" },
   { to: "/shop", labelKey: "nav.shop", testId: "nav-shop" },
   { to: "/extras", labelKey: "nav.extras", testId: "nav-extras" },
 ];

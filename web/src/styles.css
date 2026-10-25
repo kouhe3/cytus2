@@ -1546,6 +1546,125 @@ kbd {
   color: var(--text);
 }
 
+/* ---------------------------------------------------------- branching OS */
+.branch-map-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+  padding-bottom: 6px;
+}
+
+.branch-map {
+  display: block;
+  font-family: inherit;
+}
+
+.branch-edges path {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1.2;
+}
+
+.branch-node {
+  cursor: pointer;
+  outline: none;
+}
+
+.branch-node rect {
+  fill: var(--panel-2);
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.branch-node text {
+  fill: var(--text);
+  font-size: 9.5px;
+}
+
+.branch-node:hover rect,
+.branch-node:focus-visible rect {
+  stroke: var(--accent);
+}
+
+.branch-node.is-merge rect {
+  fill: var(--panel);
+  stroke-dasharray: 3 2;
+}
+
+.branch-node.is-end rect {
+  stroke: var(--accent);
+}
+
+.branch-node.is-active rect {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.branch-node.is-active text {
+  fill: #05070a;
+}
+
+.branch-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.branch-row {
+  display: grid;
+  grid-template-columns: 46px minmax(96px, 132px) auto auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-size: 12.5px;
+}
+
+.branch-row:hover {
+  border-color: var(--accent-dim);
+  background: var(--panel-2);
+}
+
+.branch-row-pos,
+.branch-row-state {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.branch-row-id {
+  color: var(--text-strong);
+}
+
+.branch-row-snippet {
+  color: var(--text);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.branch-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--panel-2);
+  vertical-align: middle;
+}
+
+.branch-swatch.is-merge {
+  background: var(--panel);
+  border-style: dashed;
+}
+
+.branch-swatch.is-end {
+  border-color: var(--accent);
+}
+
 .media-video {
   border-color: #2f6f80;
   color: #8edcea;

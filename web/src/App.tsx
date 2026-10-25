@@ -16,6 +16,7 @@ import { decodeEntityPath } from "./data/selectors";
 import { useDatabase } from "./data/useDatabase";
 import type { Database } from "./types";
 import { BackupFolderView, BackupIndexView } from "./views/BackupView";
+import { BranchIndexView, BranchNodeView } from "./views/BranchView";
 import { CharacterIndexView } from "./views/CharacterIndexView";
 import { CharacterView } from "./views/CharacterView";
 import { ChartView } from "./views/ChartView";
@@ -42,6 +43,7 @@ const PAGE_TITLES: Record<string, MessageKey> = {
   "/oa": "nav.oa",
   "/backup": "nav.backup",
   "/story": "nav.story",
+  "/branch": "nav.branch",
   "/shop": "nav.shop",
   "/extras": "nav.extras",
   "/extras/assistants": "extras.assistantsTitle",
@@ -137,6 +139,11 @@ function BackupFolderRoute({ db }: { db: Database }) {
   return <BackupFolderView db={db} gameId={decodeParam(params["gameId"])} />;
 }
 
+function BranchNodeRoute({ db }: { db: Database }) {
+  const params = useParams();
+  return <BranchNodeView db={db} gameId={decodeParam(params["gameId"])} />;
+}
+
 function EntityRoute({ db }: { db: Database }) {
   const location = useLocation();
   const path = decodeEntityPath(location.pathname);
@@ -203,6 +210,11 @@ export default function App() {
       document.title = i18n.t("app.backupFolderTitle");
       return;
     }
+    if (location.pathname.startsWith("/branch/")) {
+      const gameId = decodeEntityPath(location.pathname).split("/").pop() ?? "";
+      document.title = `${gameId} · Cytus II`;
+      return;
+    }
     if (state.status === "ready") {
       const path = decodeEntityPath(location.pathname);
       const entity = state.db.entityById.get(path);
@@ -249,6 +261,11 @@ cd web && pnpm dev`}</pre>
             element={<BackupFolderRoute db={db} />}
           />
           <Route path="/story" element={<StoryIndexView db={db} />} />
+          <Route path="/branch" element={<BranchIndexView db={db} />} />
+          <Route
+            path="/branch/:gameId"
+            element={<BranchNodeRoute db={db} />}
+          />
           <Route path="/shop" element={<ShopIndexView db={db} />} />
           <Route path="/extras" element={<ExtrasIndexView db={db} />} />
           <Route path="/extras/assistants" element={<AssistantsView db={db} />} />

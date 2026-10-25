@@ -21,6 +21,7 @@ import {
   StoryNodeDetails,
   SubtitleLineDetails,
 } from "../components/EntitySections";
+import { EntityList } from "../components/EntityLink";
 import { EntityMedia } from "../components/EntityMedia";
 import { Fact, Facts } from "../components/Facts";
 import { MediaImage } from "../components/Media";
@@ -75,6 +76,7 @@ import type {
   BaseEntity,
   ChartEntity,
   Database,
+  GalleryItemEntity,
   Lang,
   LocalizedText,
 } from "../types";
@@ -328,6 +330,23 @@ export function EntityView({
   const outgoingCount = outgoingEdges(db, entity.id).length;
   const incomingCount = incomingEdges(db, entity.id).length;
 
+  // Read-only reverse index (no canonical edge): a Backup Database video points
+  // back at the OS log through its own unlock condition.
+  const relatedVideos = useMemo(() => {
+    if (!isOsLog(entity)) {
+      return [];
+    }
+    const logId = entity.game_id;
+    return (db.entitiesByType.get("gallery_item") ?? []).filter(
+      (record): record is GalleryItemEntity =>
+        isGalleryItem(record) &&
+        record.kind === "video" &&
+        record.conditions.some(
+          (condition) => condition.kind === "os" && condition.value === logId,
+        ),
+    );
+  }, [db, entity]);
+
   const data = recordOf(entity);
   const genericFacts = GENERIC_FIELDS.map((field) => ({
     field,
@@ -493,6 +512,21 @@ export function EntityView({
           ) : null}
 
           <TypeDetails db={db} entity={entity} lang={lang} />
+
+          {relatedVideos.length > 0 ? (
+            <section
+              className="detail-section"
+              data-testid="os-related-videos"
+            >
+              <h2>{i18n.t("section.osRelatedVideos")}</h2>
+              <EntityList
+                db={db}
+                entities={relatedVideos}
+                lang={lang}
+                testId="os-related-video"
+              />
+            </section>
+          ) : null}
 
           {charts.length > 0 ? (
             <section className="detail-section" data-testid="charts-section">

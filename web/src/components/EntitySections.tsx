@@ -441,6 +441,11 @@ export function GalleryItemDetails({
   const stage = bossStageForGalleryItem(db, entity.id);
   return (
     <Section title={i18n.t("section.backupItem")} testId="gallery-item-detail">
+      {entity.kind === "video" ? (
+        <div data-testid="gallery-video">
+          <VideoPlayer clip={entity.location} label={entity.name} />
+        </div>
+      ) : null}
       <Facts>
         <Fact label={i18n.t("fact.kind")}>
           <MediaKindBadge kind={entity.kind} />

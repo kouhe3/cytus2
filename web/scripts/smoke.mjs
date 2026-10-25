@@ -261,6 +261,31 @@ const STORY_MOVIE_MISSING_STUB = `(() => {
 })()`;
 // ------------------------------------------------ end story node movie stub
 
+/**
+ * Backup Database negative path (#29): every gallery video exports today, so
+ * the missing-media note is exercised by deleting one clip from the manifest
+ * response before the app boots. Kept separate from MISSING_CLIP_STUB so the
+ * two tickets' stubs stay independent.
+ */
+const GALLERY_MISSING_CLIP_STUB = `(() => {
+  const realFetch = window.fetch;
+  window.fetch = async (input, init) => {
+    const url = typeof input === 'string' ? input : input.url;
+    const response = await realFetch(input, init);
+    if (!url.includes('/media/manifest.json')) {
+      return response;
+    }
+    const data = await response.clone().json();
+    if (data.movies) delete data.movies.aios1701;
+    if (data.videos) delete data.videos.aios1701;
+    if (data.subtitles) delete data.subtitles.aios1701;
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+})()`;
+
 const TIMELINE_SNAPSHOT = `(() => {
   const cards = [...document.querySelectorAll('[data-testid="timeline-card"]')];
   const orders = cards.map((card) => Number(card.dataset.order));
@@ -1434,6 +1459,128 @@ try {
     Math.abs(galleryImage.rendered - galleryImage.natural) < 0.01,
     `gallery image keeps its natural aspect (natural ${galleryImage.natural.toFixed(3)}, rendered ${galleryImage.rendered.toFixed(3)})`,
   );
+
+  // ----------------------------------- Backup Database video item (#29)
+  await cdp.navigate(`${appBase}/gallery_item/ai001/aios1701`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="gallery-video"] video[data-testid="video-player"]'))`,
+    "gallery video player loads",
+  );
+  const galleryVideo = await cdp.evaluate(`(() => {
+    const section = document.querySelector('[data-testid="gallery-video"]');
+    const video = section.querySelector('video[data-testid="video-player"]');
+    const track = section.querySelector('[data-testid="video-track"]');
+    const facts = [...document.querySelectorAll('[data-testid="gallery-item-detail"] .fact')];
+    return {
+      clip: video.dataset.clip,
+      src: new URL(video.getAttribute('src'), location.href).pathname,
+      controls: video.controls,
+      autoplay: video.autoplay,
+      paused: video.paused,
+      trackLang: track?.srclang ?? null,
+      trackSrc: track ? new URL(track.getAttribute('src'), location.href).pathname : null,
+      caption: section.querySelector('figcaption')?.textContent ?? '',
+      kind: document.querySelector('[data-testid="gallery-item-detail"] .media-kind')?.textContent ?? '',
+      conditionHref: document.querySelector('[data-testid="condition-link"]')?.getAttribute('href') ?? '',
+      labels: facts.map(fact => fact.querySelector('dt')?.textContent ?? ''),
+      values: facts.map(fact => fact.querySelector('dd')?.textContent?.trim() ?? ''),
+    };
+  })()`);
+  check(
+    galleryVideo.clip === "aios1701",
+    `gallery video exposes its clip id (got ${galleryVideo.clip})`,
+  );
+  check(
+    galleryVideo.src.endsWith("/media/videos/aios1701.mp4"),
+    `gallery video resolves through the media manifest (got ${galleryVideo.src})`,
+  );
+  check(
+    galleryVideo.trackLang === "zh-Hans",
+    `gallery video track follows the sidebar language (got ${galleryVideo.trackLang})`,
+  );
+  check(
+    galleryVideo.trackSrc?.endsWith("/media/subs/aios1701.zh-Hans.vtt") === true,
+    `gallery video track points at the zh-Hans VTT (got ${galleryVideo.trackSrc})`,
+  );
+  const galleryCues = await cdp.waitFor(
+    `(() => {
+      const track = document.querySelector('[data-testid="gallery-video"] [data-testid="video-track"]');
+      return track && track.readyState === 2 && track.track?.cues ? track.track.cues.length : 0;
+    })()`,
+    "gallery subtitle cues load",
+  );
+  check(
+    galleryCues === 17,
+    `gallery video subtitles expose 17 cues (got ${galleryCues})`,
+  );
+  check(galleryVideo.controls === true, "gallery video shows native controls");
+  check(galleryVideo.autoplay === false, "gallery video never autoplays");
+  check(galleryVideo.paused === true, "gallery video starts paused");
+  check(
+    galleryVideo.caption === "Video_???_06_30",
+    `gallery video is captioned with the entry name (got ${galleryVideo.caption})`,
+  );
+  check(
+    galleryVideo.kind === translate("zh-Hans", "mediaKind.video"),
+    `gallery video keeps its kind fact (got ${galleryVideo.kind})`,
+  );
+  check(
+    galleryVideo.conditionHref === "/os/aios017",
+    `gallery video keeps its unlock-condition link (got ${galleryVideo.conditionHref})`,
+  );
+  check(
+    galleryVideo.labels.includes(translate("zh-Hans", "fact.location")) &&
+      galleryVideo.values.includes("aios1701"),
+    `gallery video keeps its location fact (got ${galleryVideo.labels.join(",")})`,
+  );
+  check(
+    galleryVideo.labels.length === 7,
+    `gallery video keeps every metadata fact (got ${galleryVideo.labels.length})`,
+  );
+
+  const galleryStub = await cdp.call("Page.addScriptToEvaluateOnNewDocument", {
+    source: GALLERY_MISSING_CLIP_STUB,
+  });
+  await cdp.navigate(`${appBase}/gallery_item/ai001/aios1701`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="video-missing"]'))`,
+    "gallery missing-video note renders",
+  );
+  const galleryMissing = await cdp.evaluate(`(() => {
+    const note = document.querySelector('[data-testid="gallery-video"] [data-testid="video-missing"]');
+    return {
+      clip: note?.dataset.clip ?? null,
+      text: note?.textContent ?? '',
+      players: document.querySelectorAll('[data-testid="gallery-video"] video').length,
+      conditionHref: document.querySelector('[data-testid="condition-link"]')?.getAttribute('href') ?? '',
+    };
+  })()`);
+  check(
+    galleryMissing.clip === "aios1701",
+    `gallery missing-video note names the clip (got ${galleryMissing.clip})`,
+  );
+  check(
+    galleryMissing.players === 0,
+    `gallery video without an export renders no <video> element (got ${galleryMissing.players})`,
+  );
+  check(
+    galleryMissing.text.trim().length > 0,
+    "gallery missing-video note has copy",
+  );
+  check(
+    galleryMissing.conditionHref === "/os/aios017",
+    `gallery missing-video note keeps the unlock condition visible (got ${galleryMissing.conditionHref})`,
+  );
+  await cdp.call("Page.removeScriptToEvaluateOnNewDocument", {
+    identifier: galleryStub.identifier,
+  });
+  await cdp.navigate(`${appBase}/gallery_item/ai001/aios1701`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="gallery-video"] video[data-testid="video-player"]'))`,
+    "gallery video player returns without the stub",
+  );
+  check(true, "removing the gallery manifest stub restores the player");
+  await cdp.screenshot("gallery-video.png");
 
   // ------------------------------------------------------------- story nodes
   await cdp.navigate(`${appBase}/story`);

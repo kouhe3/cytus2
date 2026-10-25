@@ -318,6 +318,9 @@ export const ZH_HANS = {
   "section.storyBranch": "Branching OS 节点",
   "section.nextNodes": "后续节点",
   "section.storyEvent": "故事事件",
+  // --- ticket/30-story-movies ---
+  "section.storyMovies": "故事影片",
+  // --- end ticket/30-story-movies ---
   "section.capsoPack": "CAPSO 商店包",
   "section.capsoItems": "物品（{count}）",
   "section.capsoItem": "CAPSO 物品",
@@ -935,6 +938,9 @@ const EN: Messages = {
   "section.storyBranch": "Branching OS node",
   "section.nextNodes": "Next nodes",
   "section.storyEvent": "Story event",
+  // --- ticket/30-story-movies ---
+  "section.storyMovies": "Story movies",
+  // --- end ticket/30-story-movies ---
   "section.capsoPack": "CAPSO shop pack",
   "section.capsoItems": "Items ({count})",
   "section.capsoItem": "CAPSO item",
@@ -1549,6 +1555,9 @@ const JA: Messages = {
   "section.storyBranch": "Branching OS ノード",
   "section.nextNodes": "次のノード",
   "section.storyEvent": "ストーリーイベント",
+  // --- ticket/30-story-movies ---
+  "section.storyMovies": "ストーリー映像",
+  // --- end ticket/30-story-movies ---
   "section.capsoPack": "CAPSO ショップパック",
   "section.capsoItems": "アイテム（{count}）",
   "section.capsoItem": "CAPSO アイテム",
@@ -2163,6 +2172,9 @@ const ZH_HANT: Messages = {
   "section.storyBranch": "Branching OS 節點",
   "section.nextNodes": "後續節點",
   "section.storyEvent": "故事事件",
+  // --- ticket/30-story-movies ---
+  "section.storyMovies": "故事影片",
+  // --- end ticket/30-story-movies ---
   "section.capsoPack": "CAPSO 商店包",
   "section.capsoItems": "物品（{count}）",
   "section.capsoItem": "CAPSO 物品",
@@ -2777,6 +2789,9 @@ const KO: Messages = {
   "section.storyBranch": "Branching OS 노드",
   "section.nextNodes": "다음 노드",
   "section.storyEvent": "스토리 이벤트",
+  // --- ticket/30-story-movies ---
+  "section.storyMovies": "스토리 영상",
+  // --- end ticket/30-story-movies ---
   "section.capsoPack": "CAPSO 상점 팩",
   "section.capsoItems": "아이템 ({count})",
   "section.capsoItem": "CAPSO 아이템",

@@ -1,0 +1,5 @@
+# Project-scoped omp configuration.
+# Extensions listed here are loaded for sessions started in this project, and
+# their sibling surfaces (skills/, commands/, rules/) are discovered too.
+extensions:
+  - ./.omp/vendor/superpowers-omp

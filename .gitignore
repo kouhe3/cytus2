@@ -67,3 +67,6 @@ __pycache__/
 # regenerated locally by tools/wiki_snapshot.py; only titles.json and
 # template_params.json are committed.
 /wiki/snapshot/pages.json
+
+# 项目级 omp 扩展的第三方 checkout（.omp/config.yml 引用，按需重新克隆）
+/.omp/vendor/

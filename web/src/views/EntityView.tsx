@@ -414,6 +414,16 @@ export function EntityView({
                   {formatUnit(i18n, "replies", entity.reply_count)}
                 </p>
               ) : null}
+              {isImPost(entity) && entity.title_only ? (
+                <p className="hint" data-testid="im-title-only-note">
+                  {i18n.t("entity.titleOnlyPost")}
+                </p>
+              ) : null}
+              {isImPost(entity) && entity.removed_after_read ? (
+                <p className="hint" data-testid="im-removed-after-read-note">
+                  {i18n.t("entity.removedAfterReadPost")}
+                </p>
+              ) : null}
               {isOsLog(entity) ? (
                 <p className="byline">
                   {entity.date

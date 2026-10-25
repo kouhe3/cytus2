@@ -6,6 +6,8 @@ type MediaProps = {
   readonly kind?: "auto" | "image" | "viewer" | "avatar" | "illustration" | "logo";
   readonly alt?: string;
   readonly className?: string;
+  /** Skip the inline 3:2 game frame and keep the asset's own aspect ratio. */
+  readonly natural?: boolean;
 };
 
 /** Game inline images use a 240x160 (3:2) frame scaled by the texture ratio. */
@@ -34,12 +36,19 @@ function useImage(id: string, kind: NonNullable<MediaProps["kind"]>): MediaAsset
   return asset;
 }
 
-export function MediaImage({ id, kind = "auto", alt, className }: MediaProps) {
+export function MediaImage({
+  id,
+  kind = "auto",
+  alt,
+  className,
+  natural = false,
+}: MediaProps) {
   const asset = useImage(id, kind);
   if (!asset) {
     return null;
   }
   const stretch =
+    !natural &&
     kind !== "avatar" &&
     kind !== "logo" &&
     kind !== "illustration" &&

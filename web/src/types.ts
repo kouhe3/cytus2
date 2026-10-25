@@ -62,6 +62,8 @@ export interface ImPostEntity extends BaseEntity {
   readonly reply_count: number;
   readonly story_gate: string | null;
   readonly topic_gate: string | null;
+  readonly title_only: boolean;
+  readonly removed_after_read: boolean;
   readonly level_locks: LevelLock[];
   readonly attachments: string[];
   readonly charts: string[];

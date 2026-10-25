@@ -7,6 +7,7 @@ import { MediaImage } from "../components/Media";
 import { TypeBadge } from "../components/ui";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
+import { isIllustration } from "../data/database";
 import {
   characterImAccount,
   characterOsEntries,
@@ -90,6 +91,20 @@ export function CharacterView({
     return [...grouped.entries()];
   }, [entries]);
 
+  const illustrations = useMemo(
+    () =>
+      (db.entitiesByType.get("illustration") ?? [])
+        .filter(isIllustration)
+        .filter((item) => item.character_id === character.id)
+        .sort(
+          (left, right) =>
+            Number(right.costume === "Default") -
+              Number(left.costume === "Default") ||
+            left.game_id.localeCompare(right.game_id),
+        ),
+    [db, character.id],
+  );
+
   const imAccount = IM_TAB_CHARACTERS[character.game_id]
     ? characterImAccount(db, character)
     : null;
@@ -130,12 +145,30 @@ export function CharacterView({
               alt={character.name}
               className="character-logo"
             />
-            <MediaImage
-              id={character.game_id}
-              kind="illustration"
-              alt={character.name}
-              className="character-illustration"
-            />
+            {illustrations.length > 0 ? (
+              <div
+                className="character-illustrations"
+                data-testid="character-illustrations"
+                aria-label={i18n.t("type.illustration")}
+              >
+                {illustrations.map((item) => (
+                  <figure
+                    key={item.id}
+                    className="character-illustration-item"
+                    data-testid="character-illustration"
+                    data-illustration-id={item.id}
+                  >
+                    <MediaImage
+                      id={item.game_id}
+                      kind="illustration"
+                      alt={`${character.name} · ${item.costume || item.game_id}`}
+                      className="character-illustration"
+                    />
+                    <figcaption>{item.costume || item.game_id}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <nav

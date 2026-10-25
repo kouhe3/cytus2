@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BackButton } from "../components/BackButton";
 import { EntityLink } from "../components/EntityLink";
+import { MediaImage, MediaVideo } from "../components/Media";
 import { TextBody } from "../components/TextBody";
 import { Avatar } from "../components/ui";
 import { oaGroups, findOaGroup } from "../data/collections";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
+import { loadMediaManifest } from "../data/media";
 import { formatUnit } from "../data/messages";
 import { entityHref } from "../data/selectors";
 import type { I18n } from "../data/messages";
+import type { MediaManifest } from "../data/media";
 import type { OaGroup } from "../data/collections";
 import type { Database } from "../types";
 
@@ -26,6 +29,158 @@ function oaStats(
     documents: formatUnit(i18n, "documents", group.documents.length),
     descriptions: formatUnit(i18n, "descriptions", group.descriptions.length),
   });
+}
+
+function useMediaManifest(): MediaManifest | null {
+  const [manifest, setManifest] = useState<MediaManifest | null>(null);
+  useEffect(() => {
+    let active = true;
+    loadMediaManifest()
+      .then((data) => {
+        if (active) {
+          setManifest(data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+  return manifest;
+}
+
+/**
+ * OA scene clips come from `video_oasystem_*` bundles. Their manifest keys are
+ * `<character>_oa_system` plus `<character>_sNNN_oa_system` costume variants.
+ * The scene LOGOs (`<character>_l`) are separate textures.
+ */
+function OaScenes({
+  db,
+  manifest,
+  characterId,
+  i18n,
+}: {
+  db: Database;
+  manifest: MediaManifest | null;
+  characterId: string;
+  i18n: I18n;
+}) {
+  const scenes = useMemo(() => {
+    if (!manifest) {
+      return [];
+    }
+    return Object.keys(manifest.videos)
+      .filter((key) => key.endsWith("_oa_system"))
+      .filter((key) => {
+        const stem = key.slice(0, -"_oa_system".length);
+        return stem === characterId || stem.startsWith(`${characterId}_s`);
+      })
+      .sort();
+  }, [manifest, characterId]);
+  const logos = useMemo(() => {
+    if (!manifest) {
+      return [];
+    }
+    const base = characterId.slice(0, -3);
+    return [characterId, `${base}002`, `${base}003`].flatMap((id) => {
+      const asset = manifest.oaAssets[`${id}_l`];
+      return asset ? [{ id, asset }] : [];
+    });
+  }, [manifest, characterId]);
+  if (scenes.length === 0 && logos.length === 0) {
+    return null;
+  }
+  return (
+    <section className="detail-section" data-testid="oa-scenes">
+      <h2>
+        {i18n.t("oa.scenesHeading", {
+          count: i18n.formatNumber(scenes.length),
+        })}
+      </h2>
+      <p className="hint">{i18n.t("oa.scenesHint")}</p>
+      {logos.length > 0 ? (
+        <div className="oa-art" data-testid="oa-scene-logos">
+          {logos.map(({ id, asset }) => (
+            <figure key={id} className="oa-art-item">
+              <MediaImage id={id} kind="image" natural alt={`${id} logo`} />
+              <figcaption>
+                {asset.file.split("/").pop()?.replace(/\.png$/, "")} · {asset.w}×
+                {asset.h}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      ) : null}
+      <div className="oa-scene-list">
+        {scenes.map((key) => {
+          const stem = key.slice(0, -"_oa_system".length);
+          const illustration = db.entityById.get(`illustration/${stem}`);
+          const costume =
+            illustration && "costume" in illustration
+              ? String(illustration.costume)
+              : "";
+          const label = costume ? `${stem} · ${costume}` : stem;
+          return (
+            <figure
+              key={key}
+              className="oa-scene-item"
+              data-testid="oa-scene-video"
+              data-scene-id={key}
+            >
+              <MediaVideo id={key} alt={label} />
+              <figcaption>{label}</figcaption>
+            </figure>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/** Object art = `<character>_objNNN` plus the three `oas_<character>_NNN_N` panels. */
+function OaObjectArt({
+  manifest,
+  characterId,
+  objectId,
+  i18n,
+}: {
+  manifest: MediaManifest | null;
+  characterId: string;
+  objectId: string;
+  i18n: I18n;
+}) {
+  const art = useMemo(() => {
+    if (!manifest) {
+      return [];
+    }
+    const index = objectId.split("obj")[1] ?? "";
+    return [
+      `${characterId}_obj${index}`,
+      ...[1, 2, 3].map((panel) => `oas_${characterId}_${index}_${panel}`),
+    ].flatMap((key) => {
+      const asset = manifest.oaAssets[key];
+      return asset ? [{ key, asset }] : [];
+    });
+  }, [manifest, characterId, objectId]);
+  if (art.length === 0) {
+    return null;
+  }
+  return (
+    <section className="oa-object-art" data-testid="oa-object-art">
+      <h3>{i18n.t("oa.objectArt")}</h3>
+      <div className="oa-art">
+        {art.map(({ key, asset }) => (
+          <figure key={key} className="oa-art-item">
+            <MediaImage id={key} kind="image" natural alt={key} />
+            <figcaption>
+              {asset.file.split("/").pop()?.replace(/\.png$/, "")} · {asset.w}×
+              {asset.h}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export function OaIndexView({ db }: { db: Database }) {
@@ -124,6 +279,7 @@ export function OaCharacterView({
   const i18n = useI18n();
   const group: OaGroup | null = findOaGroup(db, gameId);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+  const manifest = useMediaManifest();
 
   useEffect(() => {
     setSelectedObjectId(null);
@@ -175,6 +331,13 @@ export function OaCharacterView({
             <p className="byline">{oaStats(i18n, group)}</p>
           </header>
 
+          <OaScenes
+            db={db}
+            manifest={manifest}
+            characterId={group.oa.game_id}
+            i18n={i18n}
+          />
+
           <nav
             className="tab-strip"
             aria-label={i18n.t("oa.objectsAria")}
@@ -213,6 +376,12 @@ export function OaCharacterView({
                 </Link>
               </header>
               <TextBody textRef={activeObject.text_ref} lang={lang} />
+              <OaObjectArt
+                manifest={manifest}
+                characterId={group.oa.game_id}
+                objectId={activeObject.game_id}
+                i18n={i18n}
+              />
               <h3>
                 {i18n.t("oa.documentsHeading", {
                   count: i18n.formatNumber(attachedDocuments.length),

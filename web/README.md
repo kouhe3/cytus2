@@ -28,10 +28,10 @@ repository root when the default `python` does not have UnityPy;
 |:--|:--|
 | `/` | redirects to `/timeline` |
 | `/timeline` | global unlock timeline: all 323 iM posts + the 501 main-seven OS logs (`timeline_scope=timeline`) ordered by `reading_order.order`; level slider, type, tier and iM account filters |
-| `/character/<gameId>` | character page: every OS log of that character via `OS → SORT BY VERSION`; PAFF / NEKO / ROBO add an IM tab linking to the account-filtered feed |
+| `/character/<gameId>` | character page: logo plus every costume illustration, then every OS log of that character via `OS → SORT BY VERSION`; PAFF / NEKO / ROBO add an IM tab linking to the account-filtered feed |
 | `/os` | OS archive index with the game's three groupings: chapter → folder (default; 17 chapters with logs, each split by `TimelineChapter.Folder`), character → version, and version → character. The chapter order follows the wiki-maintained game list (`Amiya` between `Decommission` and `cyTus`), not the table's `Id`. Every file carries the 1-based unlock level of its own character (`Lv N`, e.g. `Lv 36`); other characters' level conditions and the file-lock chain stay in the entity detail, and the list neither hides files nor marks them as locked. Staging chapters `test01` / `test02` stay out of the chapter view; the chosen mode persists in `sessionStorage` |
 | `/oa` | OA archive index: one card per character with object/document/description counts |
-| `/oa/<gameId>` | OA workspace: object tabs, each object's text and documents, all hotspot descriptions |
+| `/oa/<gameId>` | OA workspace: scene videos with scene LOGOs, object tabs, each object's color art plus three panel images, object text and documents, all hotspot descriptions |
 | `/backup` | Backup Database folder index with per-folder gallery logos and media counts |
 | `/backup/<gameId>` | folder header logo, then items grouped as a media retrospective; kind filter, conditions, boss-stage links |
 | `/story` | story nodes ordered by reading order; level/version/chapter sort, event/Branching OS filter |
@@ -40,7 +40,7 @@ repository root when the default `python` does not have UnityPy;
 | `/extras/assistants` | iM assistant dialogue groups, pages and trigger/target, all five languages |
 | `/extras/titles` | 10 title screens with story unlocks and `video_title_*` playback; missing clips are marked |
 | `/search?q=<text>` | full-text search over iM posts, OS logs, OA documents and subtitle lines, grouped by type |
-| `/im/<gameId>`, `/os/<gameId>`, `/<type>/<gameId>` | entity detail with body text, type-specific facts, charts, and inbound/outbound edges |
+| `/im/<gameId>`, `/os/<gameId>`, `/<type>/<gameId>` | entity detail with body text, type-specific facts, charts, and inbound/outbound edges; title-only iM posts carry an explicit note, and the four Bili-Wiki-confirmed posts carry a manual removed-after-reading note |
 | `/song/<songId>@<Difficulty>` | chart detail: level, NeedUnlock, unlock sources from `unlocks_chart` edges, backlinks, sibling difficulties |
 
 History routing is used, so every URL can be opened or refreshed directly, and

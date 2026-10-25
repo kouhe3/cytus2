@@ -25,13 +25,18 @@ from typing import Any
 from ..blocks import one_line as _one_line, parse_blocks as _parse_blocks
 from ..errors import BuildError, InputError
 from ..keys import asset_key, chart_key, entity_key, slug
-from ..provenance import sort_record, text_asset
+from ..provenance import manual, sort_record, text_asset
 from ..sources import LANGS, InputSource
 
 _DIFFICULTY_BY_INDEX = {0: "Easy", 1: "Hard", 2: "Chaos", 3: "Glitch"}
 _LANG_ORDER = {code: index for index, (code, _) in enumerate(LANGS)}
 _TEXT_ARTIFACT = Path("text") / "im_os.jsonl"
 
+# Bili Wiki records these four title-only posts as removed from the iM feed
+# after reading. The client only exposes the resulting save flag
+# (``IMTopicRecord.IsRemoved``); the source tables carry no lifecycle field.
+REMOVED_AFTER_READ_TOPIC_IDS = frozenset({"N2201", "P1201", "Q6701", "R0801"})
+REMOVED_AFTER_READ_LOCATOR = "https://wiki.biligame.com/cytus2"
 
 # --------------------------------------------------------------------- shared
 _text_asset = text_asset
@@ -258,6 +263,7 @@ def _build_im(source: InputSource) -> tuple[list[dict[str, Any]], list[dict[str,
             if locator:
                 provenance.append(_text_asset(locator))
 
+        missing_languages = _missing_languages(contents)
         record: dict[str, Any] = {
             "id": entity_key("im", game_id),
             "type": "im_post",
@@ -270,13 +276,28 @@ def _build_im(source: InputSource) -> tuple[list[dict[str, Any]], list[dict[str,
             "reply_count": reply_count,
             "story_gate": str(lock.get("StoryLockId") or "").strip() or None,
             "topic_gate": str(lock.get("TopicLockId") or "").strip() or None,
+            "title_only": (
+                len(missing_languages) == len(LANGS)
+                and reply_count == 0
+                and not attachments
+                and not charts
+                and any(titles.values())
+            ),
+            "removed_after_read": game_id in REMOVED_AFTER_READ_TOPIC_IDS,
             "level_locks": level_locks,
             "attachments": attachments,
             "charts": charts,
             "text_ref": entity_key("im", game_id),
-            "missing_languages": _missing_languages(contents),
+            "missing_languages": missing_languages,
             "provenance": provenance,
         }
+        if record["removed_after_read"]:
+            provenance.append(
+                manual(
+                    REMOVED_AFTER_READ_LOCATOR,
+                    f"{game_id}: removed from the iM feed after reading (Bili Wiki)",
+                )
+            )
         _sorted_provenance(record)
         posts_out.append(record)
 

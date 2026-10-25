@@ -15,6 +15,8 @@
     "reply_count",
     "story_gate",
     "topic_gate",
+    "title_only",
+    "removed_after_read",
     "level_locks",
     "attachments",
     "charts",
@@ -65,6 +67,14 @@
     "topic_gate": {
       "type": ["string", "null"],
       "description": "TopicLockId from im_lock_condition_data (the post shown before this one)."
+    },
+    "title_only": {
+      "type": "boolean",
+      "description": "Derived: the post has a title but no body in any language, no replies, no attachments and no charts."
+    },
+    "removed_after_read": {
+      "type": "boolean",
+      "description": "Manual (Bili Wiki): the post is removed from the iM feed after it has been read; the client stores the resulting flag in save data (IMTopicRecord.IsRemoved)."
     },
     "level_locks": {
       "type": "array",

@@ -63,6 +63,7 @@ export function EntityMedia({ entity }: { readonly entity: BaseEntity }) {
         <MediaImage
           id={location}
           kind="image"
+          natural
           alt={String(data["name"] ?? location)}
           className="gallery-image"
         />

@@ -473,6 +473,9 @@ try {
     const levelLabels = [...document.querySelectorAll(
       '[data-testid="character-os-entry"] [data-testid="os-unlock-level"]',
     )].map((label) => label.textContent);
+    const illustrations = document.querySelectorAll(
+      '[data-testid="character-illustration"] img',
+    ).length;
     return {
       osEntries: orders.length,
       versions,
@@ -481,6 +484,7 @@ try {
       ),
       levels: levelLabels.length,
       firstLevel: levelLabels[0] ?? null,
+      illustrations,
       imTab: Boolean(imTab),
       imHref: imTab?.getAttribute('href') ?? null,
       paffNote:
@@ -497,12 +501,17 @@ try {
     `document.querySelectorAll('[data-testid="character-os-entry"]').length > 0`,
     "PAFF character page",
   );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="character-illustration"] img').length === 4`,
+    "PAFF illustrations load",
+  );
   const paffPage = await cdp.evaluate(CHARACTER_SNAPSHOT);
   check(paffPage.characterId === "character/paff001", "PAFF character page loads");
   check(paffPage.osEntries === 81, `PAFF lists all 81 OS logs (got ${paffPage.osEntries})`);
   check(paffPage.versions.length > 1 && paffPage.osSorted, "PAFF OS logs are sorted by version");
   check(paffPage.levels === 81, `PAFF marks all 81 owner unlock levels (got ${paffPage.levels})`);
   check(paffPage.firstLevel === "Lv 36", `PAFF's first OS file marks Lv 36 (got ${paffPage.firstLevel})`);
+  check(paffPage.illustrations === 4, `PAFF shows all 4 illustrations (got ${paffPage.illustrations})`);
   check(paffPage.imTab, "PAFF character page has an IM tab");
   check(
     paffPage.imHref === "/timeline?account=paff001",
@@ -561,6 +570,13 @@ try {
   );
   await cdp.screenshot("character-paff-note.png");
 
+  await cdp.navigate(`${appBase}/character/neko001`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="character-illustration"] img').length === 9`,
+    "NEKO illustrations load",
+  );
+  check(true, "NEKO character page lists all 9 illustrations");
+
   await cdp.navigate(`${appBase}/timeline?account=xenon_01`);
   await cdp.waitFor(
     `document.querySelectorAll('[data-testid="timeline-card"]').length === 19`,
@@ -587,6 +603,53 @@ try {
       `Boolean(document.querySelector('[data-testid="timeline-card"][href^="/os/paos"]'))`,
     )),
     "PΛFF OS logs stay out of the timeline",
+  );
+
+  // ------------------------------------------------------- title-only iM posts
+  const titleOnlyNote = translate("zh-Hans", "entity.titleOnlyPost");
+  const removedNote = translate("zh-Hans", "entity.removedAfterReadPost");
+  for (const gameId of ["N2201", "P1201", "Q6701", "R0801"]) {
+    await cdp.navigate(`${appBase}/im/${gameId}`);
+    await cdp.waitFor(
+      `Boolean(document.querySelector('[data-testid="entity-view"][data-entity-type="im_post"]'))`,
+      `${gameId} loads`,
+    );
+    check(
+      (await cdp.evaluate(
+        `document.querySelector('[data-testid="im-title-only-note"]')?.textContent ?? ''`,
+      )) === titleOnlyNote,
+      `${gameId} is marked as title-only`,
+    );
+    check(
+      (await cdp.evaluate(
+        `document.querySelector('[data-testid="im-removed-after-read-note"]')?.textContent ?? ''`,
+      )) === removedNote,
+      `${gameId} is marked as removed after reading`,
+    );
+  }
+  for (const gameId of ["N2101", "X1601"]) {
+    await cdp.navigate(`${appBase}/im/${gameId}`);
+    await cdp.waitFor(
+      `Boolean(document.querySelector('[data-testid="entity-view"][data-entity-type="im_post"]'))`,
+      `${gameId} loads`,
+    );
+    check(
+      !(await cdp.evaluate(
+        `Boolean(document.querySelector('[data-testid="im-title-only-note"]'))`,
+      )),
+      `${gameId} is not marked title-only`,
+    );
+    check(
+      !(await cdp.evaluate(
+        `Boolean(document.querySelector('[data-testid="im-removed-after-read-note"]'))`,
+      )),
+      `${gameId} is not marked as removed after reading`,
+    );
+  }
+  await cdp.navigate(`${appBase}/timeline`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="timeline-card"]').length === ${home.count}`,
+    "timeline restored after title-only post checks",
   );
 
   // ----------------------------------------------------------- command palette
@@ -906,6 +969,24 @@ try {
     `location.pathname === '/oa/alice001' && Boolean(document.querySelector('[data-testid="oa-workspace"]'))`,
     "OA character archive opens",
   );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="oa-scene-video"]').length === 2 &&
+     document.querySelectorAll('[data-testid="oa-object-art"] img').length === 4`,
+    "OA scene and object assets load",
+  );
+  const oaMedia = await cdp.evaluate(`(() => ({
+    scenes: document.querySelectorAll('[data-testid="oa-scene-video"]').length,
+    sceneSrc: document.querySelector('[data-testid="oa-scene-video"] video')?.getAttribute('src') ?? '',
+    logos: document.querySelectorAll('[data-testid="oa-scene-logos"] img').length,
+    objectArt: document.querySelectorAll('[data-testid="oa-object-art"] img').length,
+  }))()`);
+  check(oaMedia.scenes === 2, `Alice OA shows both scene videos (got ${oaMedia.scenes})`);
+  check(
+    oaMedia.sceneSrc.endsWith("/media/videos/alice001_oa_system.mp4"),
+    `OA scene video resolves to its manifest file (got ${oaMedia.sceneSrc})`,
+  );
+  check(oaMedia.logos === 1, `Alice OA shows its scene LOGO (got ${oaMedia.logos})`);
+  check(oaMedia.objectArt === 4, `Alice object 1 shows 4 art panels (got ${oaMedia.objectArt})`);
   const oaTabCount = await cdp.evaluate(
     `document.querySelectorAll('[data-testid="oa-object-tab"]').length`,
   );
@@ -1046,6 +1127,37 @@ try {
     "back from gallery item",
   );
   check(true, "back button returns from a gallery item to its folder");
+
+  await cdp.navigate(`${appBase}/gallery_item/neko001/neko001_004`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('img.gallery-image'))`,
+    "portrait gallery item loads",
+  );
+  await cdp.waitFor(
+    `(() => {
+      const img = document.querySelector('img.gallery-image');
+      return Boolean(img && img.complete && img.naturalWidth > 0);
+    })()`,
+    "portrait gallery image decodes",
+  );
+  const galleryImage = await cdp.evaluate(`(() => {
+    const img = document.querySelector('img.gallery-image');
+    return {
+      src: img.getAttribute('src'),
+      stretched: img.classList.contains('media-stretched'),
+      natural: img.naturalWidth / img.naturalHeight,
+      rendered: img.clientWidth / img.clientHeight,
+    };
+  })()`);
+  check(
+    galleryImage.src.endsWith("/media/covers/neko001_004.png"),
+    `gallery image resolves to its cover asset (got ${galleryImage.src})`,
+  );
+  check(!galleryImage.stretched, "gallery image is not forced into the inline frame");
+  check(
+    Math.abs(galleryImage.rendered - galleryImage.natural) < 0.01,
+    `gallery image keeps its natural aspect (natural ${galleryImage.natural.toFixed(3)}, rendered ${galleryImage.rendered.toFixed(3)})`,
+  );
 
   // ------------------------------------------------------------- story nodes
   await cdp.navigate(`${appBase}/story`);

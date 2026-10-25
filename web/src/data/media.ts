@@ -4,7 +4,7 @@ export interface MediaAsset {
   readonly h?: number;
 }
 
-interface MediaManifest {
+export interface MediaManifest {
   readonly images: Record<string, readonly MediaAsset[]>;
   readonly avatars: Record<string, MediaAsset>;
   readonly illustrations: Record<string, MediaAsset>;

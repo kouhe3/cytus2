@@ -332,7 +332,24 @@ export function TextBody({
       </p>
     );
   }
-  const record = state.record;
+  return <TextRecordBody record={state.record} lang={lang} />;
+}
+
+/**
+ * Render one already-loaded text record. Extracted from `TextBody` so the
+ * relations list can render batch-loaded reply bodies with the same block,
+ * rich-text and media handling.
+ */
+export function TextRecordBody({
+  record,
+  lang,
+  testId = "entity-body",
+}: {
+  record: TextRecord | null;
+  lang: Lang;
+  testId?: string;
+}) {
+  const i18n = useI18n();
   if (!record) {
     return (
       <div className="fallback-note" data-testid="language-fallback" data-lang="none">
@@ -350,7 +367,7 @@ export function TextBody({
     return (
       <>
         {fallbackNote}
-        <div className="prose blocks" data-testid="entity-body" data-lang={record.lang}>
+        <div className="prose blocks" data-testid={testId} data-lang={record.lang}>
           {blocks.map((block, index) => (
             <Block key={index} block={block} />
           ))}
@@ -363,7 +380,7 @@ export function TextBody({
     return (
       <>
         {fallbackNote}
-        <div className="prose" data-testid="entity-body" data-lang={record.lang}>
+        <div className="prose" data-testid={testId} data-lang={record.lang}>
           {nodes.map((node, index) => {
             if (node.kind === "image") {
               return <MediaImage key={index} id={node.id} kind="image" />;

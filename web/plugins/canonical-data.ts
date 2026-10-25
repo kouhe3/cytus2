@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
  *   GET /db/data.json            the SPA projection written by `cytus2db build`
  *   GET /db/text.json            snippet/name index for the narrative text stores
  *   GET /db/text?ref=…&lang=…    one full text record, with explicit fallback
+ *   GET /db/text?ref=…&ref=…     several full records in one response
  *   GET /db/search?q=…&lang=…    full-text over posts, logs, OA files, subtitles
  *
  * The text stores are the canonical ones written by the Python pipeline
@@ -849,24 +850,44 @@ function attach(
       return;
     }
     if (url.pathname === "/db/text") {
-      const ref = url.searchParams.get("ref") ?? "";
+      const refs = [
+        ...new Set(
+          url.searchParams
+            .getAll("ref")
+            .map((value) => value.trim())
+            .filter(Boolean),
+        ),
+      ];
       const lang = parseLang(url.searchParams.get("lang"));
-      if (!ref) {
+      if (refs.length === 0) {
         sendJson(res, 400, { error: "ref is required" });
+        return;
+      }
+      if (refs.length > 500) {
+        sendJson(res, 400, { error: "too many refs" });
         return;
       }
       void store
         .ensure()
         .then(() => {
-          const record = store.record(ref, lang);
-          if (!record) {
-            sendJson(res, 404, {
-              error: `no text record for ${ref}`,
-              requested_lang: lang,
-            });
+          if (refs.length === 1) {
+            const ref = refs[0] as string;
+            const record = store.record(ref, lang);
+            if (!record) {
+              sendJson(res, 404, {
+                error: `no text record for ${ref}`,
+                requested_lang: lang,
+              });
+              return;
+            }
+            sendJson(res, 200, record);
             return;
           }
-          sendJson(res, 200, record);
+          const records: Record<string, TextRecord | null> = {};
+          for (const ref of refs) {
+            records[ref] = store.record(ref, lang);
+          }
+          sendJson(res, 200, { lang, records });
         })
         .catch((error: unknown) => {
           sendJson(res, 500, { error: String(error) });

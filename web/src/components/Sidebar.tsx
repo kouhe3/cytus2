@@ -12,7 +12,6 @@ const NAV_ITEMS: readonly {
 }[] = [
   { to: "/timeline", labelKey: "nav.timeline", testId: "nav-timeline" },
   { to: "/characters", labelKey: "type.character", testId: "nav-characters" },
-  { to: "/search", labelKey: "nav.search", testId: "nav-search" },
   { to: "/os", labelKey: "nav.os", testId: "nav-os" },
   { to: "/oa", labelKey: "nav.oa", testId: "nav-oa" },
   { to: "/backup", labelKey: "nav.backup", testId: "nav-backup" },
@@ -70,7 +69,7 @@ export function Sidebar({
         onClick={onOpenSearch}
         data-testid="open-search"
       >
-        <span>{i18n.t("sidebar.searchTrigger")}</span>
+        <span>{i18n.t("nav.search")}</span>
         <kbd>Ctrl K</kbd>
       </button>
 

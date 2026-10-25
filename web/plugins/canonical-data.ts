@@ -42,6 +42,7 @@ const SNIPPET_TYPES: Record<string, true> = {
 
 const SEARCHABLE_TEXT_TYPES: Record<string, true> = {
   im_post: true,
+  im_reply: true,
   os_log: true,
   oa_document: true,
   subtitle_line: true,
@@ -49,9 +50,11 @@ const SEARCHABLE_TEXT_TYPES: Record<string, true> = {
 
 const SEARCH_GROUPS: readonly { type: string; label: string }[] = [
   { type: "im_post", label: "iM posts" },
+  { type: "im_reply", label: "iM replies" },
   { type: "os_log", label: "OS logs" },
   { type: "oa_document", label: "OA documents" },
   { type: "subtitle_line", label: "Subtitle lines" },
+  { type: "chart", label: "Charts" },
 ];
 
 const TEXT_FILES = [
@@ -123,6 +126,13 @@ interface SearchHit {
   snippet: string;
   lang: Lang;
   fallback: boolean;
+}
+
+interface SearchGroupPayload {
+  type: string;
+  label: string;
+  hits: SearchHit[];
+  total: number;
 }
 
 type Json = Record<string, unknown>;
@@ -414,6 +424,20 @@ class TextStore {
     return "";
   }
 
+  snippetFor(ref: string, lang: Lang): string {
+    const byLang = this.snippets[ref];
+    if (!byLang) {
+      return "";
+    }
+    for (const code of [lang, ...FALLBACK_ORDER]) {
+      const value = byLang[code];
+      if (value) {
+        return value;
+      }
+    }
+    return "";
+  }
+
   record(ref: string, lang: Lang): ServedTextRecord | null {
     const byLang = this.detail.get(ref);
     if (!byLang) {
@@ -645,6 +669,64 @@ class ProjectionStore {
     return rows;
   }
 
+  private songName(songId: string): string {
+    const song = this.entities.get(songId);
+    if (!song) {
+      return songId.split("/").slice(1).join("/");
+    }
+    return stringValue(song["name"]) || stringValue(song["game_id"]) || songId;
+  }
+
+  private chartTitle(record: Json): string {
+    const songName = this.songName(stringValue(record["song_id"]));
+    const difficulty = stringValue(record["difficulty"]);
+    const level = stringValue(record["level"]);
+    const difficultyPart = difficulty ? ` · ${difficulty}` : "";
+    const levelPart = level ? ` · Lv ${level}` : "";
+    return `${songName}${difficultyPart}${levelPart}`;
+  }
+
+  /**
+   * Charts carry no text record; they are matched on their composed label plus
+   * the song's aliases, so "Yasutaka Nakata" and "ai001" both reach a chart.
+   */
+  chartSearch(matchers: readonly TextMatcher[], lang: Lang): SearchRow[] {
+    const rows: SearchRow[] = [];
+    for (const [id, record] of this.entities) {
+      if (stringValue(record["type"]) !== "chart") {
+        continue;
+      }
+      const title = this.chartTitle(record);
+      const haystack = [title, stringValue(record["game_id"])];
+      const song = this.entities.get(stringValue(record["song_id"]));
+      if (song) {
+        haystack.push(stringValue(song["name"]), stringValue(song["artist"]));
+        const terms = song["search_terms"];
+        if (Array.isArray(terms)) {
+          for (const term of terms) {
+            if (typeof term === "string") {
+              haystack.push(term);
+            }
+          }
+        }
+      }
+      const text = haystack.filter(Boolean).join(" ").toLowerCase();
+      if (!matchers.every((matches) => matches(text))) {
+        continue;
+      }
+      rows.push({
+        id,
+        ref: id,
+        type: "chart",
+        lang,
+        fallback: false,
+        snippet: title,
+        title,
+      });
+    }
+    return rows;
+  }
+
 }
 
 /* ------------------------------------------------------------------ HTTP */
@@ -751,6 +833,35 @@ function parseLang(value: string | null): Lang {
   return value && isLang(value) ? value : "zh-Hans";
 }
 
+/**
+ * Title matches outrank body-only hits, and the tighter the title match the
+ * higher it sits. Ties fall through to title, then ref, so the order is stable.
+ */
+function relevance(
+  title: string,
+  tokens: readonly string[],
+  needle: string,
+): number {
+  if (!title) {
+    return 3;
+  }
+  const lowered = title.toLowerCase();
+  if (lowered === needle) {
+    return 0;
+  }
+  if (lowered.startsWith(needle)) {
+    return 1;
+  }
+  if (lowered.includes(needle)) {
+    return 2;
+  }
+  // A multi-token query matches rows token-wise, so a title carrying every
+  // token is still a title hit even without the contiguous phrase.
+  return tokens.length > 1 && tokens.every((token) => lowered.includes(token))
+    ? 2
+    : 3;
+}
+
 function searchResponse(
   query: string,
   lang: Lang,
@@ -760,7 +871,7 @@ function searchResponse(
 ): {
   query: string;
   lang: Lang;
-  groups: { type: string; label: string; hits: SearchHit[] }[];
+  groups: SearchGroupPayload[];
   total: number;
 } {
   const tokens = query
@@ -777,15 +888,22 @@ function searchResponse(
   const rows = [
     ...textRows,
     ...projection.titleSearch(matchers, lang, covered),
+    ...projection.chartSearch(matchers, lang),
   ];
+  const needle = query.trim().toLowerCase();
   const byType = new Map<string, SearchRow[]>();
   for (const row of rows) {
     const title =
-      row.type === "oa_document"
+      row.title ||
+      (row.type === "oa_document"
         ? store.nameFor(row.ref, row.lang) ||
           projection.gameIdFor(row.ref) ||
           row.ref
-        : projection.titleFor(row.ref, row.lang);
+        : row.type === "im_reply"
+          ? store.nameFor(row.ref, row.lang) ||
+            store.snippetFor(row.ref, row.lang) ||
+            row.ref
+          : projection.titleFor(row.ref, row.lang));
     const list = byType.get(row.type);
     if (list) {
       list.push({ ...row, title });
@@ -793,7 +911,7 @@ function searchResponse(
       byType.set(row.type, [{ ...row, title }]);
     }
   }
-  const groups: { type: string; label: string; hits: SearchHit[] }[] = [];
+  const groups: SearchGroupPayload[] = [];
   let total = 0;
   for (const group of SEARCH_GROUPS) {
     const hits = byType.get(group.type);
@@ -802,9 +920,12 @@ function searchResponse(
     }
     hits.sort(
       (left, right) =>
+        relevance(left.title, tokens, needle) -
+          relevance(right.title, tokens, needle) ||
         left.title.localeCompare(right.title) ||
         left.ref.localeCompare(right.ref),
     );
+    total += hits.length;
     const capped = hits.slice(0, limit).map((row) => ({
       id: row.id,
       ref: row.ref,
@@ -814,8 +935,12 @@ function searchResponse(
       lang: row.lang,
       fallback: row.fallback,
     }));
-    total += hits.length;
-    groups.push({ type: group.type, label: group.label, hits: capped });
+    groups.push({
+      type: group.type,
+      label: group.label,
+      hits: capped,
+      total: hits.length,
+    });
   }
   return { query, lang, groups, total };
 }
@@ -899,7 +1024,7 @@ function attach(
       const lang = parseLang(url.searchParams.get("lang"));
       const requestedLimit = Number(url.searchParams.get("limit") ?? "20");
       const limit = Number.isFinite(requestedLimit)
-        ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 50)
+        ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 500)
         : 20;
       void Promise.all([store.ensure(), projection.ensure()])
         .then(() => {

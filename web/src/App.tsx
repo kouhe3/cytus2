@@ -223,7 +223,6 @@ cd web && pnpm dev`}</pre>
         </Routes>
       </div>
       <CommandPalette
-        db={db}
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
       />

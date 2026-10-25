@@ -516,7 +516,7 @@ export interface Database {
   readonly entitiesByType: Map<string, BaseEntity[]>;
   readonly imFilters: ImFilters;
   readonly timelineOrders: ReadingOrderRow[];
-  readonly allReadingOrders: ReadingOrderRow[];
+
   readonly readingOrderByEntity: Map<string, ReadingOrderRow>;
   readonly textRefs: TextSummary["refs"];
   readonly textNames: TextSummary["names"];
@@ -543,6 +543,8 @@ export interface SearchGroup {
   readonly type: string;
   readonly label: string;
   readonly hits: SearchHit[];
+  /** Uncapped number of hits of this type; `hits` may be capped by `limit`. */
+  readonly total: number;
 }
 
 export interface SearchResponse {

@@ -3,11 +3,20 @@ import type { KeyboardEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { useI18n } from "../data/i18n";
-import { entityTypeLabel, searchGroupLabel } from "../data/labels";
+import {
+  entityTypeLabel,
+  searchGroupCount,
+  searchGroupLabel,
+} from "../data/labels";
 import { useLanguage } from "../data/language";
 import { formatUnit } from "../data/messages";
 import { useFullTextSearch } from "../data/search";
+import { entityHref } from "../data/selectors";
 import type { SearchHit } from "../types";
+
+/** Preview cap for the palette, full cap once the user asks for everything. */
+const PREVIEW_LIMIT = 20;
+const EXPANDED_LIMIT = 500;
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -52,8 +61,14 @@ export function SearchView() {
   const query = params.get("q") ?? "";
   const [input, setInput] = useState(query);
   const [selected, setSelected] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const search = useFullTextSearch(query, lang);
+  const search = useFullTextSearch(
+    query,
+    lang,
+    true,
+    expanded ? EXPANDED_LIMIT : PREVIEW_LIMIT,
+  );
 
   useEffect(() => {
     setInput(query);
@@ -67,6 +82,10 @@ export function SearchView() {
   useEffect(() => {
     setSelected(0);
   }, [search.response]);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [query]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -94,7 +113,7 @@ export function SearchView() {
       const hit = hits[selected];
       if (hit) {
         event.preventDefault();
-        navigate(`/${encodeURI(hit.id)}`);
+        navigate(entityHref(hit.id));
       }
     }
   };
@@ -164,7 +183,9 @@ export function SearchView() {
             >
               <h2>
                 {searchGroupLabel(i18n, group.type, group.label)}
-                <span className="edge-count">{group.hits.length}</span>
+                <span className="edge-count">
+                  {searchGroupCount(group.hits.length, group.total)}
+                </span>
               </h2>
               <ul className="link-list">
                 {group.hits.map((hit) => {
@@ -174,7 +195,7 @@ export function SearchView() {
                     <li key={`${hit.type}:${hit.id}`} role="presentation">
                       <Link
                         id={`search-hit-${index}`}
-                        to={`/${encodeURI(hit.id)}`}
+                        to={entityHref(hit.id)}
                         role="option"
                         aria-selected={index === selected}
                         className={
@@ -190,9 +211,11 @@ export function SearchView() {
                         <span className="entity-link-title">
                           <Highlighted text={hit.title} query={query} />
                         </span>
-                        <span className="search-snippet">
-                          <Highlighted text={hit.snippet} query={query} />
-                        </span>
+                        {hit.snippet === hit.title ? null : (
+                          <span className="search-snippet">
+                            <Highlighted text={hit.snippet} query={query} />
+                          </span>
+                        )}
                         <span className="entity-link-meta">
                           <span>{entityTypeLabel(i18n, hit.type)}</span>
                           <code>{hit.id}</code>
@@ -210,6 +233,21 @@ export function SearchView() {
                   );
                 })}
               </ul>
+              {!expanded && group.total > group.hits.length ? (
+                <button
+                  type="button"
+                  className="text-button"
+                  data-testid="search-show-all"
+                  onClick={() => setExpanded(true)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.stopPropagation();
+                    }
+                  }}
+                >
+                  {i18n.t("search.showAll")}
+                </button>
+              ) : null}
             </section>
           ))}
           {search.status === "ready" && hits.length === 0 ? (
@@ -235,9 +273,11 @@ export function SearchView() {
           <h2>{i18n.t("search.coverage")}</h2>
           <ul className="plain-list">
             <li>{i18n.t("search.coverage.im")}</li>
+            <li>{i18n.t("search.coverage.replies")}</li>
             <li>{i18n.t("search.coverage.os")}</li>
             <li>{i18n.t("search.coverage.oa")}</li>
             <li>{i18n.t("search.coverage.subtitles")}</li>
+            <li>{i18n.t("search.coverage.charts")}</li>
           </ul>
           <p className="hint">{i18n.t("search.coverageHint")}</p>
         </section>

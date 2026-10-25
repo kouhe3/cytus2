@@ -140,6 +140,28 @@ _Avoid_: 与 `story_node.kind=branch`（Branching OS 节点）混用；不要把
 一条阅读顺序记录属于哪里：`timeline` = 全局解锁时间线（全部 iM 帖 + 主线 7 人的 OS），`character` = 只在角色页按 `Category` 分组、按 osdata 数组顺序（`os_log.position`）阅读的 OS，`none` = OA 文档与故事节点。角色页的 iM 页签只对 PAFF / NEKO / ROBO 开放；这是游戏的角色页导航结构，不由 `imFilters`（iM feed 的账号过滤维度）推导。PΛFF 没有 iM 账号入口。
 _Avoid_: 把 `character` 当成「角色实体」；把 `imFilters` 的账户当成角色页 iM 页签的依据
 
+## 搜索
+
+**Search**（搜索）:
+一次查询同时覆盖实体标题与叙事正文，产出一份结果集。palette 与 `搜索结果页` 展示的是同一份结果，不是两种检索。
+_Avoid_: 把「搜索实体」与「全文搜索」当成两个功能；把两种入口说成两套索引
+
+**Search preview**:
+Search 的即时子集：在 Ctrl K 面板里按类型分组显示的头部命中，不离开当前页面。
+_Avoid_: 把 preview 当成独立的实体搜索
+
+**Search expanded**:
+Search 的全量视图（`/search?q=`）：可分享、可键盘遍历，每类显示「已显示 / 总数」。
+_Avoid_: 全文搜索页（暗示它只搜正文）
+
+**Search result**:
+能打开一个实体的命中，带类型、标题与命中片段。标题命中与正文命中同等是结果，只在排序上区分。
+_Avoid_: 把页面入口算作结果
+
+**Jump entry**（跳转）:
+palette 里指向固定页面的入口（时间线、各索引页），不打开实体，因此不是 Search result。
+_Avoid_: 导航目标（与 sidebar 的视图导航混用）
+
 ## Wiki 导出
 
 **Page model**:

@@ -13,11 +13,12 @@ export async function fetchSearch(
   query: string,
   lang: Lang,
   signal: AbortSignal,
+  limit = 20,
 ): Promise<SearchResponse> {
   const params = new URLSearchParams({
     q: query,
     lang,
-    limit: "20",
+    limit: String(limit),
   });
   const response = await fetch(`/db/search?${params.toString()}`, { signal });
   if (!response.ok) {
@@ -30,6 +31,7 @@ export function useFullTextSearch(
   query: string,
   lang: Lang,
   enabled = true,
+  limit = 20,
 ): SearchState {
   const [state, setState] = useState<SearchState>(IDLE);
 
@@ -42,7 +44,7 @@ export function useFullTextSearch(
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setState((previous) => ({ ...previous, status: "loading" }));
-      fetchSearch(trimmed, lang, controller.signal)
+      fetchSearch(trimmed, lang, controller.signal, limit)
         .then((response) => {
           if (!controller.signal.aborted) {
             setState({ status: "ready", response, error: null });
@@ -62,7 +64,7 @@ export function useFullTextSearch(
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, lang, enabled]);
+  }, [query, lang, enabled, limit]);
 
   return state;
 }

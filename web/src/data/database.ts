@@ -278,7 +278,6 @@ export function buildDatabase(
     entitiesByType,
     imFilters,
     timelineOrders,
-    allReadingOrders: readingOrders,
     readingOrderByEntity,
     textRefs: text.refs,
     textNames: text.names ?? {},

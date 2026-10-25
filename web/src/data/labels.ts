@@ -116,9 +116,11 @@ export function conditionKindLabel(i18n: I18n, kind: string): string {
 
 const SEARCH_GROUP_KEYS: Record<string, MessageKey> = {
   im_post: "search.group.im_post",
+  im_reply: "search.group.im_reply",
   os_log: "search.group.os_log",
   oa_document: "search.group.oa_document",
   subtitle_line: "search.group.subtitle_line",
+  chart: "search.group.chart",
 };
 
 export function searchGroupLabel(
@@ -128,6 +130,11 @@ export function searchGroupLabel(
 ): string {
   const key = SEARCH_GROUP_KEYS[type];
   return key ? i18n.t(key) : fallback;
+}
+
+/** `20 / 37` while the server caps a group, `37` once every hit is shown. */
+export function searchGroupCount(shown: number, total: number): number | string {
+  return shown < total ? `${shown} / ${total}` : total;
 }
 
 export function fallbackNotice(

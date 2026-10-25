@@ -3,14 +3,14 @@ import type { KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
-import { entityTypeLabel, searchGroupLabel } from "../data/labels";
-import { useFullTextSearch } from "../data/search";
 import {
-  chartLabel,
-  entityHref,
-  entityTitle,
-} from "../data/selectors";
-import type { Database } from "../types";
+  entityTypeLabel,
+  searchGroupCount,
+  searchGroupLabel,
+} from "../data/labels";
+import type { MessageKey } from "../data/messages";
+import { useFullTextSearch } from "../data/search";
+import { entityHref } from "../data/selectors";
 
 interface PaletteItem {
   readonly key: string;
@@ -24,12 +24,28 @@ type PaletteRow =
   | { readonly kind: "item"; readonly key: string; readonly item: PaletteItem }
   | { readonly kind: "note"; readonly key: string; readonly text: string };
 
+/**
+ * Pages are jumps, not results: `/db/search` owns every entity match, so the
+ * palette never scores a title locally. Keeping the two kinds apart is what
+ * stops this panel from growing a second search engine.
+ */
+const PAGE_ENTRIES: readonly { href: string; labelKey: MessageKey }[] = [
+  { href: "/timeline", labelKey: "nav.timeline" },
+  { href: "/characters", labelKey: "type.character" },
+  { href: "/os", labelKey: "nav.os" },
+  { href: "/oa", labelKey: "nav.oa" },
+  { href: "/backup", labelKey: "nav.backup" },
+  { href: "/story", labelKey: "nav.story" },
+  { href: "/shop", labelKey: "nav.shop" },
+  { href: "/extras", labelKey: "nav.extras" },
+];
+
+const PAGE_MATCH_LIMIT = 4;
+
 export function CommandPalette({
-  db,
   open,
   onClose,
 }: {
-  db: Database;
   open: boolean;
   onClose: () => void;
 }) {
@@ -40,76 +56,34 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
 
-  const navigationItems = useMemo(() => {
-    const next: PaletteItem[] = [
-      {
-        key: "command:timeline",
-        label: i18n.t("nav.timeline"),
-        hint: i18n.t("palette.timelineHint"),
-        href: "/timeline",
-      },
-    ];
-    for (const row of db.allReadingOrders) {
-      if (row.entity_type !== "im_post" && row.entity_type !== "os_log") {
-        continue;
-      }
-      const entity = db.entityById.get(row.entity_id);
-      if (!entity) {
-        continue;
-      }
-      next.push({
-        key: `entity:${entity.id}`,
-        label: entityTitle(db, entity, lang, i18n),
-        hint: `${entityTypeLabel(i18n, entity.type)} · ${i18n.t("common.level", {
-          level: row.level_gate + 1,
-        })} · #${row.order}`,
-        href: entityHref(entity.id),
-      });
-    }
-    for (const charts of db.chartsBySong.values()) {
-      for (const chart of charts) {
-        next.push({
-          key: `chart:${chart.id}`,
-          label: chartLabel(db, chart, i18n),
-          hint: i18n.t("palette.chartHint", {
-            value: chart.need_unlock ? i18n.t("common.yes") : i18n.t("common.no"),
-          }),
-          href: entityHref(chart.id),
-        });
-      }
-    }
-    return next;
-  }, [db, lang, i18n]);
+  const pageItems = useMemo<PaletteItem[]>(
+    () =>
+      PAGE_ENTRIES.map((entry) => ({
+        key: `page:${entry.href}`,
+        label: i18n.t(entry.labelKey),
+        hint: entry.href,
+        href: entry.href,
+      })),
+    [i18n],
+  );
 
   const needle = query.trim().toLowerCase();
   const search = useFullTextSearch(query, lang, open);
-  const searchHits = useMemo(
-    () => search.response?.groups.flatMap((group) => group.hits) ?? [],
-    [search.response],
-  );
 
-  const navMatches = useMemo(() => {
+  const pageMatches = useMemo(() => {
     if (!needle) {
-      return navigationItems.slice(0, 12);
+      return pageItems;
     }
-    const hitHrefs = new Set(searchHits.map((hit) => `/${encodeURI(hit.id)}`));
     const scored: { item: PaletteItem; score: number }[] = [];
-    for (const item of navigationItems) {
-      if (hitHrefs.has(item.href)) {
-        continue;
-      }
+    for (const item of pageItems) {
       const label = item.label.toLowerCase();
-      const hint = item.hint.toLowerCase();
-      const id = item.key.toLowerCase();
       let score = -1;
       if (label.startsWith(needle)) {
         score = 0;
       } else if (label.includes(needle)) {
         score = 1;
-      } else if (id.includes(needle)) {
+      } else if (item.href.includes(needle)) {
         score = 2;
-      } else if (hint.includes(needle)) {
-        score = 3;
       }
       if (score >= 0) {
         scored.push({ item, score });
@@ -120,82 +94,89 @@ export function CommandPalette({
         left.score - right.score ||
         left.item.label.localeCompare(right.item.label),
     );
-    return scored.slice(0, 8).map((entry) => entry.item);
-  }, [navigationItems, needle, searchHits]);
+    return scored.slice(0, PAGE_MATCH_LIMIT).map((entry) => entry.item);
+  }, [pageItems, needle]);
 
   const rows = useMemo<PaletteRow[]>(() => {
     const next: PaletteRow[] = [];
-    if (needle) {
+    if (!needle) {
       next.push({
-        kind: "item",
-        key: "action:search",
-        item: {
-          key: "action:search",
-          label: i18n.t("palette.fullSearch", { query: query.trim() }),
-          hint: i18n.t("palette.fullSearchHint"),
-          href: `/search?q=${encodeURIComponent(query.trim())}`,
-        },
+        kind: "group",
+        key: "group:jump",
+        label: i18n.t("palette.navigation"),
       });
-      if (search.status === "loading") {
-        next.push({
-          kind: "note",
-          key: "note:loading",
-          text: i18n.t("search.searching"),
-        });
+      for (const item of pageMatches) {
+        next.push({ kind: "item", key: item.key, item });
       }
-      if (search.status === "error") {
-        next.push({
-          kind: "note",
-          key: "note:error",
-          text: i18n.t("search.error", {
-            message: search.error?.message ?? i18n.t("common.unknownError"),
-          }),
-        });
+      return next;
+    }
+    next.push({
+      kind: "item",
+      key: "action:search",
+      item: {
+        key: "action:search",
+        label: i18n.t("palette.fullSearch", { query: query.trim() }),
+        hint: i18n.t("palette.fullSearchHint"),
+        href: `/search?q=${encodeURIComponent(query.trim())}`,
+      },
+    });
+    if (search.status === "loading") {
+      next.push({
+        kind: "note",
+        key: "note:loading",
+        text: i18n.t("search.searching"),
+      });
+    }
+    if (search.status === "error") {
+      next.push({
+        kind: "note",
+        key: "note:error",
+        text: i18n.t("search.error", {
+          message: search.error?.message ?? i18n.t("common.unknownError"),
+        }),
+      });
+    }
+    for (const group of search.response?.groups ?? []) {
+      if (group.hits.length === 0) {
+        continue;
       }
-      for (const group of search.response?.groups ?? []) {
-        if (group.hits.length === 0) {
-          continue;
-        }
+      next.push({
+        kind: "group",
+        key: `group:${group.type}`,
+        label: i18n.t("palette.group", {
+          label: searchGroupLabel(i18n, group.type, group.label),
+          count: searchGroupCount(group.hits.length, group.total),
+        }),
+      });
+      for (const hit of group.hits) {
         next.push({
-          kind: "group",
-          key: `group:${group.type}`,
-          label: i18n.t("palette.group", {
-            label: searchGroupLabel(i18n, group.type, group.label),
-            count: group.hits.length,
-          }),
-        });
-        for (const hit of group.hits) {
-          next.push({
-            kind: "item",
+          kind: "item",
+          key: `hit:${hit.type}:${hit.id}`,
+          item: {
             key: `hit:${hit.type}:${hit.id}`,
-            item: {
-              key: `hit:${hit.type}:${hit.id}`,
-              label: hit.title,
-              hint: `${entityTypeLabel(i18n, hit.type)} · ${hit.snippet}${
-                hit.fallback ? ` · ${i18n.t("common.fallbackText")}` : ""
-              }`,
-              href: `/${encodeURI(hit.id)}`,
-            },
-          });
-        }
-      }
-      if (navMatches.length > 0) {
-        next.push({
-          kind: "group",
-          key: "group:navigation",
-          label: i18n.t("palette.navigation"),
+            label: hit.title,
+            hint: `${entityTypeLabel(i18n, hit.type)}${
+              hit.snippet === hit.title ? "" : ` · ${hit.snippet}`
+            }${
+              hit.fallback ? ` · ${i18n.t("common.fallbackText")}` : ""
+            }`,
+            href: entityHref(hit.id),
+          },
         });
-        for (const item of navMatches) {
-          next.push({ kind: "item", key: item.key, item });
-        }
       }
-    } else {
-      for (const item of navMatches) {
+    }
+    if (pageMatches.length > 0) {
+      next.push({
+        kind: "group",
+        key: "group:jump",
+        label: i18n.t("palette.navigation"),
+      });
+      for (const item of pageMatches) {
         next.push({ kind: "item", key: item.key, item });
       }
     }
     return next;
-  }, [needle, navMatches, query, search, i18n]);
+  }, [needle, pageMatches, query, search, i18n]);
 
   const results = useMemo(
     () =>

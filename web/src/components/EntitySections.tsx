@@ -4,6 +4,7 @@ import { ConditionList, LevelLockList } from "./Conditions";
 import { EntityLink, EntityList } from "./EntityLink";
 import { Fact, Facts } from "./Facts";
 import { TextBody } from "./TextBody";
+import { VideoPlayer } from "./VideoPlayer";
 import { MediaKindBadge, StoryKindBadge } from "./ui";
 import {
   isBossStage,
@@ -39,6 +40,7 @@ import type {
   OaDocumentEntity,
   OaObjectEntity,
   ShopBundleEntity,
+  StoryGalleryRef,
   StoryNodeEntity,
   SubtitleLineEntity,
 } from "../types";
@@ -82,6 +84,15 @@ function EntityById({
       {entityTitle(db, entity, lang, i18n)}
     </Link>
   );
+}
+
+/**
+ * Story nodes reference Backup Database items by folder + file location
+ * (`TRIGGER_GALLERY_*`); the canonical item id is `gallery_item/<folder>/<file>`.
+ */
+function galleryItemId(reference: StoryGalleryRef): string {
+  const folder = reference.folder_id.split("/").slice(-1)[0];
+  return `gallery_item/${folder}/${reference.location}`;
 }
 
 function EntityRef({
@@ -551,94 +562,114 @@ export function StoryNodeDetails({
   const bossStages = entity.boss_stages ?? [];
   const movies = entity.movie_files ?? [];
   return (
-    <Section title={i18n.t("section.storyEvent")} testId="story-event-detail">
-      <Facts>
-        <Fact label={i18n.t("fact.kind")}>
-          <StoryKindBadge kind={entity.kind} />
-        </Fact>
-        <Fact label={i18n.t("fact.className")}>
-          <code>{entity.class_name ?? "—"}</code>
-        </Fact>
-        <Fact label={i18n.t("fact.topicIds")}>
-          <EntityRefList
-            db={db}
-            lang={lang}
-            namespace="im"
-            values={entity.topic_ids ?? []}
-          />
-        </Fact>
-        <Fact label={i18n.t("fact.startTopic")}>
-          <EntityRef
-            db={db}
-            lang={lang}
-            namespace="im"
-            id={entity.start_topic_id}
-          />
-        </Fact>
-        <Fact label={i18n.t("fact.endTopic")}>
-          <EntityRef
-            db={db}
-            lang={lang}
-            namespace="im"
-            id={entity.end_topic_id}
-          />
-        </Fact>
-        <Fact label={i18n.t("fact.triggerTopics")}>
-          <EntityRefList
-            db={db}
-            lang={lang}
-            namespace="im"
-            values={entity.trigger_topics ?? []}
-          />
-        </Fact>
-        <Fact label={i18n.t("fact.triggerOs")}>
-          <EntityRef
-            db={db}
-            lang={lang}
-            namespace="os"
-            id={entity.trigger_os_id}
-          />
-        </Fact>
-        <Fact label={i18n.t("fact.actions")}>
-          <StringChips values={entity.actions ?? []} />
-        </Fact>
-        <Fact label={i18n.t("fact.steps")}>
-          <StringChips values={entity.steps ?? []} />
-        </Fact>
-        <Fact label={i18n.t("fact.movies")}>
-          <StringChips values={movies} />
-        </Fact>
-        <Fact label={i18n.t("fact.gallery")}>
-          <EntityById db={db} id={entity.gallery_ref} lang={lang} />
-        </Fact>
-        <Fact label={i18n.t("fact.bossStages")}>
-          {bossStages.length === 0 ? (
-            <span className="muted">{i18n.t("common.none")}</span>
-          ) : (
-            <span className="chip-row">
-              {bossStages.map((stage) => {
-                const target = stage.entity_id
-                  ? db.entityById.get(stage.entity_id)
-                  : undefined;
-                return target ? (
-                  <Link
-                    key={stage.raw}
-                    to={entityHref(target.id)}
-                    className="inline-link"
-                  >
-                    {stage.raw}
-                  </Link>
-                ) : (
-                  <span key={stage.raw} className="muted">
-                    {stage.raw} ({stage.status})
-                  </span>
-                );
-              })}
-            </span>
-          )}
-        </Fact>
-      </Facts>
-    </Section>
+    <>
+      <Section title={i18n.t("section.storyEvent")} testId="story-event-detail">
+        <Facts>
+          <Fact label={i18n.t("fact.kind")}>
+            <StoryKindBadge kind={entity.kind} />
+          </Fact>
+          <Fact label={i18n.t("fact.className")}>
+            <code>{entity.class_name ?? "—"}</code>
+          </Fact>
+          <Fact label={i18n.t("fact.topicIds")}>
+            <EntityRefList
+              db={db}
+              lang={lang}
+              namespace="im"
+              values={entity.topic_ids ?? []}
+            />
+          </Fact>
+          <Fact label={i18n.t("fact.startTopic")}>
+            <EntityRef
+              db={db}
+              lang={lang}
+              namespace="im"
+              id={entity.start_topic_id}
+            />
+          </Fact>
+          <Fact label={i18n.t("fact.endTopic")}>
+            <EntityRef
+              db={db}
+              lang={lang}
+              namespace="im"
+              id={entity.end_topic_id}
+            />
+          </Fact>
+          <Fact label={i18n.t("fact.triggerTopics")}>
+            <EntityRefList
+              db={db}
+              lang={lang}
+              namespace="im"
+              values={entity.trigger_topics ?? []}
+            />
+          </Fact>
+          <Fact label={i18n.t("fact.triggerOs")}>
+            <EntityRef
+              db={db}
+              lang={lang}
+              namespace="os"
+              id={entity.trigger_os_id}
+            />
+          </Fact>
+          <Fact label={i18n.t("fact.actions")}>
+            <StringChips values={entity.actions ?? []} />
+          </Fact>
+          <Fact label={i18n.t("fact.steps")}>
+            <StringChips values={entity.steps ?? []} />
+          </Fact>
+          <Fact label={i18n.t("fact.movies")}>
+            <StringChips values={movies} />
+          </Fact>
+          <Fact label={i18n.t("fact.gallery")}>
+            <EntityById
+              db={db}
+              id={entity.gallery_ref ? galleryItemId(entity.gallery_ref) : null}
+              lang={lang}
+            />
+          </Fact>
+          <Fact label={i18n.t("fact.bossStages")}>
+            {bossStages.length === 0 ? (
+              <span className="muted">{i18n.t("common.none")}</span>
+            ) : (
+              <span className="chip-row">
+                {bossStages.map((stage) => {
+                  const target = stage.entity_id
+                    ? db.entityById.get(stage.entity_id)
+                    : undefined;
+                  return target ? (
+                    <Link
+                      key={stage.raw}
+                      to={entityHref(target.id)}
+                      className="inline-link"
+                    >
+                      {stage.raw}
+                    </Link>
+                  ) : (
+                    <span key={stage.raw} className="muted">
+                      {stage.raw} ({stage.status})
+                    </span>
+                  );
+                })}
+              </span>
+            )}
+          </Fact>
+        </Facts>
+      </Section>
+      {/* ticket/30-story-movies: players for exported clips; the chips above stay
+          as the textual fallback when a clip has no export. */}
+      {movies.length > 0 ? (
+        <Section title={i18n.t("section.storyMovies")} testId="story-movies">
+          {movies.map((file) => {
+            const clip = file.replace(/\.mp4$/i, "");
+            return (
+              <div key={file} data-testid="story-movie" data-clip={clip}>
+                <VideoPlayer clip={clip} label={file} />
+              </div>
+            );
+          })}
+        </Section>
+      ) : null}
+    </>
   );
 }
 

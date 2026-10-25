@@ -861,6 +861,44 @@ try {
     "OS detail returns to the timeline",
   );
 
+  // ------------------------------------------- OS gallery-image logs
+  await cdp.navigate(`${appBase}/os/ivos003`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="entity-body"] img'))`,
+    "gallery OS log renders its image",
+  );
+  const galleryOs = await cdp.evaluate(`(() => {
+    const body = document.querySelector('[data-testid="entity-body"]');
+    return {
+      images: [...body.querySelectorAll('img')]
+        .map((img) => new URL(img.getAttribute('src'), location.href).pathname),
+      text: body.textContent ?? '',
+    };
+  })()`);
+  check(
+    galleryOs.images.length === 1 &&
+      galleryOs.images[0].endsWith("/media/os-attachments/ivos0301.png"),
+    `gallery OS log renders its manifest image (got ${galleryOs.images.join(", ")})`,
+  );
+  check(
+    !galleryOs.text.includes('"Id"'),
+    "gallery JSON does not leak into the OS body as narration",
+  );
+  await cdp.screenshot("os-gallery-image.png");
+
+  await cdp.navigate(`${appBase}/os/ivos026`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="entity-body"] img').length === 3`,
+    "gallery OS log renders every referenced image",
+  );
+  check(true, "gallery OS log renders every referenced image");
+
+  await cdp.navigate(`${appBase}/timeline`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="timeline-card"]').length === ${home.count}`,
+    "timeline restored after gallery OS checks",
+  );
+
   // ------------------------------------------- OS cutscene player (#28)
   await cdp.navigate(`${appBase}/os/aios017`);
   await cdp.waitFor(

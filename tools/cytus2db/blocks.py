@@ -21,6 +21,79 @@ def one_line(value: Any) -> str:
     return " ".join(str(value or "").split())
 
 
+_JSON_DECODER = json.JSONDecoder()
+
+
+def _consume_json(lines: list[str], start: int) -> tuple[Any, int, bool]:
+    """Read one JSON value starting at ``lines[start]``.
+
+    The ``##json=`` directives are followed by a pretty-printed payload that
+    spans several lines, so parsing one line at a time would treat the tail as
+    narration. Stop before the next directive and report failure instead of
+    swallowing the rest of the body.
+    """
+    index = start
+    buffer = ""
+    started = False
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.lstrip()
+        if buffer and stripped.startswith("##"):
+            break
+        if not started and stripped:
+            if not stripped.startswith(("{", "[")):
+                return None, start, False
+            started = True
+        index += 1
+        buffer = f"{buffer}\n{line}" if buffer else line
+        candidate = buffer.lstrip()
+        if not candidate:
+            continue
+        try:
+            payload, _ = _JSON_DECODER.raw_decode(candidate)
+        except json.JSONDecodeError:
+            continue
+        return payload, index, True
+    return None, start, False
+
+
+def _json_blocks(viewer: str, payload: Any) -> list[dict[str, Any]]:
+    """Turn one ``##json=<viewer>`` payload into blocks."""
+    if viewer == "gallery" and isinstance(payload, list):
+        blocks: list[dict[str, Any]] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            gallery_id = str(item.get("Id") or "").strip()
+            if gallery_id:
+                # Gallery entries in OS bodies are exported OS attachments;
+                # reuse the image block so SPA and wiki share one renderer.
+                blocks.append({"kind": "image", "id": gallery_id})
+        return blocks or [{"kind": "note", "directive": "json", "value": viewer}]
+    if viewer == "booklet" and isinstance(payload, dict):
+        body = str(payload.get("Content") or "").replace("\r\n", "\n")
+        paragraphs = [
+            item.strip("\n") for item in body.split("\n\n") if item.strip()
+        ]
+        return [
+            {
+                "kind": "booklet",
+                "title": one_line(payload.get("Title")),
+                "subtitle": one_line(payload.get("Subtitle")),
+                "paragraphs": paragraphs,
+            }
+        ]
+    if isinstance(payload, dict):
+        return [
+            {
+                "kind": "imageviewer",
+                "id": str(payload.get("Image") or ""),
+                "viewer": viewer,
+            }
+        ]
+    return [{"kind": "note", "directive": "json", "value": viewer}]
+
+
 def parse_blocks(text: str) -> list[dict[str, Any]]:
     """Turn one script-style body into ordered blocks, preserving speakers."""
     blocks: list[dict[str, Any]] = []
@@ -28,7 +101,6 @@ def parse_blocks(text: str) -> list[dict[str, Any]]:
     mode = "dialogue"
     paragraph: list[str] = []
     dialogue_open = False
-    pending_viewer: str | None = None
     pending_blank = False
 
     def add(block: dict[str, Any]) -> None:
@@ -44,41 +116,11 @@ def parse_blocks(text: str) -> list[dict[str, Any]]:
             add({"kind": "narration", "text": "\n".join(paragraph)})
             paragraph = []
 
-    for raw in (text or "").split("\n"):
-        line = raw.rstrip()
-        if pending_viewer is not None:
-            viewer, pending_viewer = pending_viewer, None
-            payload: Any = None
-            stripped = line.strip()
-            if stripped.startswith("{"):
-                try:
-                    payload = json.loads(stripped)
-                except json.JSONDecodeError:
-                    payload = None
-            if viewer == "booklet" and isinstance(payload, dict):
-                body = str(payload.get("Content") or "").replace("\r\n", "\n")
-                paragraphs = [
-                    item.strip("\n") for item in body.split("\n\n") if item.strip()
-                ]
-                add(
-                    {
-                        "kind": "booklet",
-                        "title": one_line(payload.get("Title")),
-                        "subtitle": one_line(payload.get("Subtitle")),
-                        "paragraphs": paragraphs,
-                    }
-                )
-            elif isinstance(payload, dict):
-                add(
-                    {
-                        "kind": "imageviewer",
-                        "id": str(payload.get("Image") or ""),
-                        "viewer": viewer,
-                    }
-                )
-            else:
-                add({"kind": "note", "directive": "json", "value": viewer})
-            continue
+    lines = (text or "").split("\n")
+    index = 0
+    while index < len(lines):
+        line = lines[index].rstrip()
+        index += 1
 
         if line.startswith("##"):
             pending_blank = False
@@ -111,7 +153,11 @@ def parse_blocks(text: str) -> list[dict[str, Any]]:
                 add({"kind": "movie", "id": value})
             elif key == "json":
                 flush()
-                pending_viewer = value
+                payload, next_index, ok = _consume_json(lines, index)
+                if ok:
+                    index = next_index
+                for block in _json_blocks(value, payload):
+                    add(block)
             elif key == "mail":
                 flush()
                 parts = [one_line(item) for item in value.split(",")]

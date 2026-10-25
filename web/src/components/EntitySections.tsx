@@ -4,7 +4,7 @@ import { ConditionList, LevelLockList } from "./Conditions";
 import { EntityLink, EntityList } from "./EntityLink";
 import { Fact, Facts } from "./Facts";
 import { TextBody } from "./TextBody";
-import { VideoPlayer } from "./VideoPlayer";
+import { normalizeClipId, VideoPlayer } from "./VideoPlayer";
 import { MediaKindBadge, StoryKindBadge } from "./ui";
 import {
   isBossStage,
@@ -665,7 +665,7 @@ export function StoryNodeDetails({
       {movies.length > 0 ? (
         <Section title={i18n.t("section.storyMovies")} testId="story-movies">
           {movies.map((file) => {
-            const clip = file.replace(/\.mp4$/i, "");
+            const clip = normalizeClipId(file);
             return (
               <div key={file} data-testid="story-movie" data-clip={clip}>
                 <VideoPlayer clip={clip} label={file} />

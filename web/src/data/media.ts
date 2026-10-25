@@ -4,9 +4,6 @@ export interface MediaAsset {
   readonly file: string;
   readonly w?: number;
   readonly h?: number;
-  readonly fps?: number;
-  readonly frames?: number;
-  readonly bytes?: number;
   /** Only `videos` entries carry this flag; `movies` aliases never do. */
   readonly hasAudio?: boolean;
   readonly song?: string;
@@ -27,7 +24,6 @@ export interface MediaManifest {
   readonly videos: Record<string, MediaAsset>;
   readonly movies: Record<string, MediaAsset>;
   readonly logos?: Record<string, MediaAsset>;
-  readonly titles?: Record<string, MediaAsset>;
   /** VTT files keyed by subtitle group, then by language. */
   readonly subtitles?: Record<string, Partial<Record<Lang, SubtitleTrack>>>;
   /** Muxed variants keyed `<clip>|<song>`. */

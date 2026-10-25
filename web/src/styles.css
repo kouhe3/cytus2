@@ -2296,6 +2296,12 @@ kbd {
   overflow-wrap: anywhere;
 }
 
+.cutscene-more {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .cutscene-selection {
   margin-top: 16px;
   padding: 16px 18px;

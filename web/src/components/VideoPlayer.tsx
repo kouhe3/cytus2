@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
 import {
@@ -7,9 +7,8 @@ import {
   type MediaAsset,
   type SubtitleTrack,
 } from "../data/media";
-import { LANGUAGES } from "../data/messages";
+import { languageLabel } from "../data/messages";
 import { useMediaManifest } from "../data/useMedia";
-import type { Lang } from "../types";
 
 const MP4_SUFFIX = /\.mp4$/i;
 
@@ -27,8 +26,6 @@ export interface VideoPlayerProps {
   readonly clip: string;
   /** Exact subtitle group key. Defaults to the clip id; `null` never attaches a track. */
   readonly subtitleKey?: string | null;
-  /** Defaults to the sidebar language. */
-  readonly lang?: Lang;
   /** Seconds to seek to once metadata is available (subtitle-cue jumps). */
   readonly startAt?: number;
   /** Muxed variant key `<clip>|<song>` from `manifest.videoAudio`. */
@@ -37,6 +34,8 @@ export interface VideoPlayerProps {
   readonly label?: string;
   /** `note` explains absent media; `hide` keeps the inline-movie/OA behaviour. */
   readonly missing?: "note" | "hide";
+  /** Only the Cutscene Library asks for #32's no-audio note. */
+  readonly showAudioNote?: boolean;
   /** Optional test id for the figure root; the `<video>` is always `video-player`. */
   readonly testId?: string;
 }
@@ -49,23 +48,21 @@ export interface VideoPlayerProps {
 export function VideoPlayer({
   clip,
   subtitleKey,
-  lang,
   startAt,
   audioKey,
   label,
   missing = "note",
+  showAudioNote = false,
   testId,
 }: VideoPlayerProps) {
   const i18n = useI18n();
   const { lang: activeLang } = useLanguage();
   const { status, manifest } = useMediaManifest();
-  const [failed, setFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const clipId = normalizeClipId(clip);
-  const resolvedLang = lang ?? activeLang;
-  const langLabel =
-    LANGUAGES.find((option) => option.code === resolvedLang)?.title ?? resolvedLang;
+  const resolvedLang = activeLang;
+  const langLabel = languageLabel(resolvedLang);
   const hide = missing === "hide";
 
   const muxed: MediaAsset | null =
@@ -82,13 +79,10 @@ export function VideoPlayer({
   /**
    * `videos` is the only map with the flag; aliases and old manifests stay
    * quiet. A resolved muxed variant is itself the audio-bearing copy, so a
-   * silent origin never paints the note under the muxed player.
+   * silent origin never paints the note under the muxed player. Only the
+   * Cutscene Library opts in through `showAudioNote`.
    */
   const silent = !muxed && manifest?.videos?.[clipId]?.hasAudio === false;
-
-  useEffect(() => {
-    setFailed(false);
-  }, [asset?.file, clipId]);
 
   useEffect(() => {
     if (startAt === undefined) {
@@ -109,18 +103,17 @@ export function VideoPlayer({
     return () => {
       video.removeEventListener("loadedmetadata", seek);
     };
-  }, [startAt, asset?.file, failed]);
+  }, [startAt, asset?.file]);
 
-  if (!asset || failed) {
-    // Inline movies and OA scenes rendered nothing when the export was
-    // missing, and they had no playback-error surface of their own.
+  if (!asset) {
+    // Inline movies and OA scenes rendered nothing when the export was missing.
     if (hide) {
       return null;
     }
-    if (!failed && status === "loading") {
+    if (status === "loading") {
       return null;
     }
-    const reason = failed ? "playback" : status === "error" ? "manifest" : "missing";
+    const reason = status === "error" ? "manifest" : "missing";
     return (
       <p
         className="video-note"
@@ -128,11 +121,9 @@ export function VideoPlayer({
         data-clip={clipId}
         data-reason={reason}
       >
-        {reason === "playback"
-          ? i18n.t("video.playbackError", { clip: clipId })
-          : reason === "manifest"
-            ? i18n.t("video.manifestError")
-            : i18n.t("video.missing", { clip: clipId })}
+        {reason === "manifest"
+          ? i18n.t("video.manifestError")
+          : i18n.t("video.missing", { clip: clipId })}
       </p>
     );
   }
@@ -163,7 +154,6 @@ export function VideoPlayer({
           controls
           preload="metadata"
           aria-label={label ?? clipId}
-          onError={() => setFailed(true)}
         >
           {track ? (
             <track
@@ -179,7 +169,7 @@ export function VideoPlayer({
         </video>
       </div>
       {label ? <figcaption className="video-caption">{label}</figcaption> : null}
-      {silent ? (
+      {silent && showAudioNote ? (
         <p className="video-note" data-testid="video-no-audio" data-clip={clipId}>
           {i18n.t("video.noAudio")}
         </p>

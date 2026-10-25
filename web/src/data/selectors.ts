@@ -300,6 +300,76 @@ export interface CharacterOsEntry {
   readonly entity: OsLogEntity;
 }
 
+/** A folder inside one OS chapter, in the game's TIMELINE CHAPTER view. */
+export interface OsFolderGroup {
+  readonly folderId: string | null;
+  readonly name: string;
+  readonly entries: CharacterOsEntry[];
+}
+
+export interface OsChapterGroup {
+  readonly chapterId: string;
+  readonly name: string;
+  readonly category: number | null;
+  readonly entries: CharacterOsEntry[];
+  readonly folders: OsFolderGroup[];
+}
+
+/**
+ * The 1-based level of the OS log's own character (the reading-order thread).
+ * A file can require several characters, but the lists only mark the owner's
+ * level; `null` means the file has no level condition for that character.
+ */
+export function osOwnerUnlockLevel(entry: CharacterOsEntry): number | null {
+  const owner = entry.row.thread;
+  if (!owner) {
+    return null;
+  }
+  const lock = entry.entity.level_locks.find((item) => item.character === owner);
+  return lock ? lock.level + 1 : null;
+}
+
+export function osOwnerLevelLabel(
+  i18n: I18n,
+  entry: CharacterOsEntry,
+): string | null {
+  const level = osOwnerUnlockLevel(entry);
+  return level === null
+    ? null
+    : i18n.t("common.level", { level: i18n.formatNumber(level) });
+}
+
+/**
+ * The game's TIMELINE CHAPTER order. `osdata/chapters` carries only
+ * Id/Name/Category and no sort table (side-chapter `Index` restarts at 1), so
+ * the order is maintained by the wiki: as of 4.6 the extra chapter "Amiya"
+ * sits between chapters 2 and 3.
+ */
+const OS_CHAPTER_ORDER = [
+  "Architects",
+  "Decommission",
+  "Amiya",
+  "cyTus",
+  "The Silence",
+  "Vanessa",
+  "The Lost",
+  "Loom",
+  "Another Me",
+  "Buried",
+  "The New World",
+  "Miku",
+  "Kizuna AI",
+  "Alice",
+  "Hans",
+  "Graff.J",
+  "Kaf",
+];
+
+function osChapterRank(name: string): number {
+  const index = OS_CHAPTER_ORDER.indexOf(name);
+  return index === -1 ? OS_CHAPTER_ORDER.length : index;
+}
+
 export function compareOsVersions(
   left: CharacterOsEntry,
   right: CharacterOsEntry,
@@ -321,7 +391,10 @@ export function compareOsVersions(
   );
 }
 
-/** Compare `Category` labels ("1.1", "2.9") numerically, segment by segment. */
+/**
+ * Compare `Category` labels ("1.1", "2.9", "1.9.1") numerically, segment by
+ * segment. A shorter label precedes its own subdivisions, so "1.9" < "1.9.1".
+ */
 export function compareOsCategories(left: string, right: string): number {
   const a = left.split(".");
   const b = right.split(".");
@@ -332,10 +405,115 @@ export function compareOsCategories(left: string, right: string): number {
       return x - y;
     }
     if (Number.isFinite(x) !== Number.isFinite(y)) {
-      return Number.isFinite(x) ? -1 : 1;
+      return Number.isFinite(x) ? 1 : -1;
     }
   }
   return left.localeCompare(right);
+}
+
+/**
+ * Every OS log that carries a reading-order row, regardless of thread or
+ * timeline scope.
+ */
+export function allOsEntries(db: Database): CharacterOsEntry[] {
+  const entries: CharacterOsEntry[] = [];
+  for (const entity of db.entitiesByType.get("os_log") ?? []) {
+    if (!isOsLog(entity)) {
+      continue;
+    }
+    const row = db.readingOrderByEntity.get(entity.id);
+    if (!row) {
+      continue;
+    }
+    entries.push({ row, entity });
+  }
+  return entries;
+}
+
+/**
+ * The game's TIMELINE CHAPTER view: chapters in the wiki-maintained game order
+ * (not the table's Id), each split by `TimelineChapter.Folder`. Staged
+ * chapters (test01/test02) are not part of that view and stay in the
+ * version/character groupings only.
+ */
+export function chapterOsGroups(db: Database): OsChapterGroup[] {
+  type Pending = {
+    chapterId: string;
+    name: string;
+    category: number | null;
+    rank: number;
+    entries: CharacterOsEntry[];
+  };
+  const chapters = new Map<string, Pending>();
+  for (const entry of allOsEntries(db)) {
+    if (entry.row.chapter_staged) {
+      continue;
+    }
+    const chapterId = entry.row.chapter_id ?? entry.entity.chapter_id;
+    if (!chapterId) {
+      continue;
+    }
+    let group = chapters.get(chapterId);
+    if (!group) {
+      const chapter = db.entityById.get(chapterId);
+      const name =
+        entry.row.chapter ??
+        (chapter && "name" in chapter ? String(chapter.name) : chapterId);
+      const category =
+        chapter && "category" in chapter && typeof chapter.category === "number"
+          ? chapter.category
+          : null;
+      const gameId =
+        chapter && "game_id" in chapter ? Number(chapter.game_id) : Number.NaN;
+      group = {
+        chapterId,
+        name,
+        category,
+        rank: entry.row.chapter_order ?? (Number.isFinite(gameId) ? gameId : 0),
+        entries: [],
+      };
+      chapters.set(chapterId, group);
+    }
+    group.entries.push(entry);
+  }
+  return [...chapters.values()]
+    .sort(
+      (left, right) =>
+        osChapterRank(left.name) - osChapterRank(right.name) ||
+        left.rank - right.rank ||
+        left.name.localeCompare(right.name),
+    )
+    .map((group) => {
+      const byFolder = new Map<string, OsFolderGroup>();
+      for (const entry of group.entries) {
+        const folderId = entry.entity.folder_id;
+        const folder = folderId ? db.entityById.get(folderId) : undefined;
+        const name = folder && "name" in folder ? String(folder.name) : "—";
+        const bucket = byFolder.get(name);
+        if (bucket) {
+          bucket.entries.push(entry);
+        } else {
+          byFolder.set(name, { folderId, name, entries: [entry] });
+        }
+      }
+      const folders = [...byFolder.values()]
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map((folder) => ({
+          ...folder,
+          entries: [...folder.entries].sort(
+            (left, right) =>
+              left.entity.index - right.entity.index ||
+              left.entity.id.localeCompare(right.entity.id),
+          ),
+        }));
+      return {
+        chapterId: group.chapterId,
+        name: group.name,
+        category: group.category,
+        entries: group.entries,
+        folders,
+      };
+    });
 }
 
 /**
@@ -348,24 +526,15 @@ export function characterOsEntries(
   db: Database,
   characterId: string,
 ): CharacterOsEntry[] {
-  const entries: CharacterOsEntry[] = [];
-  for (const entity of db.entitiesByType.get("os_log") ?? []) {
-    if (!isOsLog(entity)) {
-      continue;
-    }
-    const row = db.readingOrderByEntity.get(entity.id);
-    if (!row || row.thread !== characterId) {
-      continue;
-    }
-    entries.push({ row, entity });
-  }
-  return entries.sort(
-    (left, right) =>
-      compareOsCategories(left.entity.category, right.entity.category) ||
-      left.entity.position - right.entity.position ||
-      left.entity.index - right.entity.index ||
-      left.entity.id.localeCompare(right.entity.id),
-  );
+  return allOsEntries(db)
+    .filter((entry) => entry.row.thread === characterId)
+    .sort(
+      (left, right) =>
+        compareOsCategories(left.entity.category, right.entity.category) ||
+        left.entity.position - right.entity.position ||
+        left.entity.index - right.entity.index ||
+        left.entity.id.localeCompare(right.entity.id),
+    );
 }
 
 export function selectTimeline(

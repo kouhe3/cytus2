@@ -12,6 +12,7 @@ import {
   characterOsEntries,
   entityHref,
   entityTitle,
+  osOwnerLevelLabel,
 } from "../data/selectors";
 import type { CharacterOsEntry } from "../data/selectors";
 import type { I18n } from "../data/messages";
@@ -205,6 +206,7 @@ export function CharacterView({
                               ? i18n.formatDate(entry.entity.date)
                               : i18n.t("entity.noDate")
                           }
+                          level={osOwnerLevelLabel(i18n, entry) ?? undefined}
                         />
                       </li>
                     ))}

@@ -9,7 +9,8 @@
  * reading-order cards, the level slider, type/tier filters, the Ctrl+K command
  * palette, a chart page reached from a card, the chart → post → chart round
  * trip, OA archives and documents, backup media, story nodes, CAPSO/gacha/shop
- * bundles, grouped full-text search with keyboard navigation, and the
+ * bundles, the OS chapter → folder index, grouped full-text search with
+ * keyboard navigation, and the
  * five-language switch including its missing-language fallback.
  * Screenshots are written to web/.shots/.
  *
@@ -469,12 +470,17 @@ try {
       return 0;
     };
     const imTab = document.querySelector('[data-testid="character-tab-im"]');
+    const levelLabels = [...document.querySelectorAll(
+      '[data-testid="character-os-entry"] [data-testid="os-unlock-level"]',
+    )].map((label) => label.textContent);
     return {
       osEntries: orders.length,
       versions,
       osSorted: orders.every(
         (value, index) => index === 0 || compare(orders[index - 1], value) <= 0,
       ),
+      levels: levelLabels.length,
+      firstLevel: levelLabels[0] ?? null,
       imTab: Boolean(imTab),
       imHref: imTab?.getAttribute('href') ?? null,
       paffNote:
@@ -495,6 +501,8 @@ try {
   check(paffPage.characterId === "character/paff001", "PAFF character page loads");
   check(paffPage.osEntries === 81, `PAFF lists all 81 OS logs (got ${paffPage.osEntries})`);
   check(paffPage.versions.length > 1 && paffPage.osSorted, "PAFF OS logs are sorted by version");
+  check(paffPage.levels === 81, `PAFF marks all 81 owner unlock levels (got ${paffPage.levels})`);
+  check(paffPage.firstLevel === "Lv 36", `PAFF's first OS file marks Lv 36 (got ${paffPage.firstLevel})`);
   check(paffPage.imTab, "PAFF character page has an IM tab");
   check(
     paffPage.imHref === "/timeline?account=paff001",
@@ -545,6 +553,7 @@ try {
   );
   const paffAlt = await cdp.evaluate(CHARACTER_SNAPSHOT);
   check(paffAlt.osEntries === 18, `PΛFF lists its 18 OS logs (got ${paffAlt.osEntries})`);
+  check(paffAlt.levels === 18, `PΛFF marks all 18 owner unlock levels (got ${paffAlt.levels})`);
   check(!paffAlt.imTab, "PΛFF has no IM tab");
   check(
     paffAlt.paffNote === translate("zh-Hans", "character.paffNote"),
@@ -729,6 +738,111 @@ try {
   await cdp.waitFor(
     `location.pathname === '/timeline' && document.querySelectorAll('[data-testid="timeline-card"]').length > 0`,
     "OS detail returns to the timeline",
+  );
+
+  // -------------------------------------------- OS index: chapter → folder
+  await cdp.navigate(`${appBase}/os`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="os-index"]'))`,
+    "OS index loads",
+  );
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="os-mode-chapter"]').click()`,
+  );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="os-chapter-group"]').length > 0`,
+    "OS chapter grouping renders",
+  );
+  const chapterIndex = await cdp.evaluate(`(() => {
+    const groups = [...document.querySelectorAll('[data-testid="os-chapter-group"]')];
+    const first = groups[0];
+    return {
+      chapters: groups.length,
+      ids: groups.map((group) => group.dataset.chapterId),
+      names: groups.map(
+        (group) => group.querySelector('summary .os-summary-name > span')?.textContent ?? '',
+      ),
+      firstName: first?.querySelector('summary')?.textContent ?? '',
+      firstFolder: first?.querySelector('[data-testid="os-folder-group"] h3 span')?.textContent ?? '',
+      firstOpen: first?.hasAttribute('open') ?? false,
+      firstLevel: first?.querySelector('[data-testid="os-unlock-level"]')?.textContent ?? '',
+      levels: document.querySelectorAll('[data-testid="os-chapter-group"] [data-testid="os-unlock-level"]').length,
+      folders: document.querySelectorAll('[data-testid="os-folder-group"]').length,
+      entries: document.querySelectorAll('[data-testid="os-chapter-group"] .link-list li').length,
+    };
+  })()`);
+  check(
+    chapterIndex.chapters === 17,
+    `chapter view lists 17 chapters with logs (got ${chapterIndex.chapters})`,
+  );
+  check(
+    !chapterIndex.ids.includes("chapter/16"),
+    "the test01 staging chapter stays out of the chapter view",
+  );
+  check(
+    chapterIndex.firstName.includes("Architects"),
+    "chapter view starts with the Architects chapter",
+  );
+  check(
+    chapterIndex.names.slice(0, 4).join("|") === "Architects|Decommission|Amiya|cyTus",
+    `chapter order follows the game, not the table id (got ${chapterIndex.names.slice(0, 4).join(" → ")})`,
+  );
+  check(chapterIndex.firstOpen, "the first chapter opens its folders");
+  check(
+    chapterIndex.firstFolder === "Ivy & Vanessa",
+    `chapter 0 groups its files under Ivy & Vanessa (got ${chapterIndex.firstFolder})`,
+  );
+  check(
+    chapterIndex.entries === 1032,
+    `chapter view covers all 1032 non-staging OS logs (got ${chapterIndex.entries})`,
+  );
+  check(
+    chapterIndex.folders === 54,
+    `chapter view renders 54 folder groups (got ${chapterIndex.folders})`,
+  );
+  check(
+    chapterIndex.firstLevel === "Lv 2",
+    `first chapter file marks its owner unlock level (got ${chapterIndex.firstLevel})`,
+  );
+  check(
+    chapterIndex.levels === 1031,
+    `chapter view marks every file with an owner level (got ${chapterIndex.levels})`,
+  );
+  await cdp.screenshot("os-chapters.png");
+
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="os-mode-character"]').click()`,
+  );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="os-character-group"]').length > 0`,
+    "character grouping switches back in",
+  );
+  check(
+    (await cdp.evaluate(
+      `document.querySelectorAll('[data-testid="os-character-group"]').length`,
+    )) === 26,
+    "26 characters list their OS logs",
+  );
+
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="os-mode-version"]').click()`,
+  );
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="os-version-root"]').length > 0`,
+    "version grouping renders",
+  );
+  await cdp.navigate(`${appBase}/timeline`);
+  await cdp.navigate(`${appBase}/os`);
+  await cdp.waitFor(
+    `document.querySelectorAll('[data-testid="os-version-root"]').length > 0`,
+    "OS grouping survives leaving and returning",
+  );
+  check(
+    (await cdp.evaluate(`sessionStorage.getItem('os-index-mode')`)) === "version",
+    "OS grouping persists in sessionStorage",
+  );
+  await cdp.evaluate(
+    `document.querySelector('[data-testid="os-mode-chapter"]').click()`,
   );
 
   // ------------------------------------ CAPSO unlock source (generic detail)

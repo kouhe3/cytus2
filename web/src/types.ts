@@ -210,6 +210,23 @@ export interface GalleryFolderEntity extends BaseEntity {
   readonly provenance: ProvenanceEntry[];
 }
 
+/** OS timeline chapter (`osdata/chapters`); category 0 is main, 1 is collab. */
+export interface ChapterEntity extends BaseEntity {
+  readonly type: "chapter";
+  readonly game_id: string;
+  readonly name: string;
+  readonly category: number;
+  readonly provenance: ProvenanceEntry[];
+}
+
+/** OS timeline folder (`TimelineChapter.Folder`), not a Backup Database folder. */
+export interface FolderEntity extends BaseEntity {
+  readonly type: "folder";
+  readonly game_id: string;
+  readonly name: string;
+  readonly provenance: ProvenanceEntry[];
+}
+
 export interface GalleryItemEntity extends BaseEntity {
   readonly type: "gallery_item";
   readonly game_id: string;

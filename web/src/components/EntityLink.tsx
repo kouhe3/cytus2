@@ -12,12 +12,14 @@ export function EntityLink({
   lang,
   testId,
   meta,
+  level,
 }: {
   db: Database;
   entity: BaseEntity;
   lang: Lang;
   testId?: string;
   meta?: string;
+  level?: string;
 }) {
   const i18n = useI18n();
   const reply = isImReply(entity);
@@ -48,6 +50,11 @@ export function EntityLink({
           <TypeBadge type={entity.type} />
           <code>{entity.id}</code>
           {meta ? <span>{meta}</span> : null}
+          {level ? (
+            <span className="entity-link-level" data-testid="os-unlock-level">
+              {level}
+            </span>
+          ) : null}
         </span>
       </span>
     </Link>

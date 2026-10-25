@@ -792,6 +792,22 @@ kbd {
   letter-spacing: 0.05em;
 }
 
+.os-version-group h3.os-folder-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-strong);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.os-folder-heading .muted {
+  font-weight: 400;
+}
+
 .facts {
   margin: 0;
   display: flex;
@@ -884,6 +900,11 @@ kbd {
   font-size: 10.5px;
   color: #5f7589;
   overflow-wrap: anywhere;
+}
+
+.entity-link-level {
+  color: var(--accent-dim);
+  font-variant-numeric: tabular-nums;
 }
 
 .inline-link {

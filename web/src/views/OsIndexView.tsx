@@ -6,15 +6,17 @@ import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
 import type { I18n } from "../data/messages";
 import {
+  chapterOsGroups,
   characterOsEntries,
   compareOsVersions,
   entityHref,
+  osOwnerLevelLabel,
 } from "../data/selectors";
 import type { CharacterOsEntry } from "../data/selectors";
 import { isCharacter } from "../data/database";
 import type { CharacterEntity, Database } from "../types";
 
-type Mode = "character" | "version";
+type Mode = "chapter" | "character" | "version";
 type CharacterGroup = {
   readonly character: CharacterEntity;
   readonly entries: CharacterOsEntry[];
@@ -33,19 +35,11 @@ function categoryGroups(entries: CharacterOsEntry[]): [string, CharacterOsEntry[
   return [...grouped.entries()];
 }
 
-/** Date plus a lock marker; level-0 conditions are always satisfied. */
+/** Date shown beside every OS file; locks are not displayed in this archive. */
 function osFileMeta(i18n: I18n, entry: CharacterOsEntry): string {
-  const locked =
-    entry.entity.file_lock !== null ||
-    entry.entity.level_locks.some((lock) => lock.level > 0);
-  return [
-    entry.entity.date
-      ? i18n.formatDate(entry.entity.date)
-      : i18n.t("entity.noDate"),
-    locked ? i18n.t("osIndex.locked") : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  return entry.entity.date
+    ? i18n.formatDate(entry.entity.date)
+    : i18n.t("entity.noDate");
 }
 
 const OPEN_STORAGE = "os-index-open";
@@ -64,9 +58,8 @@ function initialOpen(): Set<string> {
 }
 
 function initialMode(): Mode {
-  return sessionStorage.getItem(MODE_STORAGE) === "version"
-    ? "version"
-    : "character";
+  const stored = sessionStorage.getItem(MODE_STORAGE);
+  return stored === "character" || stored === "version" ? stored : "chapter";
 }
 
 export function OsIndexView({ db }: { readonly db: Database }) {
@@ -126,6 +119,8 @@ export function OsIndexView({ db }: { readonly db: Database }) {
       .sort((a, b) => compareOsVersions(a.first, b.first));
   }, [characters, db]);
 
+  const chapters = useMemo(() => chapterOsGroups(db), [db]);
+
   const toggle = (key: string, open: boolean) => {
     setOpenGroups((current) => {
       const next = new Set(current);
@@ -158,7 +153,7 @@ export function OsIndexView({ db }: { readonly db: Database }) {
               {i18n.t("nav.os")} · <code>os_log</code>
             </p>
             <h1>{i18n.t("nav.os")}</h1>
-            <p className="byline">{i18n.t("character.osLede")}</p>
+            <p className="byline">{i18n.t("osIndex.lede")}</p>
           </header>
 
           <div
@@ -169,9 +164,19 @@ export function OsIndexView({ db }: { readonly db: Database }) {
           >
             <button
               type="button"
+              className={mode === "chapter" ? "active" : ""}
+              aria-pressed={mode === "chapter"}
+              onClick={() => chooseMode("chapter")}
+              data-testid="os-mode-chapter"
+            >
+              {i18n.t("osIndex.byChapter")}
+            </button>
+            <button
+              type="button"
               className={mode === "character" ? "active" : ""}
               aria-pressed={mode === "character"}
               onClick={() => chooseMode("character")}
+              data-testid="os-mode-character"
             >
               {i18n.t("osIndex.byCharacter")}
             </button>
@@ -180,10 +185,82 @@ export function OsIndexView({ db }: { readonly db: Database }) {
               className={mode === "version" ? "active" : ""}
               aria-pressed={mode === "version"}
               onClick={() => chooseMode("version")}
+              data-testid="os-mode-version"
             >
               {i18n.t("osIndex.byVersion")}
             </button>
           </div>
+
+          {mode === "chapter"
+            ? chapters.map((chapter, index) => {
+                const key = `ch:${chapter.chapterId}`;
+                const open =
+                  [...openGroups].some((item) => item.startsWith("ch:"))
+                    ? openGroups.has(key)
+                    : index === 0;
+                return (
+                  <details
+                    key={chapter.chapterId}
+                    className="os-character-group"
+                    open={open}
+                    onToggle={(event) => toggle(key, event.currentTarget.open)}
+                    data-testid="os-chapter-group"
+                    data-chapter-id={chapter.chapterId}
+                  >
+                    <summary>
+                      <span className="os-summary-name">
+                        <span>{chapter.name}</span>
+                        {chapter.category === null ? null : (
+                          <span className="meta-chip">
+                            {i18n.t(
+                              chapter.category === 0
+                                ? "osIndex.chapterMain"
+                                : "osIndex.chapterCollab",
+                            )}
+                          </span>
+                        )}
+                      </span>
+                      <span className="muted">
+                        {i18n.t("osIndex.chapterMeta", {
+                          logs: i18n.formatNumber(chapter.entries.length),
+                          folders: i18n.formatNumber(chapter.folders.length),
+                        })}
+                      </span>
+                    </summary>
+                    {chapter.folders.map((folder) => (
+                      <section
+                        key={folder.folderId ?? folder.name}
+                        className="os-version-group"
+                        data-testid="os-folder-group"
+                        data-folder-id={folder.folderId ?? ""}
+                      >
+                        <h3 className="os-folder-heading">
+                          <span>{folder.name}</span>
+                          <span className="muted">
+                            {i18n.t("character.osCount", {
+                              count: i18n.formatNumber(folder.entries.length),
+                            })}
+                          </span>
+                        </h3>
+                        <ul className="link-list">
+                          {folder.entries.map((entry) => (
+                            <li key={entry.entity.id}>
+                              <EntityLink
+                                db={db}
+                                entity={entry.entity}
+                                lang={lang}
+                                meta={osFileMeta(i18n, entry)}
+                                level={osOwnerLevelLabel(i18n, entry) ?? undefined}
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
+                  </details>
+                );
+              })
+            : null}
 
           {mode === "character"
             ? characters.map(({ character, entries }, index) => {
@@ -237,6 +314,7 @@ export function OsIndexView({ db }: { readonly db: Database }) {
                                 entity={entry.entity}
                                 lang={lang}
                                 meta={osFileMeta(i18n, entry)}
+                                level={osOwnerLevelLabel(i18n, entry) ?? undefined}
                               />
                             </li>
                           ))}
@@ -246,7 +324,10 @@ export function OsIndexView({ db }: { readonly db: Database }) {
                   </details>
                 );
               })
-            : versions.map(({ version, entries, characters: groups }, index) => {
+            : null}
+
+          {mode === "version"
+            ? versions.map(({ version, entries, characters: groups }, index) => {
                 const key = `v:${version}`;
                 const open =
                   [...openGroups].some((item) => item.startsWith("v:"))
@@ -300,6 +381,7 @@ export function OsIndexView({ db }: { readonly db: Database }) {
                                 entity={entry.entity}
                                 lang={lang}
                                 meta={osFileMeta(i18n, entry)}
+                                level={osOwnerLevelLabel(i18n, entry) ?? undefined}
                               />
                             </li>
                           ))}
@@ -308,7 +390,8 @@ export function OsIndexView({ db }: { readonly db: Database }) {
                     ))}
                   </details>
                 );
-              })}
+              })
+            : null}
         </article>
       </main>
     </>

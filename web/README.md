@@ -29,6 +29,7 @@ repository root when the default `python` does not have UnityPy;
 | `/` | redirects to `/timeline` |
 | `/timeline` | global unlock timeline: all 323 iM posts + the 501 main-seven OS logs (`timeline_scope=timeline`) ordered by `reading_order.order`; level slider, type, tier and iM account filters |
 | `/character/<gameId>` | character page: every OS log of that character via `OS → SORT BY VERSION`; PAFF / NEKO / ROBO add an IM tab linking to the account-filtered feed |
+| `/os` | OS archive index with the game's three groupings: chapter → folder (default; 17 chapters with logs, each split by `TimelineChapter.Folder`), character → version, and version → character. The chapter order follows the wiki-maintained game list (`Amiya` between `Decommission` and `cyTus`), not the table's `Id`. Every file carries the 1-based unlock level of its own character (`Lv N`, e.g. `Lv 36`); other characters' level conditions and the file-lock chain stay in the entity detail, and the list neither hides files nor marks them as locked. Staging chapters `test01` / `test02` stay out of the chapter view; the chosen mode persists in `sessionStorage` |
 | `/oa` | OA archive index: one card per character with object/document/description counts |
 | `/oa/<gameId>` | OA workspace: object tabs, each object's text and documents, all hotspot descriptions |
 | `/backup` | Backup Database folder index with per-folder media counts |
@@ -109,11 +110,13 @@ Node 24 strips the types, so no test runner or build step is involved.
 the IM tab limited to PAFF / NEKO / ROBO, the PΛFF note, the slider/filter
 behaviour, the Ctrl+K palette, a chart opened from an entity link, an
 unlock-source jump, direct chart deep links, the return to the timeline, the
-chart → post → chart round trip, the OA archive and document views, a backup
-gallery item, a Branching OS node, a CAPSO pack and the Black Market bundle,
-the extras hub, all 19 assistant groups / 30 pages with their language switch,
-the 10 title screens and 13 video clips (or their missing-export notes),
-grouped search hits opened with the keyboard, and the five-language switch
+chart → post → chart round trip, the OS chapter → folder index (17 chapters,
+54 folders, 1032 logs) and its three-way grouping switch, the OA archive and
+document views, a backup gallery item, a Branching OS node, a CAPSO pack and
+the Black Market bundle, the extras hub, all 19 assistant groups / 30 pages
+with their language switch, the 10 title screens and 13 video clips (or their
+missing-export notes), grouped search hits opened with the keyboard, and the
+five-language switch
 including the explicit missing-language fallback. The switch checks assert the
 sidebar label, timeline heading/filter/level gate/account heading, character
 tab and PΛFF note in each of the five languages, plus that the canonical text

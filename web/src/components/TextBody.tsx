@@ -379,16 +379,9 @@ function textBodyNodes(text: string): BodyNode[] {
 export function TextBody({
   textRef,
   lang,
-  mediaOnly = false,
 }: {
   textRef: string | null;
   lang: Lang;
-  /**
-   * Keep only the media blocks (images, image viewers, movies). Branching OS
-   * ending nodes never show their body in game, but their attachments are the
-   * placeholders the developers shipped, so the SPA lists those alone.
-   */
-  mediaOnly?: boolean;
 }) {
   const i18n = useI18n();
   const [state, setState] = useState<TextState>({ status: "idle" });
@@ -432,7 +425,7 @@ export function TextBody({
       </p>
     );
   }
-  return <TextRecordBody record={state.record} lang={lang} mediaOnly={mediaOnly} />;
+  return <TextRecordBody record={state.record} lang={lang} />;
 }
 
 /**
@@ -444,13 +437,10 @@ export function TextRecordBody({
   record,
   lang,
   testId = "entity-body",
-  mediaOnly = false,
 }: {
   record: TextRecord | null;
   lang: Lang;
   testId?: string;
-  /** Keep only image / image viewer / movie blocks (see `TextBody`). */
-  mediaOnly?: boolean;
 }) {
   const i18n = useI18n();
   if (!record) {
@@ -467,22 +457,11 @@ export function TextRecordBody({
   ) : null;
   const blocks = record.blocks ?? [];
   if (blocks.length > 0) {
-    const shown = mediaOnly
-      ? blocks.filter(
-          (block) =>
-            block.kind === "image" ||
-            block.kind === "imageviewer" ||
-            block.kind === "movie",
-        )
-      : blocks;
-    if (shown.length === 0) {
-      return <>{fallbackNote}</>;
-    }
     return (
       <>
         {fallbackNote}
         <div className="prose blocks" data-testid={testId} data-lang={record.lang}>
-          {shown.map((block, index) => (
+          {blocks.map((block, index) => (
             <Block key={index} block={block} />
           ))}
         </div>
@@ -490,12 +469,7 @@ export function TextRecordBody({
     );
   }
   if (record.text) {
-    const nodes = textBodyNodes(record.text).filter(
-      (node) => !mediaOnly || node.kind === "image" || node.kind === "movie",
-    );
-    if (nodes.length === 0) {
-      return <>{fallbackNote}</>;
-    }
+    const nodes = textBodyNodes(record.text);
     return (
       <>
         {fallbackNote}

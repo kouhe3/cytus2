@@ -287,22 +287,15 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
 
           <section className="detail-section" data-testid="branch-node-body">
             <h2>{i18n.t("branch.bodyTitle")}</h2>
-            {branchOpensReader(node) ? (
-              <TextBody textRef={node.text_ref ?? null} lang={lang} />
-            ) : (
-              <>
-                <p className="hint" data-testid="branch-body-skipped">
-                  {i18n.t("branch.storyOnly")}
-                </p>
-                {/* The game hides the body, but the attachments it shipped with
-                    these endings are DUMMY placeholders: surface them alone. */}
-                <TextBody
-                  textRef={node.text_ref ?? null}
-                  lang={lang}
-                  mediaOnly
-                />
-              </>
+            {branchOpensReader(node) ? null : (
+              <p className="hint" data-testid="branch-body-skipped">
+                {i18n.t("branch.storyOnly")}
+              </p>
             )}
+            {/* The game opens no reader for branch points and endings, but the
+                file still carries text and the (DUMMY) attachments: show the
+                archive copy either way. */}
+            <TextBody textRef={node.text_ref ?? null} lang={lang} />
           </section>
 
           <section className="detail-section" data-testid="branch-node-facts">

@@ -241,7 +241,7 @@ export function BackupFolderView({
               // content and the condition line sits next to it.
               <article className="media-card" key={item.id}>
                 <Link
-                  to={entityHref(item.id)}
+                  to={entityHref(db, item.id)}
                   className="media-card-main"
                   data-testid="backup-item-card"
                   data-kind={item.kind}

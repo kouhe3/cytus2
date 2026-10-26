@@ -1,11 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { StoryKindBadge } from "../components/ui";
 import { isStoryNode } from "../data/database";
 import {
   storyEntries,
   storySortMetaCount,
-  type StoryKindFilter,
   type StorySort,
 } from "../data/collections";
 import { useI18n } from "../data/i18n";
@@ -21,24 +19,15 @@ const SORT_OPTIONS: { value: StorySort; labelKey: MessageKey }[] = [
   { value: "chapter", labelKey: "story.sort.chapter" },
 ];
 
-const KIND_OPTIONS: { value: StoryKindFilter; labelKey: MessageKey }[] = [
-  { value: "all", labelKey: "story.kind.all" },
-  { value: "event", labelKey: "story.kind.event" },
-  { value: "branch", labelKey: "story.kind.branch" },
-];
-
 export function StoryIndexView({ db }: { db: Database }) {
   const { lang } = useLanguage();
   const i18n = useI18n();
   const [sort, setSort] = useState<StorySort>("level");
-  const [kind, setKind] = useState<StoryKindFilter>("all");
   const entries = useMemo(
-    () => storyEntries(db, lang, sort, kind, i18n),
-    [db, lang, sort, kind, i18n],
+    () => storyEntries(db, lang, sort, i18n),
+    [db, lang, sort, i18n],
   );
   const metaCount = storySortMetaCount(db, sort);
-  const nodeCount = db.entitiesByType.get("story_node")?.length ?? 0;
-  const shownEvents = entries.filter((entry) => entry.node.kind === "event").length;
   const eventCount =
     db.entitiesByType.get("story_node")?.filter(
       (node) => isStoryNode(node) && node.kind === "event",
@@ -53,13 +42,7 @@ export function StoryIndexView({ db }: { db: Database }) {
           <p className="lede">{i18n.t("story.lede")}</p>
           <div className="page-stats" data-testid="story-stats">
             {i18n.t("story.stats", {
-              nodes: formatUnit(i18n, "nodes", entries.length),
-              events: formatUnit(i18n, "events", shownEvents),
-              branches: formatUnit(
-                i18n,
-                "branches",
-                entries.length - shownEvents,
-              ),
+              events: formatUnit(i18n, "events", eventCount),
             })}
           </div>
         </header>
@@ -79,27 +62,13 @@ export function StoryIndexView({ db }: { db: Database }) {
               </button>
             ))}
           </div>
-          <div className="segmented" data-testid="story-kind-filter">
-            {KIND_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={kind === option.value ? "segment active" : "segment"}
-                aria-pressed={kind === option.value}
-                data-testid={`story-kind-${option.value}`}
-                onClick={() => setKind(option.value)}
-              >
-                {i18n.t(option.labelKey)}
-              </button>
-            ))}
-          </div>
         </div>
 
         {sort !== "level" ? (
           <p className="hint" data-testid="story-sort-note">
             {i18n.t("story.sortMeta", {
               meta: i18n.formatNumber(metaCount),
-              total: i18n.formatNumber(nodeCount),
+              total: i18n.formatNumber(eventCount),
               sort: i18n.t(
                 sort === "version" ? "story.sort.version" : "story.sort.chapter",
               ),
@@ -115,15 +84,13 @@ export function StoryIndexView({ db }: { db: Database }) {
           {entries.map((entry) => (
             <Link
               key={entry.node.id}
-              to={entityHref(entry.node.id)}
+              to={entityHref(db, entry.node.id)}
               className="card story-card"
               data-testid="story-node-card"
-              data-kind={entry.node.kind}
               data-node-id={entry.node.id}
               data-order={entry.row?.order ?? ""}
             >
               <header className="card-head">
-                <StoryKindBadge kind={entry.node.kind} />
                 <span
                   className="card-order"
                   title={i18n.t("story.readingOrderTitle")}
@@ -178,29 +145,18 @@ export function StoryIndexView({ db }: { db: Database }) {
           </p>
         </section>
         <section className="panel">
-          <h2>{i18n.t("story.twoSystems")}</h2>
-          <p>
-            {i18n.t("story.twoSystemsBefore")}
-            <code>story_node(kind=branch)</code>
-            {i18n.t("story.twoSystemsMiddle")}
-            <code>gallery_item</code>
-            {i18n.t("story.twoSystemsAfter")}
-          </p>
+          <h2>{i18n.t("story.branchingTitle")}</h2>
+          <p>{i18n.t("story.branchingText")}</p>
+          <Link to="/branch" className="inline-link">
+            {i18n.t("nav.branch")} →
+          </Link>
         </section>
         <section className="panel">
           <h2>{i18n.t("story.counts")}</h2>
           <dl className="facts">
             <div className="fact">
-              <dt>{i18n.t("story.allNodes")}</dt>
-              <dd>{i18n.formatNumber(nodeCount)}</dd>
-            </div>
-            <div className="fact">
               <dt>{i18n.t("story.events")}</dt>
               <dd>{i18n.formatNumber(eventCount)}</dd>
-            </div>
-            <div className="fact">
-              <dt>{i18n.t("story.branchingOs")}</dt>
-              <dd>{i18n.formatNumber(nodeCount - eventCount)}</dd>
             </div>
             <div className="fact">
               <dt>{i18n.t("story.shown")}</dt>

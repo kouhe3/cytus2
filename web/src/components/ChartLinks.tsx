@@ -31,7 +31,7 @@ export function ChartLinks({
       {ordered.map((chart) => (
         <li key={chart.id}>
           <Link
-            to={entityHref(chart.id)}
+            to={entityHref(db, chart.id)}
             className="entity-link chart-link"
             data-testid={testId}
             data-chart-id={chart.id}

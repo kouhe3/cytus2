@@ -49,7 +49,7 @@ export function CharacterIndexView({ db }: { db: Database }) {
         {characters.map((character) => (
           <Link
             key={character.id}
-            to={entityHref(character.id)}
+            to={entityHref(db, character.id)}
             className="collection-card"
             data-testid="character-card"
             data-character-id={character.id}

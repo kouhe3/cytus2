@@ -184,7 +184,7 @@ function FactValue({
     const entity = resolveEntityRef(db, raw);
     if (entity) {
       return (
-        <Link to={entityHref(entity.id)} className="inline-link">
+        <Link to={entityHref(db, entity.id)} className="inline-link">
           {entityTitle(db, entity, lang, i18n)}
         </Link>
       );
@@ -397,7 +397,7 @@ export function EntityView({
               {isImReply(entity) ? (
                 <p className="byline">
                   {entity.author} ·{" "}
-                  <Link to={entityHref(entity.post_id)} className="inline-link">
+                  <Link to={entityHref(db, entity.post_id)} className="inline-link">
                     {(() => {
                       const parent = db.entityById.get(entity.post_id);
                       return parent
@@ -413,7 +413,7 @@ export function EntityView({
                   {order?.thread ? (
                     <>
                       {" · "}
-                      <Link to={entityHref(order.thread)} className="inline-link">
+                      <Link to={entityHref(db, order.thread)} className="inline-link">
                         {characterName(db, order.thread)}
                       </Link>
                     </>
@@ -578,7 +578,7 @@ export function EntityView({
                 <Fact label={i18n.t("entity.fact.stage")}>{order.stage}</Fact>
                 {order.thread ? (
                   <Fact label={i18n.t("entity.fact.thread")}>
-                    <Link to={entityHref(order.thread)} className="inline-link">
+                    <Link to={entityHref(db, order.thread)} className="inline-link">
                       {characterName(db, order.thread)}
                     </Link>
                   </Fact>

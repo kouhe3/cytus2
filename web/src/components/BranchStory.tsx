@@ -73,7 +73,7 @@ export function BranchConsequences({
               return (
                 <li key={story.id}>
                   <Link
-                    to={entityHref(story.id)}
+                    to={entityHref(db, story.id)}
                     className="entity-link"
                     data-testid="branch-story-link"
                     data-story-id={story.id}

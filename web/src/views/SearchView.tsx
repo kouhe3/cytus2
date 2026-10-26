@@ -12,7 +12,7 @@ import { useLanguage } from "../data/language";
 import { formatUnit } from "../data/messages";
 import { useFullTextSearch } from "../data/search";
 import { entityHref } from "../data/selectors";
-import type { SearchHit } from "../types";
+import type { Database, SearchHit } from "../types";
 
 /** Preview cap for the palette, full cap once the user asks for everything. */
 const PREVIEW_LIMIT = 20;
@@ -53,7 +53,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
   );
 }
 
-export function SearchView() {
+export function SearchView({ db }: { db: Database }) {
   const { lang } = useLanguage();
   const i18n = useI18n();
   const navigate = useNavigate();
@@ -113,7 +113,7 @@ export function SearchView() {
       const hit = hits[selected];
       if (hit) {
         event.preventDefault();
-        navigate(entityHref(hit.id));
+        navigate(entityHref(db, hit.id));
       }
     }
   };
@@ -195,7 +195,7 @@ export function SearchView() {
                     <li key={`${hit.type}:${hit.id}`} role="presentation">
                       <Link
                         id={`search-hit-${index}`}
-                        to={entityHref(hit.id)}
+                        to={entityHref(db, hit.id)}
                         role="option"
                         aria-selected={index === selected}
                         className={

@@ -25,7 +25,7 @@ export function EntityLink({
   const reply = isImReply(entity);
   return (
     <Link
-      to={entityHref(entity.id)}
+      to={entityHref(db, entity.id)}
       className={`entity-link${reply ? " entity-link--reply" : ""}`}
       data-testid={testId}
       data-entity-id={entity.id}

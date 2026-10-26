@@ -45,7 +45,7 @@ export function ShopIndexView({ db }: { db: Database }) {
               {expansionPacks.map((pack) => (
                 <Link
                   key={pack.id}
-                  to={entityHref(pack.id)}
+                  to={entityHref(db, pack.id)}
                   className="collection-card"
                   data-testid="expansion-pack-card"
                   data-pack-id={pack.id}
@@ -74,7 +74,7 @@ export function ShopIndexView({ db }: { db: Database }) {
             {packs.map((group) => (
               <Link
                 key={group.pack.id}
-                to={entityHref(group.pack.id)}
+                to={entityHref(db, group.pack.id)}
                 className="collection-card"
                 data-testid="capso-pack-card"
                 data-pack-id={group.pack.id}
@@ -103,7 +103,7 @@ export function ShopIndexView({ db }: { db: Database }) {
             {gacha.map((group) => (
               <Link
                 key={group.machine.id}
-                to={entityHref(group.machine.id)}
+                to={entityHref(db, group.machine.id)}
                 className="collection-card"
                 data-testid="gacha-card"
                 data-machine-id={group.machine.id}
@@ -130,7 +130,7 @@ export function ShopIndexView({ db }: { db: Database }) {
             {bundles.map((bundle) => (
               <Link
                 key={bundle.id}
-                to={entityHref(bundle.id)}
+                to={entityHref(db, bundle.id)}
                 className="collection-card"
                 data-testid="bundle-card"
                 data-bundle-id={bundle.id}

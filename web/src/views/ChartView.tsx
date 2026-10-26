@@ -34,7 +34,7 @@ function SourceList({
       {entities.map((entity) => (
         <li key={entity.id}>
           <Link
-            to={entityHref(entity.id)}
+            to={entityHref(db, entity.id)}
             className="source-link"
             data-testid={testId}
             data-source-id={entity.id}
@@ -140,7 +140,7 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
               <dt>{i18n.t("fact.song")}</dt>
               <dd>
                 {song ? (
-                  <Link to={entityHref(song.id)} className="inline-link">
+                  <Link to={entityHref(db, song.id)} className="inline-link">
                     {songName}
                   </Link>
                 ) : (
@@ -194,7 +194,7 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
               {siblings.map((sibling) => (
                 <Link
                   key={sibling.id}
-                  to={entityHref(sibling.id)}
+                  to={entityHref(db, sibling.id)}
                   className={
                     sibling.id === chart.id
                       ? "chart-jump active"
@@ -252,7 +252,7 @@ export function ChartView({ db, chart }: { db: Database; chart: ChartEntity }) {
               <dt>{i18n.t("fact.pack")}</dt>
               <dd>
                 {song && isSong(song) ? (
-                  <Link to={entityHref(song.pack_id)} className="inline-link">
+                  <Link to={entityHref(db, song.pack_id)} className="inline-link">
                     {song.pack_id}
                   </Link>
                 ) : (

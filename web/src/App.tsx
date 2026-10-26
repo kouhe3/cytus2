@@ -9,7 +9,7 @@ import {
 } from "react-router-dom";
 import { CommandPalette } from "./components/CommandPalette";
 import { Sidebar } from "./components/Sidebar";
-import { isCharacter, isChart } from "./data/database";
+import { isCharacter, isChart, isStoryNode } from "./data/database";
 import { useI18n } from "./data/i18n";
 import type { MessageKey } from "./data/messages";
 import { decodeEntityPath } from "./data/selectors";
@@ -161,6 +161,12 @@ function EntityRoute({ db }: { db: Database }) {
   if (!entity) {
     return <NotFound path={path} />;
   }
+  // Branching OS nodes are read in their own graph view (`/branch/<gameId>`).
+  // The flat `/story_node/<id>` page was deleted, so the old URL must not
+  // resurrect it for bookmarks that still carry it.
+  if (isStoryNode(entity) && entity.kind === "branch") {
+    return <NotFound path={path} />;
+  }
   if (isChart(entity)) {
     return <ChartView db={db} chart={entity} />;
   }
@@ -218,7 +224,7 @@ export default function App() {
     if (state.status === "ready") {
       const path = decodeEntityPath(location.pathname);
       const entity = state.db.entityById.get(path);
-      if (entity) {
+      if (entity && !(isStoryNode(entity) && entity.kind === "branch")) {
         document.title = `${path} · Cytus II`;
       } else {
         document.title = i18n.t("app.defaultTitle");
@@ -251,7 +257,7 @@ cd web && pnpm dev`}</pre>
           <Route path="/" element={<Navigate to="/timeline" replace />} />
           <Route path="/timeline" element={<TimelineView db={db} />} />
           <Route path="/characters" element={<CharacterIndexView db={db} />} />
-          <Route path="/search" element={<SearchView />} />
+          <Route path="/search" element={<SearchView db={db} />} />
           <Route path="/os" element={<OsIndexView db={db} />} />
           <Route path="/oa" element={<OaIndexView db={db} />} />
           <Route path="/oa/:gameId" element={<OaCharacterRoute db={db} />} />
@@ -276,6 +282,7 @@ cd web && pnpm dev`}</pre>
         </Routes>
       </div>
       <CommandPalette
+        db={db}
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
       />

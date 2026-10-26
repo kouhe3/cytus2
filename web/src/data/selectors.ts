@@ -9,10 +9,12 @@ import {
   isOaObject,
   isOsLog,
   isSong,
+  isStoryNode,
   isSubtitleLine,
   recordOf,
   textSnippet,
 } from "./database";
+import { branchHref } from "./branch";
 import { localizedValue, pickLocalized } from "./language";
 import { conditionKindLabel, relationLabel } from "./labels";
 import type { I18n, MessageKey } from "./messages";
@@ -165,7 +167,16 @@ function textName(db: Database, textRef: string, lang: Lang): string {
   return pickLocalized(names as LocalizedText, lang).value;
 }
 
-export function entityHref(id: string): string {
+/**
+ * Canonical page for an entity id. A Branching OS node is read in its own
+ * graph view, so it resolves to `/branch/<gameId>`; every other entity keeps
+ * the flat `/<type>/<game id>` path.
+ */
+export function entityHref(db: Database, id: string): string {
+  const entity = db.entityById.get(id);
+  if (entity && isStoryNode(entity) && entity.kind === "branch") {
+    return branchHref(entity.game_id);
+  }
   // Entity ids use "#" for reply floors.  A raw "#" starts the URL fragment,
   // so encode it into the path; otherwise /im_reply/P0101#1 resolves to the
   // non-existent /im_reply/P0101.
@@ -806,7 +817,7 @@ export function conditionLink(
           kind: conditionKindLabel(i18n, condition.kind),
           value: condition.value,
         }),
-        href: entityHref(id),
+        href: entityHref(db, id),
         id,
       };
     }

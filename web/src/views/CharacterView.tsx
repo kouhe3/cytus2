@@ -55,7 +55,7 @@ function PackFact({
       <dt>{children}</dt>
       <dd>
         {pack ? (
-          <Link to={entityHref(pack.id)} className="inline-link">
+          <Link to={entityHref(db, pack.id)} className="inline-link">
             {entityTitle(db, pack, lang, i18n)}
           </Link>
         ) : (

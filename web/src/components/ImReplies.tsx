@@ -69,7 +69,7 @@ export function ImReplies({
               </div>
               <span className="im-reply-author">{reply.author}</span>
               <Link
-                to={entityHref(reply.id)}
+                to={entityHref(db, reply.id)}
                 className="im-reply-floor"
                 data-testid="im-reply-permalink"
               >

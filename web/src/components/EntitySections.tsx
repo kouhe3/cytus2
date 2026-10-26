@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ConditionList, LevelLockList } from "./Conditions";
-import { BranchConsequences, BranchStateText } from "./BranchStory";
 import { EntityLink, EntityList } from "./EntityLink";
 import { Fact, Facts } from "./Facts";
 import { MediaImage } from "./Media";
@@ -19,7 +18,6 @@ import {
   isGachaReward,
   isGalleryItem,
   isOaDocument,
-  isStoryNode,
   resolveEntityRef,
 } from "../data/database";
 import { useI18n } from "../data/i18n";
@@ -89,7 +87,7 @@ function EntityById({
     return <code>{id}</code>;
   }
   return (
-    <Link to={entityHref(id)} className="inline-link">
+    <Link to={entityHref(db, id)} className="inline-link">
       {entityTitle(db, entity, lang, i18n)}
     </Link>
   );
@@ -109,7 +107,7 @@ function BranchTriggerRef({ db, id }: { db: Database; id: string | null | undefi
     return <code>{id}</code>;
   }
   return (
-    <Link to={entityHref(nodeId)} className="inline-link">
+    <Link to={entityHref(db, nodeId)} className="inline-link">
       <code>{id}</code>
     </Link>
   );
@@ -148,7 +146,7 @@ function EntityRef({
   const title = entityTitle(db, entity, lang, i18n);
   return (
     <Link
-      to={entityHref(entity.id)}
+      to={entityHref(db, entity.id)}
       className="inline-link"
       title={title}
     >
@@ -186,7 +184,7 @@ function EntityRefList({
         return (
           <Link
             key={`${value}:${index}`}
-            to={entityHref(entity.id)}
+            to={entityHref(db, entity.id)}
             className="code-chip inline-link"
             title={entityTitle(db, entity, lang, i18n)}
           >
@@ -630,56 +628,6 @@ export function StoryNodeDetails({
   lang: Lang;
 }) {
   const i18n = useI18n();
-  if (entity.kind === "branch") {
-    const next = (entity.next ?? [])
-      .map((id) => db.entityById.get(id))
-      .filter(
-        (record): record is StoryNodeEntity =>
-          record !== undefined && isStoryNode(record),
-      );
-    return (
-      <>
-        <Section
-          title={i18n.t("section.storyBranch")}
-          testId="story-branch-detail"
-        >
-          <Facts>
-            <Fact label={i18n.t("fact.kind")}>
-              <StoryKindBadge kind={entity.kind} />
-            </Fact>
-            <Fact label={i18n.t("fact.order")}>{entity.order ?? "—"}</Fact>
-            <Fact label={i18n.t("fact.position")}>{entity.position ?? "—"}</Fact>
-            <Fact label={i18n.t("fact.level")}>{entity.level ?? "—"}</Fact>
-            <Fact label={i18n.t("fact.sourceFile")}>
-              <code>{entity.source_file ?? "—"}</code>
-            </Fact>
-            <Fact label={i18n.t("fact.state")}>
-              <BranchStateText node={entity} />{" "}
-              <code>
-                {entity.state_id ?? "—"} / {entity.state_value ?? "—"}
-              </code>
-            </Fact>
-            <Fact label={i18n.t("fact.levelLocks")}>
-              <LevelLockList
-                db={db}
-                locks={entity.level_locks}
-                levelOffset={0}
-              />
-            </Fact>
-          </Facts>
-        </Section>
-        <Section title={i18n.t("section.nextNodes")} testId="story-next">
-          <EntityList
-            db={db}
-            entities={next}
-            lang={lang}
-            empty={i18n.t("value.noNextNode")}
-          />
-        </Section>
-        <BranchConsequences db={db} node={entity} lang={lang} />
-      </>
-    );
-  }
   const bossStages = entity.boss_stages ?? [];
   const movies = entity.movie_files ?? [];
   return (
@@ -763,7 +711,7 @@ export function StoryNodeDetails({
                   return target ? (
                     <Link
                       key={stage.raw}
-                      to={entityHref(target.id)}
+                      to={entityHref(db, target.id)}
                       className="inline-link"
                     >
                       {stage.raw}

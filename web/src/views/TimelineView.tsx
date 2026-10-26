@@ -111,7 +111,7 @@ export function TimelineView({ db }: { db: Database }) {
 
         <div className="feed" data-testid="timeline-feed">
           {entries.map((entry) => (
-            <TimelineCard key={entry.entity.id} entry={entry} />
+            <TimelineCard db={db} key={entry.entity.id} entry={entry} />
           ))}
           {entries.length === 0 ? (
             <div className="empty-state">{i18n.t("timeline.empty")}</div>

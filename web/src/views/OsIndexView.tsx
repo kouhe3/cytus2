@@ -300,7 +300,7 @@ export function OsIndexView({ db }: { readonly db: Database }) {
                           alt={character.name}
                           className="os-character-logo"
                         />
-                        <Link to={entityHref(character.id)} className="inline-link">
+                        <Link to={entityHref(db, character.id)} className="inline-link">
                           {character.name || character.game_id}
                         </Link>
                       </span>
@@ -376,7 +376,7 @@ export function OsIndexView({ db }: { readonly db: Database }) {
                             className="os-character-logo"
                           />
                           <Link
-                            to={entityHref(character.id)}
+                            to={entityHref(db, character.id)}
                             className="inline-link"
                           >
                             {character.name || character.game_id}

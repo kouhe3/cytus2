@@ -3,9 +3,16 @@ import { useI18n } from "../data/i18n";
 import { branchLabel } from "../data/labels";
 import { entityHref } from "../data/selectors";
 import type { TimelineEntry } from "../data/selectors";
+import type { Database } from "../types";
 import { Avatar, LevelBadge, SpoilerChip, TierChip, TypeBadge } from "./ui";
 
-export function TimelineCard({ entry }: { entry: TimelineEntry }) {
+export function TimelineCard({
+  db,
+  entry,
+}: {
+  db: Database;
+  entry: TimelineEntry;
+}) {
   const i18n = useI18n();
   const { row, entity } = entry;
   const branch = row.branch ? branchLabel(i18n, row.branch) : null;
@@ -28,7 +35,7 @@ export function TimelineCard({ entry }: { entry: TimelineEntry }) {
     .join(" · ");
   return (
     <Link
-      to={entityHref(entity.id)}
+      to={entityHref(db, entity.id)}
       className="card timeline-card"
       title={detail}
       data-testid="timeline-card"

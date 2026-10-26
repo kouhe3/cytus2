@@ -174,6 +174,15 @@ export function findBranchNode(db: Database, gameId: string): StoryNodeEntity | 
   return record && isStoryNode(record) && record.kind === "branch" ? record : null;
 }
 
+/**
+ * Canonical reader URL for a Branching OS node. `/story_node/<id>` used to
+ * double as the node page; the reader owns the node now, so every link goes
+ * through here.
+ */
+export function branchHref(gameId: string): string {
+  return `/branch/${encodeURIComponent(gameId)}`;
+}
+
 /** Nodes whose `next` edge points at `node`; drives the reader's predecessors. */
 export function branchPredecessors(
   db: Database,

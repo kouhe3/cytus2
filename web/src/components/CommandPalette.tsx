@@ -11,6 +11,7 @@ import {
 import type { MessageKey } from "../data/messages";
 import { useFullTextSearch } from "../data/search";
 import { entityHref } from "../data/selectors";
+import type { Database } from "../types";
 
 interface PaletteItem {
   readonly key: string;
@@ -43,9 +44,11 @@ const PAGE_ENTRIES: readonly { href: string; labelKey: MessageKey }[] = [
 const PAGE_MATCH_LIMIT = 4;
 
 export function CommandPalette({
+  db,
   open,
   onClose,
 }: {
+  db: Database;
   open: boolean;
   onClose: () => void;
 }) {
@@ -160,7 +163,7 @@ export function CommandPalette({
             }${
               hit.fallback ? ` · ${i18n.t("common.fallbackText")}` : ""
             }`,
-            href: entityHref(hit.id),
+            href: entityHref(db, hit.id),
           },
         });
       }

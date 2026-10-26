@@ -8,6 +8,7 @@ import { LevelLockList } from "../components/Conditions";
 import { TextBody } from "../components/TextBody";
 import { VideoPlayer } from "../components/VideoPlayer";
 import {
+  branchHref,
   branchGate,
   branchGroups,
   branchOpensReader,
@@ -98,7 +99,7 @@ export function BranchIndexView({ db }: { db: Database }) {
     ),
   ).size;
   const charts = groups.reduce((sum, group) => sum + group.chartRefs.length, 0);
-  const openNode = (gameId: string) => navigate(`/branch/${encodeURIComponent(gameId)}`);
+  const openNode = (gameId: string) => navigate(branchHref(gameId));
 
   return (
     <>
@@ -151,7 +152,7 @@ export function BranchIndexView({ db }: { db: Database }) {
                 return (
                   <li key={node.id}>
                     <Link
-                      to={`/branch/${encodeURIComponent(node.game_id)}`}
+                      to={branchHref(node.game_id)}
                       className="branch-row"
                       data-testid="branch-row"
                       data-node-id={node.id}
@@ -234,7 +235,7 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
         record !== undefined && isChart(record),
     );
   const gate = branchGate(node);
-  const openNode = (id: string) => navigate(`/branch/${encodeURIComponent(id)}`);
+  const openNode = (id: string) => navigate(branchHref(id));
 
   return (
     <>
@@ -348,7 +349,7 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
                 {previous.map((item) => (
                   <li key={item.id}>
                     <Link
-                      to={`/branch/${encodeURIComponent(item.game_id)}`}
+                      to={branchHref(item.game_id)}
                       className="entity-link"
                       data-testid="branch-prev-link"
                       data-node-id={item.id}
@@ -375,7 +376,7 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
                 {next.map((item) => (
                   <li key={item.id}>
                     <Link
-                      to={`/branch/${encodeURIComponent(item.game_id)}`}
+                      to={branchHref(item.game_id)}
                       className="entity-link"
                       data-testid="branch-next-link"
                       data-node-id={item.id}

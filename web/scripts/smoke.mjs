@@ -2280,20 +2280,22 @@ try {
   );
   const storyIndex = await cdp.evaluate(`(() => ({
     cards: document.querySelectorAll('[data-testid="story-node-card"]').length,
-    kinds: [...new Set([...document.querySelectorAll('[data-testid="story-node-card"]')].map(card => card.dataset.kind))].sort(),
+    ids: [...document.querySelectorAll('[data-testid="story-node-card"]')].map(card => card.dataset.nodeId),
+    kindFilter: document.querySelectorAll('[data-testid="story-kind-filter"]').length,
   }))()`);
   check(
-    storyIndex.cards === 90,
-    `default story sequence hides the test01 staging node (got ${storyIndex.cards})`,
+    storyIndex.cards === 42,
+    `story index lists only the story events (got ${storyIndex.cards})`,
   );
   check(
-    JSON.stringify(storyIndex.kinds) === JSON.stringify(["branch", "event"]),
-    "story index contains events and Branching OS nodes",
+    storyIndex.ids.every((id) => !/^story_node\/taos/.test(id)),
+    "story index drops the Branching OS nodes",
   );
+  check(storyIndex.kindFilter === 0, "story index has no event/Branching OS filter");
   await cdp.evaluate(`document.querySelector('[data-testid="story-sort-version"]').click()`);
   const versionNote = translate("zh-Hans", "story.sortMeta", {
     meta: "4",
-    total: "91",
+    total: "43",
     sort: translate("zh-Hans", "story.sort.version"),
   });
   await cdp.waitFor(
@@ -2301,41 +2303,16 @@ try {
     "version sort notes annotated nodes",
   );
   check(true, "version sort explains its reading-order fallback");
-  await cdp.evaluate(`document.querySelector('[data-testid="story-kind-branch"]').click()`);
+
+  // The flat entity page for Branching OS nodes is gone: `/story_node/<id>`
+  // answers with the not-found view instead of a second copy of the node.
+  await cdp.navigate(`${appBase}/story_node/taos001a`);
   await cdp.waitFor(
-    `(() => {
-      const cards = [...document.querySelectorAll('[data-testid="story-node-card"]')];
-      return cards.length === 48 && cards.every(card => card.dataset.kind === 'branch');
-    })()`,
-    "Branching OS filter",
+    `Boolean(document.querySelector('[data-testid="not-found"]')) &&
+     !document.querySelector('article[data-testid="branch-node"]')`,
+    "deleted story node URL is not found",
   );
-  check(true, "kind filter shows the 48 Branching OS nodes");
-  await cdp.evaluate(
-    `document.querySelector('[data-testid="story-node-card"][data-kind="branch"]').click()`,
-  );
-  await cdp.waitFor(
-    `location.pathname.startsWith('/story_node/') &&
-     Boolean(document.querySelector('[data-testid="story-branch-detail"]')) &&
-     Boolean(document.querySelector('[data-testid="entity-body"]'))`,
-    "Branching OS node detail loads",
-  );
-  const storyNode = await cdp.evaluate(`(() => ({
-    path: location.pathname,
-    kind: document.querySelector('.story-kind')?.textContent ?? '',
-    bodyLength: (document.querySelector('[data-testid="entity-body"]')?.textContent ?? '').trim().length,
-    nextLinks: document.querySelectorAll('[data-testid="story-next"] [data-entity-id]').length,
-  }))()`);
-  check(/^\/story_node\//.test(storyNode.path), "story node URL is /story_node/<id>");
-  check(storyNode.kind === "Branching OS", "story node is labelled Branching OS");
-  check(storyNode.bodyLength > 20, "Branching OS node renders its text body");
-  check(storyNode.nextLinks > 0, "Branching OS node links its next node");
-  await cdp.screenshot("story-node.png");
-  await cdp.evaluate(`document.querySelector('[data-testid="back-to-collection"]').click()`);
-  await cdp.waitFor(
-    `location.pathname === '/story' && Boolean(document.querySelector('[data-testid="story-feed"]'))`,
-    "back from story node",
-  );
-  check(true, "story node returns to the story index");
+  check(true, "Branching OS node is only readable at /branch/<id>");
 
   // ------------------------------------ story node movies (#30)
   // ticket/30-story-movies: players for movie_files, chips stay as fallback.
@@ -2690,6 +2667,7 @@ try {
     branchMerge.active === 1,
     "graph highlights the open node",
   );
+  await cdp.screenshot("branch-node.png");
 
   await cdp.navigate(`${appBase}/branch/taos001a`);
   await cdp.waitFor(

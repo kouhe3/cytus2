@@ -37,7 +37,7 @@ function titleEntities(db: Database): TitleScreenEntity[] {
 function targetHref(db: Database, target: string): string | null {
   for (const id of [`im/${target}`, `story_node/${target}`, `os/${target}`]) {
     if (db.entityById.has(id)) {
-      return entityHref(id);
+      return entityHref(db, id);
     }
   }
   return null;

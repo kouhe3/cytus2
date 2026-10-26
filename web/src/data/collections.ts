@@ -122,7 +122,6 @@ export function findGalleryGroup(db: Database, gameId: string): GalleryGroup | n
 
 /* ------------------------------------------------------------------ story */
 export type StorySort = "level" | "version" | "chapter";
-export type StoryKindFilter = "all" | "event" | "branch";
 
 export interface StoryEntry {
   readonly node: StoryNodeEntity;
@@ -174,13 +173,14 @@ export function storyEntries(
   db: Database,
   lang: Lang,
   sort: StorySort,
-  kind: StoryKindFilter,
   i18n: I18n,
 ): StoryEntry[] {
   const nodes = typed<StoryNodeEntity>(db, "story_node").filter(isStoryNode);
   const entries: StoryEntry[] = [];
   for (const node of nodes) {
-    if (kind !== "all" && node.kind !== kind) {
+    // Branching OS nodes have their own graph reader (`/branch`); this index
+    // only lists story events.
+    if (node.kind !== "event") {
       continue;
     }
     const row = db.readingOrderByEntity.get(node.id) ?? null;
@@ -211,6 +211,9 @@ export function storySortMetaCount(
 ): number {
   let count = 0;
   for (const node of db.entitiesByType.get("story_node") ?? []) {
+    if (!isStoryNode(node) || node.kind !== "event") {
+      continue;
+    }
     const row = db.readingOrderByEntity.get(node.id);
     if (!row) {
       continue;

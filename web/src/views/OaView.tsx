@@ -373,7 +373,7 @@ export function OaCharacterView({
                     >
                       <div className="oa-desc-variant-head">
                         <Link
-                          to={entityHref(description.id)}
+                          to={entityHref(db, description.id)}
                           className="inline-link"
                           data-testid="oa-description-link"
                         >

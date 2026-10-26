@@ -356,6 +356,7 @@ export const ZH_HANS = {
   "video.subtitleMissing": "所选语言（{lang}）没有字幕。",
   "video.noSubtitle": "此影片没有字幕。",
   "video.noAudio": "此影片没有音轨。",
+  "media.placeholder": "DUMMY 占位素材：原作没有补完这张插图，显示它是预期行为。",
 
   /* #32 cutscene + subtitle library */
   "extras.cutscenesCard": "过场影片与字幕",
@@ -1041,6 +1042,7 @@ const EN: Messages = {
   "video.subtitleMissing": "No subtitles in {lang}.",
   "video.noSubtitle": "This clip has no subtitles.",
   "video.noAudio": "This clip has no audio track.",
+  "media.placeholder": "DUMMY placeholder: the game shipped this illustration unfinished, so showing it is expected.",
 
   /* #32 cutscene + subtitle library */
   "extras.cutscenesCard": "Cutscenes & subtitles",
@@ -1723,6 +1725,7 @@ const JA: Messages = {
   "video.subtitleMissing": "{lang} の字幕はありません。",
   "video.noSubtitle": "この映像に字幕はありません。",
   "video.noAudio": "この映像に音声トラックはありません。",
+  "media.placeholder": "DUMMY プレースホルダー：原作ではこのイラストが未完成のまま出荷されており、表示は想定どおり。",
 
   /* #32 cutscene + subtitle library */
   "extras.cutscenesCard": "カットシーンと字幕",
@@ -2405,6 +2408,7 @@ const ZH_HANT: Messages = {
   "video.subtitleMissing": "所選語言（{lang}）沒有字幕。",
   "video.noSubtitle": "此影片沒有字幕。",
   "video.noAudio": "此影片沒有音軌。",
+  "media.placeholder": "DUMMY 佔位素材：原作沒有補完這張插圖，顯示它是預期行為。",
 
   /* #32 cutscene + subtitle library */
   "extras.cutscenesCard": "過場影片與字幕",
@@ -3087,6 +3091,7 @@ const KO: Messages = {
   "video.subtitleMissing": "{lang} 자막이 없습니다.",
   "video.noSubtitle": "이 영상에는 자막이 없습니다.",
   "video.noAudio": "이 영상에는 오디오 트랙이 없습니다.",
+  "media.placeholder": "DUMMY 자리표시자: 원작이 이 일러스트를 미완성 상태로 출시했으며, 표시는 정상이다.",
 
   /* #32 cutscene + subtitle library */
   "extras.cutscenesCard": "컷신과 자막",

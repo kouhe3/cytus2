@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { loadMediaManifest, mediaUrl, pickAudio, pickImage, type MediaAsset } from "../data/media";
+import { useI18n } from "../data/i18n";
 
 type MediaProps = {
   readonly id: string;
@@ -55,6 +56,7 @@ export function MediaImage({
   natural = false,
   fallback,
 }: MediaProps) {
+  const i18n = useI18n();
   const asset = useImage(id, kind);
   if (!asset) {
     return <>{fallback}</>;
@@ -70,21 +72,32 @@ export function MediaImage({
     asset.h;
   const aspect = stretch ? INLINE_BASE_RATIO * (asset.w! / asset.h!) : null;
   return (
-    <img
-      className={`${className ?? "media-image"}${stretch ? " media-stretched" : ""}`}
-      src={mediaUrl(asset.file)}
-      alt={alt ?? id}
-      loading="lazy"
-      decoding="async"
-      style={
-        aspect
-          ? {
-              aspectRatio: String(Number(aspect.toFixed(4))),
-              width: `min(100%, ${Math.round(INLINE_MAX_HEIGHT * aspect)}px)`,
-            }
-          : undefined
-      }
-    />
+    <>
+      <img
+        className={`${className ?? "media-image"}${stretch ? " media-stretched" : ""}`}
+        src={mediaUrl(asset.file)}
+        alt={alt ?? id}
+        loading="lazy"
+        decoding="async"
+        style={
+          aspect
+            ? {
+                aspectRatio: String(Number(aspect.toFixed(4))),
+                width: `min(100%, ${Math.round(INLINE_MAX_HEIGHT * aspect)}px)`,
+              }
+            : undefined
+        }
+      />
+      {asset.placeholder ? (
+        <p
+          className="hint"
+          data-testid="media-placeholder"
+          data-asset={asset.file}
+        >
+          {i18n.t("media.placeholder")}
+        </p>
+      ) : null}
+    </>
   );
 }
 

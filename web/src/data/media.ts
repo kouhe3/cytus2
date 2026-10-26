@@ -7,6 +7,11 @@ export interface MediaAsset {
   /** `videos` and `songSelect` entries carry this flag; `movies` aliases never do. */
   readonly hasAudio?: boolean;
   readonly song?: string;
+  /**
+   * The export is a placeholder the developers shipped (the Branching OS
+   * ending attachments render `DUMMY`); showing it is expected data.
+   */
+  readonly placeholder?: boolean;
 }
 
 export interface SongSelectClip extends MediaAsset {

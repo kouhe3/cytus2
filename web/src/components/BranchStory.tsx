@@ -1,7 +1,13 @@
 import { Link } from "react-router-dom";
 import { EntityList } from "./EntityLink";
+import { normalizeClipId, VideoPlayer } from "./VideoPlayer";
 import { useI18n } from "../data/i18n";
-import { branchBossStages, branchState, branchStories } from "../data/branch";
+import {
+  branchBossStages,
+  branchState,
+  branchStories,
+  branchStoryMovies,
+} from "../data/branch";
 import { entityHref, entityTitle } from "../data/selectors";
 import type { Database, Lang, StoryNodeEntity } from "../types";
 
@@ -53,6 +59,7 @@ export function BranchConsequences({
   const i18n = useI18n();
   const stories = branchStories(db, node);
   const stages = branchBossStages(db, node);
+  const movies = branchStoryMovies(db, node);
   return (
     <>
       <section className="detail-section" data-testid="branch-stories">
@@ -95,6 +102,36 @@ export function BranchConsequences({
             lang={lang}
             testId="branch-boss-link"
           />
+          {stages.map((stage) => (
+            <div
+              key={`${stage.id}:video`}
+              data-testid="branch-boss-video"
+              data-clip={stage.game_id}
+            >
+              {/* The stage video ships silent; the muxed `<video>|<song>` copy
+                  pairs it with the stage's own audio track. */}
+              <VideoPlayer
+                clip={stage.game_id}
+                audioKey={`${stage.game_id}|${stage.game_id}`}
+                subtitleKey={null}
+                label={stage.display_name}
+              />
+            </div>
+          ))}
+        </section>
+      )}
+      {movies.length === 0 ? null : (
+        <section className="detail-section" data-testid="branch-movies">
+          <h2>{i18n.t("section.storyMovies")}</h2>
+          {movies.map((file) => (
+            <div
+              key={file}
+              data-testid="branch-movie"
+              data-clip={normalizeClipId(file)}
+            >
+              <VideoPlayer clip={file} label={file} />
+            </div>
+          ))}
         </section>
       )}
     </>

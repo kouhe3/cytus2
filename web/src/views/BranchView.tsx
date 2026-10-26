@@ -13,7 +13,6 @@ import {
   branchOpensReader,
   branchPlacements,
   branchPredecessors,
-  branchStoryMovies,
   findBranchNode,
 } from "../data/branch";
 import { isChart, isStoryNode, textSnippet } from "../data/database";
@@ -235,7 +234,6 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
         record !== undefined && isChart(record),
     );
   const gate = branchGate(node);
-  const movieFiles = branchStoryMovies(db, node);
   const openNode = (id: string) => navigate(`/branch/${encodeURIComponent(id)}`);
 
   return (
@@ -292,24 +290,20 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
             {branchOpensReader(node) ? (
               <TextBody textRef={node.text_ref ?? null} lang={lang} />
             ) : (
-              <p className="hint" data-testid="branch-body-skipped">
-                {i18n.t("branch.storyOnly")}
-              </p>
+              <>
+                <p className="hint" data-testid="branch-body-skipped">
+                  {i18n.t("branch.storyOnly")}
+                </p>
+                {/* The game hides the body, but the attachments it shipped with
+                    these endings are DUMMY placeholders: surface them alone. */}
+                <TextBody
+                  textRef={node.text_ref ?? null}
+                  lang={lang}
+                  mediaOnly
+                />
+              </>
             )}
           </section>
-
-          {movieFiles.length === 0 ? null : (
-            <section className="detail-section" data-testid="branch-movies">
-              <h2>{i18n.t("section.storyMovies")}</h2>
-              <ul className="link-list">
-                {movieFiles.map((movie) => (
-                  <li key={movie}>
-                    <code>{movie}</code>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
 
           <section className="detail-section" data-testid="branch-node-facts">
             <h2>{i18n.t("branch.factsTitle")}</h2>

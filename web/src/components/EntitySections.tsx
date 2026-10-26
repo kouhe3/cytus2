@@ -588,6 +588,18 @@ export function BossStageDetails({
           {i18n.t("bossStage.noGallery")}
         </p>
       )}
+      {entity.folder_id ? null : (
+        <div data-testid="boss-stage-video" data-clip={entity.game_id}>
+          {/* Branching OS stages exist only as this end-play stage video; the
+              muxed `<video>|<song>` copy carries the stage audio. */}
+          <VideoPlayer
+            clip={entity.game_id}
+            audioKey={`${entity.game_id}|${entity.game_id}`}
+            subtitleKey={null}
+            label={entity.display_name}
+          />
+        </div>
+      )}
       <Facts>
         <Fact label={i18n.t("fact.displayName")}>{entity.display_name}</Fact>
         <Fact label={i18n.t("fact.aliases")}>

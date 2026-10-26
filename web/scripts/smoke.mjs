@@ -2646,8 +2646,8 @@ try {
     "Branching OS list links a node reader",
   );
   check(
-    branchIndex.firstRowLevel === "Lv 2",
-    `Branching OS list shows the 1-based unlock level (got ${branchIndex.firstRowLevel})`,
+    branchIndex.firstRowLevel === "Lv 1",
+    `Branching OS list shows the node's own game level (got ${branchIndex.firstRowLevel})`,
   );
   await cdp.screenshot("branch-index.png");
 
@@ -2757,12 +2757,59 @@ try {
     "branch node links its own chart variants",
   );
   check(
-    branchCharts.level === "Lv 6",
-    `branch node shows the 1-based level (got ${branchCharts.level})`,
+    branchCharts.level === "Lv 5",
+    `branch node shows the node's own game level (got ${branchCharts.level})`,
   );
   check(
-    branchCharts.factLevel.includes("Lv 6"),
-    `branch node facts use the display level (got ${branchCharts.factLevel})`,
+    branchCharts.factLevel.includes("Lv 5"),
+    `branch node facts reuse the node's own game level (got ${branchCharts.factLevel})`,
+  );
+
+  await cdp.navigate(`${appBase}/branch/taos010`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="branch-boss-video"] [data-testid="video-track"]'))`,
+    "branch boss stage subtitle track ready",
+  );
+  const branchBossSubtitles = await cdp.evaluate(`(() => ({
+    clip: document.querySelector('[data-testid="branch-boss-video"]')?.getAttribute('data-clip') ?? '',
+    track: document.querySelector('[data-testid="branch-boss-video"] [data-testid="video-track"]')?.getAttribute('src') ?? '',
+    tracks: document.querySelectorAll('[data-testid="branch-boss-video"] [data-testid="video-track"]').length,
+    missing: document.querySelectorAll('[data-testid="branch-boss-video"] [data-testid="video-subtitle-missing"]').length,
+  }))()`);
+  check(
+    branchBossSubtitles.clip === "taos010_bossstage",
+    `branch boss stage plays the stage video (got ${branchBossSubtitles.clip})`,
+  );
+  check(
+    branchBossSubtitles.tracks === 1 &&
+      branchBossSubtitles.track.includes("/media/subs/taos010_bossstage."),
+    `branch boss stage attaches the clip's subtitle group (got ${branchBossSubtitles.track || "none"})`,
+  );
+  check(
+    branchBossSubtitles.missing === 0,
+    "branch boss stage reports no missing subtitles",
+  );
+
+  await cdp.navigate(`${appBase}/branch/taos012a`);
+  await cdp.waitFor(
+    `Boolean(document.querySelector('[data-testid="branch-movie"] [data-testid="video-track"]'))`,
+    "branch node 12 cutscene subtitle track ready",
+  );
+  const branchNode12 = await cdp.evaluate(`(() => ({
+    story: document.querySelector('[data-testid="branch-story-link"]')?.getAttribute('data-story-id') ?? '',
+    movie: document.querySelector('[data-testid="branch-movie"]')?.getAttribute('data-clip') ?? '',
+    tracks: document.querySelectorAll('[data-testid="branch-movie"] [data-testid="video-track"]').length,
+    track: document.querySelector('[data-testid="branch-movie"] [data-testid="video-track"]')?.getAttribute('src') ?? '',
+  }))()`);
+  check(
+    branchNode12.story === "story_node/story_tairitsu_cutscene_taos012",
+    `node 12 lists its first-open cutscene story (got ${branchNode12.story || "none"})`,
+  );
+  check(
+    branchNode12.movie === "taos1201" &&
+      branchNode12.tracks === 1 &&
+      branchNode12.track.includes("/media/subs/taos1201."),
+    `node 12 plays taos1201 with its subtitle track (got ${branchNode12.movie} / ${branchNode12.track || "none"})`,
   );
   // ------------------------------------------ end Branching OS view (#31)
 

@@ -237,9 +237,35 @@ export function branchStories(
       (entity): entity is StoryNodeEntity =>
         isStoryNode(entity) &&
         entity.kind === "event" &&
-        entity.trigger_branch_id === node.game_id,
+        triggerNamesNode(entity.trigger_branch_id, node.game_id),
     )
     .sort((left, right) => left.game_id.localeCompare(right.game_id));
+}
+
+/**
+ * Whether a story's `trigger_branch_id` selects this node.
+ *
+ * Most triggers are the exact file id (`taos010`). The node-12 cutscene is the
+ * exception the branch table itself creates: the story class carries
+ * `TOUCH_BOS_TAOS012` while the node is split into the route variants
+ * `taos012a` / `taos012b`, so a trigger that matches no file of its own still
+ * claims the single-letter variants it prefixes.
+ */
+function triggerNamesNode(
+  trigger: string | null | undefined,
+  nodeId: string,
+): boolean {
+  if (!trigger) {
+    return false;
+  }
+  if (trigger === nodeId) {
+    return true;
+  }
+  return (
+    nodeId.length === trigger.length + 1 &&
+    nodeId.startsWith(trigger) &&
+    /[a-z]/.test(nodeId.slice(-1))
+  );
 }
 
 /** Boss stages the triggered stories play, in story order and deduped. */

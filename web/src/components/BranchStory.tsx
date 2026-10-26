@@ -109,11 +109,12 @@ export function BranchConsequences({
               data-clip={stage.game_id}
             >
               {/* The stage video ships silent; the muxed `<video>|<song>` copy
-                  pairs it with the stage's own audio track. */}
+                  pairs it with the stage's own audio track. Subtitles default
+                  to the clip id, which is the manifest group
+                  (`taos010_bossstage`), so the track must not be disabled. */}
               <VideoPlayer
                 clip={stage.game_id}
                 audioKey={`${stage.game_id}|${stage.game_id}`}
-                subtitleKey={null}
                 label={stage.display_name}
               />
             </div>

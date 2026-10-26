@@ -2424,6 +2424,22 @@ kbd {
   object-fit: cover;
 }
 
+.entity-link--row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.entity-link-cover {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: #05070a;
+  object-fit: cover;
+}
+
 .entity-link-body {
   display: flex;
   flex-direction: column;

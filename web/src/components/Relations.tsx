@@ -85,6 +85,7 @@ function EdgeGroupList({
                     lang={lang}
                     testId="relation-link"
                     meta={group.relation}
+                    cover={group.relation === "belongs_to_pack"}
                   />
                 </li>
               );

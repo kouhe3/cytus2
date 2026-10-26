@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useI18n } from "../data/i18n";
 import { TypeBadge } from "./ui";
 import { MediaImage } from "./Media";
-import { isImReply } from "../data/database";
+import { isImReply, isSong } from "../data/database";
 import { entityHref, entityTitle } from "../data/selectors";
 import type { BaseEntity, Database, Lang } from "../types";
 
@@ -13,6 +13,7 @@ export function EntityLink({
   testId,
   meta,
   level,
+  cover = false,
 }: {
   db: Database;
   entity: BaseEntity;
@@ -20,13 +21,18 @@ export function EntityLink({
   testId?: string;
   meta?: string;
   level?: string;
+  /** Flag the song jacket next to the title, for relation rows that index songs. */
+  cover?: boolean;
 }) {
   const i18n = useI18n();
   const reply = isImReply(entity);
+  const jacket = cover && isSong(entity);
   return (
     <Link
       to={entityHref(db, entity.id)}
-      className={`entity-link${reply ? " entity-link--reply" : ""}`}
+      className={`entity-link${reply ? " entity-link--reply" : ""}${
+        jacket ? " entity-link--row" : ""
+      }`}
       data-testid={testId}
       data-entity-id={entity.id}
       data-entity-type={entity.type}
@@ -37,6 +43,14 @@ export function EntityLink({
           kind="avatar"
           alt={entity.author}
           className="entity-link-avatar"
+        />
+      ) : null}
+      {jacket ? (
+        <MediaImage
+          id={entity.game_id}
+          kind="cover"
+          alt={entity.name ?? entity.game_id}
+          className="entity-link-cover"
         />
       ) : null}
       <span className="entity-link-body">

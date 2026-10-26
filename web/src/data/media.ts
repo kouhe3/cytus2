@@ -47,7 +47,10 @@ export interface MediaManifest {
   /** OS phone transcripts: stickers keyed by the `msgs` Image id. */
   readonly osStickers?: Record<string, MediaAsset>;
   readonly illustrations: Record<string, MediaAsset>;
+  /** Song jackets, keyed by song id: the gallery viewer's 3:2 / 2.71:1 art. */
   readonly covers: Record<string, MediaAsset>;
+  /** Per-song cover art from `split_base_assets.apk` (`assets/bin/Data`). */
+  readonly songCovers?: Record<string, MediaAsset>;
   readonly galleryIcons: Record<string, MediaAsset>;
   readonly oaAssets: Record<string, MediaAsset>;
   readonly videos: Record<string, MediaAsset>;
@@ -103,7 +106,8 @@ export function pickImage(
     | "osAvatar"
     | "sticker"
     | "illustration"
-    | "logo" = "auto",
+    | "logo"
+    | "cover" = "auto",
 ): MediaAsset | null {
   const key = stripExtension(id.trim());
   if (!key) {
@@ -125,6 +129,17 @@ export function pickImage(
   }
   if (kind === "logo") {
     return manifest.logos?.[key] ?? manifest.galleryIcons[key] ?? null;
+  }
+  if (kind === "cover") {
+    // `songCovers` is the per-song jacket the game ships in
+    // `assets/bin/Data/<hash>` (the square 1024² art).  `covers` is the
+    // backup-database texture for the 22 base-game songs — a square canvas
+    // holding horizontally squeezed art that only the gallery viewer stretches
+    // back, so it is the fallback, not the first choice.  The manifest's
+    // illustration aliases reuse song ids (cherry001_001 ->
+    // illustration_cherry001_s001), so falling through to `illustrations`
+    // puts a gallery illustration under the cover.
+    return manifest.songCovers?.[key] ?? manifest.covers[key] ?? null;
   }
   if (kind === "image") {
     // Gallery/OS images first.  Manifest illustrations also carry aliases

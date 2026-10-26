@@ -105,6 +105,18 @@ true-end scene (story design), so its bundle carries Miku's clip; this is
 metadata, not an export error. The song-select clips stay out of `videos` so
 the Cutscene Library does not list them as subtitle-less cutscenes.
 
+Song pages (`/song/<gameId>`) take their jacket from the manifest's
+`songCovers` bucket: every one of the 695 songs ships its own cover texture
+inside `split_base_assets.apk`, in an extensionless `assets/bin/Data/<hash>`
+serialized file whose Texture2D carries the song id. The export keeps the
+largest variant (1024² for most songs, 1920×1280 for seven collab tracks) and
+renders it at its own aspect — no crop, no stretch. `covers` (the
+`galleryimageviewer.ab` backup-database art, 22 base-game songs on a squeezed
+square canvas) stays as the fallback, and `pickImage(…, "cover")` never falls
+through to `illustrations`, because that map carries song-id aliases for
+character art (`cherry001_001` → `illustration_cherry001_s001`) and the page
+would show a gallery illustration under the cover frame.
+
 Every archive video — the OS and Branching OS cutscene sections, OS/OA inline
 `##movie` blocks and OA scene clips — renders through the shared `VideoPlayer`
 (`src/components/VideoPlayer.tsx`). It resolves the clip through

@@ -45,7 +45,7 @@ export function EntityMedia({ entity }: { readonly entity: BaseEntity }) {
       <div className="entity-media">
         <MediaImage
           id={entity.game_id}
-          kind="viewer"
+          kind="cover"
           alt={entity.name ?? entity.game_id}
           className="song-cover"
         />

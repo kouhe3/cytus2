@@ -13,7 +13,8 @@ type MediaProps = {
     | "osAvatar"
     | "sticker"
     | "illustration"
-    | "logo";
+    | "logo"
+    | "cover";
   readonly alt?: string;
   readonly className?: string;
   /** Skip the inline 3:2 game frame and keep the asset's own aspect ratio. */
@@ -63,6 +64,7 @@ export function MediaImage({
   }
   const stretch =
     !natural &&
+    kind !== "cover" &&
     kind !== "avatar" &&
     kind !== "osAvatar" &&
     kind !== "sticker" &&

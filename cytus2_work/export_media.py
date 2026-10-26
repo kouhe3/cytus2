@@ -10,6 +10,7 @@ Output: viewer/public/media/**
   audio/bgm/<name>.mp3        ##bgm=<name>（osbgms.ab）
   os-avatars/<name>.png       osavatars.ab（OS 聊天记录的发送者头像，Sprite 名 = msgs Avatar）
   os-stickers/<name>.png      osstickers.ab（OS 聊天记录的表情包，Sprite 名 = msgs Image）
+  song-covers/<song>.png      每首歌的曲绘（split_base_assets.apk -> assets/bin/Data/<hash>）
   manifest.json               id -> 文件 / 尺寸 / 来源 bundle
                               songSelect: normal / trueEnd 角色选曲媒体
 """
@@ -22,6 +23,9 @@ if not os.path.exists(os.path.join(APKC, "base.apk")):
     APKC = os.path.join(ROOT, "..", "cytus2")
 TMP = os.path.join(ROOT, "media_bundles")
 OUT = os.path.join(ROOT, "..", "viewer", "public", "media")
+BASE_APK = os.path.join(APKC, "split_base_assets.apk")
+# `assets/bin/Data/<hash>`（无扩展名的 Unity 序列化文件）解包到这里
+BASEDATA = os.path.join(ROOT, "uidata")
 
 PACKS = {
     "1": os.path.join(APKC, "split_assets_pack_1.apk"),
@@ -319,6 +323,67 @@ def export_covers(manifest):
     manifest["covers"] = covers
     print(f"covers: {len(covers)}")
 
+def export_song_covers(manifest):
+    """每首歌的曲绘：`split_base_assets.apk` 里的 `assets/bin/Data/<hash>`。
+
+    这些 `<hash>` 是没有扩展名的 Unity 序列化文件，一首歌一个（旁边还有谱面和音频的
+    文件），里面的 Texture2D 名字就是 song_id。同一首歌可能有 350² / 512² / 1024²
+    多种尺寸（列表图标 / 曲包图标 / 详情图），取最大的一张原样输出到
+    `song-covers/<song_id>.png`；7 首联名曲的详情图是 1920×1280（3:2）。
+    曲绘的方形画布就是美术原始比例，不做裁剪或拉伸。
+    """
+    import UnityPy
+
+    os.makedirs(BASEDATA, exist_ok=True)
+    subprocess.run(
+        ["unzip", "-o", "-q", "-j", BASE_APK, "assets/bin/Data/*", "-d", BASEDATA],
+        capture_output=True,
+    )
+
+    pattern = re.compile(r"^[a-z]+[0-9_]*\d+_[0-9]+[a-z]?$")
+    best = {}
+    for name in sorted(os.listdir(BASEDATA)):
+        if not re.fullmatch(r"[0-9a-f]{32}", name):
+            continue
+        path = os.path.join(BASEDATA, name)
+        if os.path.getsize(path) < 1000:
+            continue
+        try:
+            env = UnityPy.load(path)
+        except Exception:
+            continue
+        for o in env.objects:
+            if o.type.name != "Texture2D":
+                continue
+            try:
+                d = o.read_typetree()
+            except Exception:
+                continue
+            key = d.get("m_Name") or ""
+            if not pattern.match(key):
+                continue
+            w, h = d.get("m_Width") or 0, d.get("m_Height") or 0
+            if key not in best or w * h > best[key][0]:
+                best[key] = (w * h, o)
+
+    os.makedirs(os.path.join(OUT, "song-covers"), exist_ok=True)
+    covers = {}
+    for key, (_, o) in sorted(best.items()):
+        try:
+            img = o.read().image.convert("RGBA")
+        except Exception:
+            continue
+        rel = f"song-covers/{key}.png"
+        img.save(os.path.join(OUT, rel), optimize=True)
+        covers[key] = {
+            "file": rel,
+            "w": img.width,
+            "h": img.height,
+            "bundle": "split_base_assets/bin/Data",
+        }
+    manifest["songCovers"] = covers
+    print(f"songCovers: {len(covers)}")
+
 def export_images(manifest):
     import UnityPy
     os.makedirs(os.path.join(OUT, "os-attachments"), exist_ok=True)
@@ -604,6 +669,10 @@ def main():
     manifest = json.load(open(manifest_path, encoding="utf-8")) if os.path.exists(manifest_path) else {}
 
     for kind in what:
+        if kind == "songCovers":
+            print("== songCovers")
+            export_song_covers(manifest)
+            continue
         patterns = GROUPS[kind]
         print(f"== {kind}")
         for pat in patterns:

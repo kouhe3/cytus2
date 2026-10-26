@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 from conftest import copy_input, run_build
+from cytus2db.validate import SchemaValidator
+
+CUTSCENE_OVERLAY = Path(__file__).resolve().parent / "fixtures" / "cutscene"
+CUTSCENE_LOCATOR = "text/cutscenedata/cutscene_data_os"
 
 ENTITY_TYPES = (
     "oa_character",
@@ -25,6 +32,19 @@ def read_jsonl(path: Path) -> list[dict]:
 
 def load_built(built_db: Path, *names: str) -> dict[str, list[dict]]:
     return {name: read_jsonl(built_db / "db" / f"{name}.jsonl") for name in names}
+
+
+@pytest.fixture(scope="module")
+def built_with_cutscene(
+    tmp_path_factory: pytest.TempPathFactory, fixture_input: Path
+) -> Path:
+    root = tmp_path_factory.mktemp("story_cutscene") / "input"
+    copy_input(fixture_input, root)
+    shutil.copytree(CUTSCENE_OVERLAY, root, dirs_exist_ok=True)
+    out = tmp_path_factory.mktemp("story_cutscene_out")
+    result = run_build(root, out)
+    assert result.returncode == 0, result.stderr
+    return out
 
 
 # --------------------------------------------------------------------- OA
@@ -256,6 +276,53 @@ def test_story_nodes_cover_events_and_branch_nodes(built_db: Path) -> None:
     end = next(row for row in branches if row["id"] == "story_node/taos002a")
     assert end["next"] == []
     assert end["charts"] == []
+
+
+def test_branch_node_cutscene_comes_from_the_cutscene_table(
+    built_with_cutscene: Path,
+) -> None:
+    nodes = {
+        row["id"]: row
+        for row in load_built(built_with_cutscene, "story_node")["story_node"]
+        if row["kind"] == "branch"
+    }
+    start = nodes["story_node/taos001a"]
+    assert start["cutscene"] == "taos0101"
+    assert {"kind": "text_asset", "locator": CUTSCENE_LOCATOR} in start["provenance"]
+    assert len(start["provenance"]) == 2
+    assert "cutscene" not in nodes["story_node/taos002a"]
+
+    data = json.loads(
+        (built_with_cutscene / "spa" / "data.json").read_text(encoding="utf-8")
+    )
+    projected = next(
+        row for row in data["entities"]["story_node"] if row["id"] == "story_node/taos001a"
+    )
+    assert projected["cutscene"] == "taos0101"
+    assert "video" not in data["entities"]
+
+
+def test_branch_node_cutscene_is_optional_and_typed(
+    built_with_cutscene: Path,
+) -> None:
+    validator = SchemaValidator()
+    nodes = {
+        row["id"]: row
+        for row in load_built(built_with_cutscene, "story_node")["story_node"]
+        if row["kind"] == "branch"
+    }
+    assert validator.errors("story_node", nodes["story_node/taos002a"]) == []
+    nulled = dict(nodes["story_node/taos001a"], cutscene=None)
+    assert any(
+        "expected type string" in error
+        for error in validator.errors("story_node", nulled)
+    )
+    bad = dict(nodes["story_node/taos001a"], cutscene="asset/video/taos0101")
+    assert any(
+        "does not match pattern" in error
+        for error in validator.errors("story_node", bad)
+    )
+    assert validator.errors("story_node", nodes["story_node/taos001a"]) == []
 
 
 def test_story_event_boss_alias_override_resolves(built_db: Path) -> None:

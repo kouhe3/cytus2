@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from ..blocks import one_line as _one_line, parse_blocks as _parse_blocks
+from ..cutscenes import CUTSCENE_LOCATOR, cutscene_clips
 from ..errors import BuildError, InputError
 from ..keys import asset_key, chart_key, entity_key, slug
 from ..provenance import manual, sort_record, text_asset
@@ -31,8 +32,6 @@ from ..sources import LANGS, InputSource
 _DIFFICULTY_BY_INDEX = {0: "Easy", 1: "Hard", 2: "Chaos", 3: "Glitch"}
 _LANG_ORDER = {code: index for index, (code, _) in enumerate(LANGS)}
 _TEXT_ARTIFACT = Path("text") / "im_os.jsonl"
-_CUTSCENE_TABLE = ("cutscenedata", "cutscene_data_os")
-_CUTSCENE_LOCATOR = "text/" + "/".join(_CUTSCENE_TABLE)
 
 # Bili Wiki records these four title-only posts as removed from the iM feed
 # after reading. The client only exposes the resulting save flag
@@ -373,38 +372,9 @@ def _movie_names(contents: Any) -> list[str]:
     return sorted(names)
 
 
-def _cutscene_clips(source: InputSource) -> dict[str, str]:
-    """TriggerId -> clip name (MovieFile without .mp4) for first-open OS cutscenes."""
-    table = source.cutscene_os()
-    if table is None:
-        return {}
-    if not isinstance(table.data, dict):
-        raise BuildError(f"{table.locator} must be a JSON object keyed by TriggerId")
-    clips: dict[str, str] = {}
-    for key, value in table.data.items():
-        where = f"{table.locator}[{key!r}]"
-        if not isinstance(value, dict):
-            raise BuildError(f"{where}: must be an object")
-        trigger = str(value.get("TriggerId") or "").strip()
-        if not trigger:
-            raise BuildError(f"{where}: missing TriggerId")
-        if trigger != str(key).strip():
-            raise BuildError(f"{where}: TriggerId {trigger!r} does not match the key")
-        if trigger in clips:
-            raise BuildError(f"{table.locator}: duplicate TriggerId {trigger!r}")
-        movie = str(value.get("MovieFile") or "").strip()
-        if not movie.endswith(".mp4"):
-            raise BuildError(f"{where}: MovieFile {movie!r} is not an .mp4 clip")
-        stem = movie[: -len(".mp4")]
-        if not stem:
-            raise BuildError(f"{where}: MovieFile {movie!r} has an empty clip name")
-        clips[trigger] = stem
-    return clips
-
-
 def _build_os(source: InputSource) -> list[dict[str, Any]]:
     chapter_ids = _chapter_ids(source)
-    cutscenes = _cutscene_clips(source)
+    cutscenes = cutscene_clips(source)
     logs: list[dict[str, Any]] = []
     for table in source.os_tables():
         if not isinstance(table.data, list):
@@ -488,7 +458,7 @@ def _build_os(source: InputSource) -> list[dict[str, Any]]:
             clip = cutscenes.get(game_id)
             if clip is not None:
                 record["cutscene"] = clip
-                record["provenance"].append(_text_asset(_CUTSCENE_LOCATOR))
+                record["provenance"].append(_text_asset(CUTSCENE_LOCATOR))
             _sorted_provenance(record)
             logs.append(record)
     return _dedupe(logs, "os_log")

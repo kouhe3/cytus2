@@ -155,6 +155,11 @@
       "type": "array",
       "items": {"type": "string", "minLength": 1}
     },
+    "cutscene": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_]+$",
+      "description": "Clip the game plays the first time this Branching OS node is opened: text/cutscenedata/cutscene_data_os MovieFile without its .mp4 suffix. Resolve it through the media manifest (movies first, videos second). Only branch nodes carry it; event nodes and nodes without a clip omit the property. A media reference, not an asset entity."
+    },
     "provenance": {
       "$ref": "common.schema.json#/$defs/provenance"
     }

@@ -4,6 +4,7 @@ Sources:
 
 ``text/oasystemdata/oa_system_data``            OA characters/objects/documents/descriptions
 ``text/branchingosdata/<file>``                 Branching OS nodes (``story_node`` kind=branch)
+``text/cutscenedata/cutscene_data_os``          Branch node first-open cutscene clips
 ``text/gallerydata/folder`` + ``<folderId>``     Backup Database folders and items
 ``text/imdata/im_lock_condition_data``          story gate topic lists (data only, no gate entity)
 ``il2cppdumper/dump.cs``                        story events (``kind=event``) and their constants
@@ -28,6 +29,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from ..blocks import paged_dialogue, parse_blocks
+from ..cutscenes import CUTSCENE_LOCATOR, cutscene_clips
 from ..errors import BuildError, InputError
 from ..keys import DIFFICULTIES, chart_key, entity_key
 from ..provenance import manual, sort_record, text_asset
@@ -721,6 +723,7 @@ def _branch_tables(source: InputSource) -> Iterable[tuple[str, Table]]:
 
 
 def _branch_nodes(source: InputSource) -> list[dict[str, Any]]:
+    cutscenes = cutscene_clips(source)
     nodes = []
     for file_name, table in _branch_tables(source):
         if not isinstance(table.data, list):
@@ -781,6 +784,10 @@ def _branch_nodes(source: InputSource) -> list[dict[str, Any]]:
                 "text_ref": entity_key("story_node", node_id),
                 "provenance": [_text_asset(where)],
             }
+            clip = cutscenes.get(node_id)
+            if clip is not None:
+                node["cutscene"] = clip
+                node["provenance"].append(_text_asset(CUTSCENE_LOCATOR))
             _sorted_provenance(node)
             nodes.append(node)
     return _dedupe(nodes, "story_node branch")

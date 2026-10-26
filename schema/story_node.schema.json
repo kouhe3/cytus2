@@ -113,6 +113,13 @@
         {"type": "string", "minLength": 1}
       ]
     },
+    "trigger_branch_id": {
+      "description": "Branching OS file id whose TOUCH_BOS_<id> step starts this story; data value, not an entity.",
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "minLength": 1}
+      ]
+    },
     "start_topic_id": {
       "anyOf": [
         {"type": "null"},

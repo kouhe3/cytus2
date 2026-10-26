@@ -68,3 +68,32 @@ public class StoryVanessa04Action : IStoryActionBossStage // TypeDefIndex: 9006
 	// Properties
 	private string Rayark.Cytus2.Story.IStoryActionBossStage.BossStage { get; }
 }
+
+// Namespace: 
+public class StoryVanessa04Action.MissingStage // TypeDefIndex: 9007
+{
+	// Fields
+	public const string BOSS_STAGE_ID = "chaos";
+}
+
+// Namespace: Rayark.Cytus2.Story
+public class StoryAlphaBranch01 // TypeDefIndex: 9008
+{
+	// Fields
+	public const string ID = "story_alpha_branch01";
+	public const string STEP_0_TOUCH_BOS_POST = "0_TOUCH_BOS_TAOS001A";
+
+	// Properties
+	private bool Rayark.Cytus2.Story.ICutscene.CanSkip { get; }
+}
+
+// Namespace: 
+public class StoryAlphaBranch01.BranchingEndPlay : IEndPlayEvent // TypeDefIndex: 9009
+{
+	// Fields
+	private const string SONG_ID = "taos010_bossstage";
+	private const string VIDEO_ID = "taos010_bossstage";
+
+	// Properties
+	private string Rayark.Cytus2.Story.IEndPlayEvent.VideoId { get; }
+}

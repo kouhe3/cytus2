@@ -73,6 +73,8 @@
     }
   ],
   "other_song_info_list": [
-    {"song_id": "story_004", "song_name": null, "artist": null, "charts": null, "is_hidden": false}
+    {"song_id": "story_004", "song_name": null, "artist": null, "charts": null, "is_hidden": false},
+    {"song_id": "vos061_bossstage", "song_name": null, "artist": null, "charts": null, "is_hidden": false},
+    {"song_id": "taos010_bossstage", "song_name": null, "artist": null, "charts": null, "is_hidden": false}
   ]
 }

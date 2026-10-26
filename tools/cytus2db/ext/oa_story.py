@@ -49,8 +49,6 @@ BOSS_STAGE_ALIAS_OVERRIDES: dict[str, str | None] = {
     "chaos": None,
     "ivy001_014_1": None,
     "vanessa_chaos": None,
-    "vos055_bossstage": None,
-    "vos061_bossstage": None,
 }
 
 OVERRIDE_LOCATOR = "tools/cytus2db/ext/oa_story.py:BOSS_STAGE_ALIAS_OVERRIDES"
@@ -84,6 +82,16 @@ _STORY_CONST_KEYS = (
     "MOVIE_FILE",
     "CUTSCENE_MOVIE_FILE",
 )
+
+# Nested EndPlay classes declare the stage they play, not a BOSS_STAGE_ID:
+# ``StoryTairitsuBranch01.BranchingEndPlay`` carries ``private const SONG_ID``
+# and ``VIDEO_ID``.  Both hold the stage id when the game ships that id in
+# ``other_song_info_list``; the catalog filter in ``_known_stages`` keeps plain
+# song ids (``vanessa001_010``) out.
+_STAGE_REF_KEYS = ("SONG_ID", "VIDEO_ID")
+# ``0_TOUCH_BOS_TAOS010``: the story waits for the player to pick that
+# Branching OS file, so the step value names the branch node that triggers it.
+_BRANCH_STEP = re.compile(r"^(?:\d+_)?TOUCH_BOS_([A-Za-z0-9]+)$")
 
 
 # --------------------------------------------------------------------- helpers
@@ -483,11 +491,19 @@ def _build_gallery(
 
 # --------------------------------------------------------------- story dump
 class _DumpClass:
-    __slots__ = ("constants", "boss_stages", "movie_files", "steps", "topics")
+    __slots__ = (
+        "constants",
+        "boss_stages",
+        "stage_refs",
+        "movie_files",
+        "steps",
+        "topics",
+    )
 
     def __init__(self) -> None:
         self.constants: dict[str, str] = {}
         self.boss_stages: list[str] = []
+        self.stage_refs: list[str] = []
         self.movie_files: list[str] = []
         self.steps: list[str] = []
         self.topics: set[str] = set()
@@ -495,6 +511,44 @@ class _DumpClass:
 
 def _dump_path(source: InputSource) -> Path:
     return source.root.joinpath(*DUMP_PATH)
+
+
+_TYPE_LINE = re.compile(r"public (?:static )?class ([\w.]+)")
+
+
+def _collect_consts(target: _DumpClass, line: str, *, public: bool) -> None:
+    """Collect one ``const string`` declaration into ``target``.
+
+    Nested action classes declare the stage they play as ``private const``;
+    only the stage keys are read from those so unrelated private constants (and
+    compiler-generated classes) stay out of the story record.
+    """
+    found = re.search(r'(?<![A-Z_])BOSS_STAGE_ID = "([^"]*)"', line)
+    if found:
+        target.boss_stages.append(found.group(1))
+    for key in _STAGE_REF_KEYS:
+        found = re.search(rf'(?<![A-Z_]){key} = "([^"]*)"', line)
+        if found:
+            target.stage_refs.append(found.group(1))
+    if not public:
+        return
+    found = re.search(r'const string ID = "([^"]+)"', line)
+    if found:
+        target.constants.setdefault("ID", found.group(1))
+    for key in _STORY_CONST_KEYS:
+        found = re.search(rf'(?<![A-Z_]){key} = "([^"]*)"', line)
+        if found:
+            if key in ("MOVIE_FILE", "CUTSCENE_MOVIE_FILE"):
+                target.movie_files.append(found.group(1))
+            else:
+                target.constants.setdefault(key, found.group(1))
+    found = re.search(
+        r'const string ((?:STEP_[A-Z0-9_]*)'
+        r'|(?:STATE_[A-Z0-9_]*_STEP_[A-Z0-9_]*)) = "([^"]+)"',
+        line,
+    )
+    if found:
+        target.steps.append(found.group(2))
 
 
 def _parse_dump(source: InputSource) -> dict[str, _DumpClass]:
@@ -506,37 +560,27 @@ def _parse_dump(source: InputSource) -> dict[str, _DumpClass]:
         )
     classes: dict[str, _DumpClass] = {}
     current: _DumpClass | None = None
-    class_re = re.compile(r"public (?:static )?class ([\w.]+)")
     with path.open(encoding="utf-8", errors="replace") as handle:
         for line in handle:
-            match = class_re.match(line)
+            # Every type block starts with its namespace comment.  Resetting
+            # here keeps constants of compiler-generated and private classes
+            # out of the public class printed above them.
+            if line.startswith("// Namespace:"):
+                current = None
+                continue
+            match = _TYPE_LINE.match(line)
             if match:
-                name = match.group(1).split(".")[-1]
-                current = classes.setdefault(name, _DumpClass())
+                # Nested classes keep the dotted name (Parent.Child) so the
+                # story-class merge below can attribute their constants.
+                current = classes.setdefault(match.group(1), _DumpClass())
                 continue
             if current is None:
                 continue
-            if line.strip().startswith("public const"):
-                found = re.search(r'const string ID = "([^"]+)"', line)
-                if found:
-                    current.constants.setdefault("ID", found.group(1))
-                for key in _STORY_CONST_KEYS:
-                    found = re.search(rf'(?<![A-Z_]){key} = "([^"]*)"', line)
-                    if found:
-                        if key in ("MOVIE_FILE", "CUTSCENE_MOVIE_FILE"):
-                            current.movie_files.append(found.group(1))
-                        else:
-                            current.constants.setdefault(key, found.group(1))
-                found = re.search(r'(?<![A-Z_])BOSS_STAGE_ID = "([^"]*)"', line)
-                if found:
-                    current.boss_stages.append(found.group(1))
-                found = re.search(
-                    r'const string ((?:STEP_[A-Z0-9_]*)'
-                    r'|(?:STATE_[A-Z0-9_]*_STEP_[A-Z0-9_]*)) = "([^"]+)"',
-                    line,
-                )
-                if found:
-                    current.steps.append(found.group(2))
+            stripped = line.strip()
+            if stripped.startswith("public const"):
+                _collect_consts(current, line, public=True)
+            elif stripped.startswith("private const"):
+                _collect_consts(current, line, public=False)
             for topic in re.findall(r"TOUCH_IM_(?:POST|TOPIC)_([A-Za-z0-9]+)", line):
                 current.topics.add(topic)
             if line.startswith("}"):
@@ -544,7 +588,25 @@ def _parse_dump(source: InputSource) -> dict[str, _DumpClass]:
     return classes
 
 
-def _story_events(source: InputSource) -> list[dict[str, Any]]:
+def _known_stages(
+    refs: Iterable[str], stage_catalog: dict[str, dict[str, Any]]
+) -> list[str]:
+    """Keep only ``SONG_ID``/``VIDEO_ID`` values the game lists as a stage."""
+    return [ref for ref in refs if ref in stage_catalog]
+
+
+def _branch_trigger(steps: Iterable[str]) -> str | None:
+    """Branching OS file id named by a ``TOUCH_BOS_<id>`` story step."""
+    for step in steps:
+        found = _BRANCH_STEP.match(step)
+        if found:
+            return found.group(1).lower()
+    return None
+
+
+def _story_events(
+    source: InputSource, stage_catalog: dict[str, dict[str, Any]]
+) -> list[dict[str, Any]]:
     classes = _parse_dump(source)
     events = []
     for name, data in classes.items():
@@ -552,7 +614,9 @@ def _story_events(source: InputSource) -> list[dict[str, Any]]:
         if not story_id:
             continue
         constants = dict(data.constants)
-        boss_stages = list(data.boss_stages)
+        boss_stages = list(data.boss_stages) + _known_stages(
+            data.stage_refs, stage_catalog
+        )
         steps = list(data.steps)
         movie_files = list(data.movie_files)
         topics = set(data.topics)
@@ -564,6 +628,7 @@ def _story_events(source: InputSource) -> list[dict[str, Any]]:
                 continue
             if not (
                 extra.boss_stages
+                or extra.stage_refs
                 or extra.movie_files
                 or extra.steps
                 or extra.topics
@@ -575,10 +640,12 @@ def _story_events(source: InputSource) -> list[dict[str, Any]]:
                 if key != "ID":
                     constants.setdefault(key, value)
             boss_stages.extend(extra.boss_stages)
+            boss_stages.extend(_known_stages(extra.stage_refs, stage_catalog))
             movie_files.extend(extra.movie_files)
             steps.extend(extra.steps)
             topics |= extra.topics
 
+        unique_steps = _unique(steps)
         event = {
             "id": entity_key("story_node", story_id),
             "type": "story_node",
@@ -586,11 +653,12 @@ def _story_events(source: InputSource) -> list[dict[str, Any]]:
             "game_id": story_id,
             "class_name": name,
             "actions": sorted(actions),
-            "steps": _unique(steps),
+            "steps": unique_steps,
             "topic_ids": [],
             "boss_stages": [],
             "trigger_os_id": constants.get("TRIGGER_OS_ID") or None,
             "trigger_topic_id": constants.get("TRIGGER_TOPIC_ID") or None,
+            "trigger_branch_id": _branch_trigger(unique_steps),
             "start_topic_id": constants.get("START_TOPIC_ID") or None,
             "end_topic_id": constants.get("END_TOPIC_ID") or None,
             "deleted_topic_id": constants.get("DELETED_TOPIC_ID") or None,
@@ -618,9 +686,39 @@ def _story_events(source: InputSource) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------- boss stages
+def _stage_catalog(source: InputSource) -> dict[str, dict[str, Any]]:
+    """``song_pack_data.other_song_info_list``: the game's special stages.
+
+    Boss stages that are not Backup Database entries only exist here (the two
+    Branching OS branch points).  The bundle ships ``song_name: null`` for
+    them, so the id doubles as the display name.
+    """
+    table = source.song_catalog()
+    if not isinstance(table.data, dict):
+        raise InputError(f"{table.locator} must be a JSON object")
+    entries = table.data.get("other_song_info_list") or []
+    if not isinstance(entries, list):
+        raise InputError(f"{table.locator}.other_song_info_list must be a list")
+    catalog: dict[str, dict[str, Any]] = {}
+    for index, entry in enumerate(entries):
+        where = f"{table.locator}.other_song_info_list[{index}]"
+        if not isinstance(entry, dict):
+            raise BuildError(f"{where}: must be an object")
+        song_id = str(entry.get("song_id") or "").strip()
+        if not song_id:
+            raise BuildError(f"{where}: missing song_id")
+        name = entry.get("song_name")
+        catalog[song_id] = {
+            "name": name.strip() if isinstance(name, str) and name.strip() else None,
+            "locator": where,
+        }
+    return catalog
+
+
 def _build_boss_stages(
     gallery_items: list[dict[str, Any]],
     events: list[dict[str, Any]],
+    stage_catalog: dict[str, dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], dict[str, tuple[str | None, dict[str, str] | None]]]:
     items = [
         item for item in gallery_items if item["kind"] == "boss_stage"
@@ -650,10 +748,14 @@ def _build_boss_stages(
         if raw in alias_map:
             resolutions[raw] = (alias_map[raw], None)
             continue
+        if raw in stage_catalog:
+            resolutions[raw] = (raw, None)
+            continue
         if raw not in BOSS_STAGE_ALIAS_OVERRIDES:
             raise BuildError(
                 f"boss stage reference {raw!r} is not a gallery FileLocation, "
-                "display name or override; add it to BOSS_STAGE_ALIAS_OVERRIDES"
+                "display name, special-stage id or override; add it to "
+                "BOSS_STAGE_ALIAS_OVERRIDES"
             )
         target = BOSS_STAGE_ALIAS_OVERRIDES[raw]
         note = f"{raw} -> {target if target is not None else 'unmapped'}"
@@ -684,6 +786,29 @@ def _build_boss_stages(
             "conditions": list(item["conditions"]),
             "provenance": list(item["provenance"])
             + manual_by_location.get(location, []),
+        }
+        _sorted_provenance(record)
+        stages.append(record)
+
+    catalog_locations = sorted(
+        {
+            target
+            for target, (_manual_ref) in resolutions.values()
+            if target is not None and target not in by_location
+        }
+    )
+    for location in catalog_locations:
+        entry = stage_catalog[location]
+        record = {
+            "id": entity_key("boss_stage", location),
+            "type": "boss_stage",
+            "game_id": location,
+            "display_name": entry["name"] or location,
+            "aliases": [],
+            "folder_id": None,
+            "gallery_item_id": None,
+            "conditions": [],
+            "provenance": [_text_asset(entry["locator"])],
         }
         _sorted_provenance(record)
         stages.append(record)
@@ -961,8 +1086,9 @@ def build(source: InputSource) -> dict[str, list[dict[str, Any]]]:
     folders, items = _build_gallery(source)
     entities["gallery_folder"] = folders
     entities["gallery_item"] = items
-    events = _story_events(source)
-    stages, resolutions = _build_boss_stages(items, events)
+    stage_catalog = _stage_catalog(source)
+    events = _story_events(source, stage_catalog)
+    stages, resolutions = _build_boss_stages(items, events, stage_catalog)
     entities["story_node"] = _build_story(source, events, resolutions)
     entities["boss_stage"] = stages
     for records in entities.values():

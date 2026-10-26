@@ -29,7 +29,9 @@ _Avoid_: 联动章节
 _Avoid_: 剧情闸（作实体）、把 Branching OS 节点叫「备份节点」
 
 **Branching OS** (`story_node`，`kind=branch`):
-新角色的分支式 OS：节点按角色等级（`SongPackId`）与分支状态解锁，和备份数据库不是同一套东西。
+新角色的分支式 OS：节点按分支 OS 自己的进度等级与分支状态解锁，和备份数据库不是同一套东西。
+节点上的 `level` 就是游戏显示的等级（存档 `Progress + 1`），每读完一个结局归零重来，最多 5 轮；
+`state_id` 是 `BranchingOS.StateId`：`0`/`1` 读轮组状态，`2`/`3` 读分支点点击结果（`BranchingSelect` 0 = Leave / 1 = Hit），`4` 要求先读完列出的文件。
 _Avoid_: 备份数据库、backup
 
 **Backup Database** (`gallery_item`):
@@ -38,6 +40,8 @@ _Avoid_: 备份节点、branching node
 
 **Boss Stage** (`boss_stage`):
 剧情里的特殊演出关卡（曲目 + 难度 + 舞台）；既属于剧情事件，也作为备份数据库条目出现。
+不是所有 boss stage 都有备份数据库条目：Branching OS 的分支点（如 `taos010_bossstage`）只在
+`song_pack_data.other_song_info_list` 里登记，这类记录的 `folder_id`/`gallery_item_id` 为 null。
 _Avoid_: boss 曲、活动曲
 
 **Character** (`character`):

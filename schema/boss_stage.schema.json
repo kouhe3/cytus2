@@ -41,12 +41,18 @@
       }
     },
     "folder_id": {
-      "type": "string",
-      "pattern": "^gallery_folder/[^\\s]+$"
+      "description": "Backup Database folder; null for stages that are not gallery entries (Branching OS branch points).",
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^gallery_folder/[^\\s]+$"}
+      ]
     },
     "gallery_item_id": {
-      "type": "string",
-      "pattern": "^gallery_item/[^\\s]+$"
+      "description": "Backup Database item; null for stages that are not gallery entries.",
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^gallery_item/[^\\s]+$"}
+      ]
     },
     "conditions": {
       "type": "array",

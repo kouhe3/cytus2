@@ -447,6 +447,8 @@ def _appears_in_gallery_edges(
         ] or node["provenance"]
         edges.add(node["id"], "appears_in_gallery", target, provenance)
     for stage in entities.get("boss_stage", []):
+        if not stage.get("gallery_item_id"):
+            continue
         provenance = [
             entry for entry in stage["provenance"] if entry.get("kind") == "text_asset"
         ] or stage["provenance"]

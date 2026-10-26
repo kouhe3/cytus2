@@ -164,5 +164,7 @@
       "song_info_list": []
     }
   ],
-  "other_song_info_list": []
+  "other_song_info_list": [
+    {"song_id": "vos061_bossstage", "song_name": null, "artist": null, "charts": null, "is_hidden": false}
+  ]
 }

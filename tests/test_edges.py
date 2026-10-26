@@ -171,7 +171,16 @@ def test_story_events_share_stage_with_resolved_boss_stages(edges: list[dict]) -
     assert edges_from(edges, "story_node/story_ending03_main", "same_stage") == {
         "boss_stage/ending03"
     }
-    assert edges_from(edges, "story_node/story_vanessa04", "same_stage") == set()
+    assert edges_from(edges, "story_node/story_vanessa04", "same_stage") == {
+        "boss_stage/vos061_bossstage"
+    }
+    assert edges_from(edges, "story_node/story_alpha_branch01", "same_stage") == {
+        "boss_stage/taos010_bossstage"
+    }
+    # Stages outside the Backup Database have no gallery edge.
+    assert edges_from(
+        edges, "boss_stage/taos010_bossstage", "appears_in_gallery"
+    ) == set()
 
 
 def test_im_replies_point_at_their_post(edges: list[dict]) -> None:

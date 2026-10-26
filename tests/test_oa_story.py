@@ -205,6 +205,8 @@ def test_boss_stages_are_keyed_by_location_with_display_aliases(
     assert set(stages) == {
         "boss_stage/alpha_bossstage",
         "boss_stage/ending03",
+        "boss_stage/taos010_bossstage",
+        "boss_stage/vos061_bossstage",
     }
     assert stages["boss_stage/ending03"]["game_id"] == "ending03"
     assert stages["boss_stage/ending03"]["display_name"] == "Ending 03 Stage"
@@ -218,6 +220,17 @@ def test_boss_stages_are_keyed_by_location_with_display_aliases(
     )
     assert "vanessa_v" not in stages["boss_stage/alpha_bossstage"]["aliases"]
 
+    # Special stages from song_pack_data carry no Backup Database row.
+    catalog = stages["boss_stage/taos010_bossstage"]
+    assert catalog["game_id"] == "taos010_bossstage"
+    assert catalog["display_name"] == "taos010_bossstage"
+    assert catalog["folder_id"] is None
+    assert catalog["gallery_item_id"] is None
+    assert catalog["conditions"] == []
+    assert [entry["locator"] for entry in catalog["provenance"]] == [
+        "text/song_pack_data.other_song_info_list[2]"
+    ]
+
 
 # --------------------------------------------------------------- story nodes
 def test_story_nodes_cover_events_and_branch_nodes(built_db: Path) -> None:
@@ -226,6 +239,7 @@ def test_story_nodes_cover_events_and_branch_nodes(built_db: Path) -> None:
     branches = [row for row in nodes if row["kind"] == "branch"]
     assert {row["id"] for row in events} == {
         "story_node/story_alpha01",
+        "story_node/story_alpha_branch01",
         "story_node/story_ending03_main",
         "story_node/story_vanessa04",
     }
@@ -247,15 +261,26 @@ def test_story_nodes_cover_events_and_branch_nodes(built_db: Path) -> None:
         }
     ]
 
-    unmapped = next(
+    vanessa = next(
         row for row in events if row["id"] == "story_node/story_vanessa04"
     )
-    assert unmapped["boss_stages"] == [
+    # The catalog resolves the stage; the nested override keeps one explicit
+    # unmapped marker in the same event.
+    assert vanessa["boss_stages"] == [
         {
             "raw": "vos061_bossstage",
+            "entity_id": "boss_stage/vos061_bossstage",
+            "status": "resolved",
+        },
+        {
+            "raw": "chaos",
             "entity_id": None,
             "status": "unmapped",
-        }
+        },
+    ]
+    assert vanessa["actions"] == [
+        "StoryVanessa04Action",
+        "StoryVanessa04Action.MissingStage",
     ]
 
     branch = next(row for row in branches if row["id"] == "story_node/taos001a")
@@ -342,6 +367,27 @@ def test_story_event_boss_alias_override_resolves(built_db: Path) -> None:
     assert any(entry["kind"] == "manual" for entry in ending["provenance"])
 
 
+def test_branch_story_binds_its_node_and_private_stage(built_db: Path) -> None:
+    nodes = load_built(built_db, "story_node")["story_node"]
+    events = {row["id"]: row for row in nodes if row["kind"] == "event"}
+    story = events["story_node/story_alpha_branch01"]
+    # `0_TOUCH_BOS_TAOS001A` names the file the player picks.
+    assert story["trigger_branch_id"] == "taos001a"
+    assert story["actions"] == ["StoryAlphaBranch01.BranchingEndPlay"]
+    # The stage id lives in the nested class as a private const.
+    assert story["boss_stages"] == [
+        {
+            "raw": "taos010_bossstage",
+            "entity_id": "boss_stage/taos010_bossstage",
+            "status": "resolved",
+        }
+    ]
+    assert events["story_node/story_alpha01"]["trigger_branch_id"] is None
+    assert all(
+        "trigger_branch_id" not in row for row in nodes if row["kind"] == "branch"
+    )
+
+
 def test_branch_text_store_resolves(built_db: Path) -> None:
     nodes = {
         row["id"]: row
@@ -424,10 +470,10 @@ def test_new_tables_are_queryable_in_sqlite(built_db: Path) -> None:
             "oa_object": 2,
             "oa_document": 2,
             "oa_description": 2,
-            "story_node": 5,
+            "story_node": 6,
             "gallery_folder": 3,
             "gallery_item": 5,
-            "boss_stage": 2,
+            "boss_stage": 4,
         }
         for table, count in expected.items():
             assert connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == count

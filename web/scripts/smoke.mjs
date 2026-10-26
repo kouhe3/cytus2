@@ -2574,39 +2574,64 @@ try {
     "Branching OS graph fits its column at the desktop viewport",
   );
   const branchLongEdges = await cdp.evaluate(`(() => {
+    const rect = (id) => document.querySelector('[data-testid="branch-map-node"][data-node-id="story_node/' + id + '"] rect');
+    const x1 = Number(rect('taos010')?.getAttribute('x')) + Number(rect('taos010')?.getAttribute('width'));
+    const y1 = Number(rect('taos010')?.getAttribute('y')) + 10;
+    const x2 = Number(rect('taos011')?.getAttribute('x'));
+    const y2 = Number(rect('taos011')?.getAttribute('y')) + 10;
     const paths = [...document.querySelectorAll('.branch-edges path')].map((path) => path.getAttribute('d') ?? '');
-    const gutter = paths.filter((d) => (d.match(/L/g) ?? []).length >= 5);
-    return { total: paths.length, gutter: gutter.length, first: gutter[0] ?? '' };
+    const path = paths.find((d) => d.startsWith('M ' + x1 + ' ' + y1 + ' ') && d.endsWith(' ' + x2 + ' ' + y2)) ?? '';
+    return {
+      total: paths.length,
+      path,
+      long: paths.filter((d) => (d.match(/L/g) ?? []).length >= 5).length,
+      turns: path ? (path.match(/L/g) ?? []).length - 1 : -1,
+      dropsTo: path ? path.includes(' ' + y2 + ' ') : false,
+    };
   })()`);
   check(
-    branchLongEdges.gutter === 1,
-    `the one edge that skips more than a column takes a row gutter (got ${branchLongEdges.gutter} of ${branchLongEdges.total})`,
+    branchLongEdges.path !== "",
+    `the 10 → 11 edge is drawn (got ${branchLongEdges.path || "none"} of ${branchLongEdges.total} edges)`,
   );
   check(
-    branchLongEdges.first.includes(" L ") && branchLongEdges.first.split(" ").length >= 11,
-    "gutter edge leaves the source row before crossing it",
+    branchLongEdges.turns === 2,
+    `the 10 → 11 edge turns only twice (got ${branchLongEdges.turns}: ${branchLongEdges.path})`,
   );
-  const branchLane = (() => {
-    const match = branchLongEdges.first.match(
-      /^M [\d.]+ ([\d.]+) L [\d.]+ [\d.]+ L [\d.]+ ([\d.]+)/,
-    );
-    return match ? Number(match[2]) > Number(match[1]) : false;
-  })();
   check(
-    branchLane,
-    "the long edge detours on the target's side instead of crossing the rows",
+    branchLongEdges.dropsTo,
+    "the 10 → 11 edge runs in on the target's own row",
+  );
+  check(
+    branchLongEdges.long === 0,
+    `no edge needs a multi-bend detour (got ${branchLongEdges.long})`,
   );
   const branchStack = await cdp.evaluate(`(() => {
     const top = (id) => {
       const rect = document.querySelector('[data-testid="branch-map-node"][data-node-id="story_node/' + id + '"] rect');
       return Number(rect?.getAttribute('y') ?? NaN);
     };
-    return { twenty: top('taos020'), twentyOne: top('taos021'), eleven: top('taos011') };
+    return {
+      eighteenA: top('taos018a'),
+      eighteenB: top('taos018b'),
+      twenty: top('taos020'),
+      twentyOne: top('taos021'),
+      eleven: top('taos011'),
+      ten: top('taos010'),
+      nineteen: top('taos019'),
+    };
   })()`);
   check(
-    branchStack.twenty < branchStack.twentyOne &&
-      branchStack.twentyOne < branchStack.eleven,
-    `merge column stacks the ending stubs by the game order (got ${branchStack.twenty} < ${branchStack.twentyOne} < ${branchStack.eleven})`,
+    branchStack.twenty === branchStack.eighteenA &&
+      branchStack.twentyOne === branchStack.eighteenB,
+    `ending stubs stay aligned with the tracks they end (got 18a/${branchStack.eighteenA} vs 20/${branchStack.twenty}, 18b/${branchStack.eighteenB} vs 21/${branchStack.twentyOne})`,
+  );
+  check(
+    branchStack.twentyOne < branchStack.eleven,
+    `the third ending sits below the second (got ${branchStack.twentyOne} < ${branchStack.eleven})`,
+  );
+  check(
+    branchStack.ten > branchStack.eighteenA && branchStack.ten < branchStack.eleven,
+    `the merge nodes sit between the tracks (got 10/${branchStack.ten})`,
   );
   check(
     branchIndex.rows === 48,

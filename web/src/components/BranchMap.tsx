@@ -1,14 +1,13 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { branchTrack } from "../data/branch";
+import { branchPlacements } from "../data/branch";
 import { useI18n } from "../data/i18n";
 import type { StoryNodeEntity } from "../types";
 
 /**
- * Branching OS graph: columns are `position`, rows are track suffixes resolved
- * from the ids, and the edges come from `next` (the game's `LinkedFileIds`).
+ * Branching OS graph. Both axes come from the projection: columns are
+ * `position`, and `branchPlacements` derives the row from `order` plus the
+ * `next` edges (see that helper), so the graph never parses the id suffix.
  * Edges are right-angle elbows like the in-game graph, not curves.
- * Nodes without a track suffix (merge and terminal nodes) share the middle row
- * and stack vertically when one column holds several of them.
  */
 const MAX_COL_W = 58;
 /** Below this a short id such as `12a` stops fitting inside the node. */
@@ -18,13 +17,6 @@ const MAX_NODE_W = 46;
 const NODE_H = 20;
 const PAD_X = 16;
 const PAD_Y = 18;
-const STACK_STEP = 22;
-
-interface Placement {
-  readonly column: number;
-  readonly row: number;
-  readonly offset: number;
-}
 
 /** `taos001a` -> `1a`, `taos010` -> `10`. */
 function shortLabel(gameId: string): string {
@@ -77,97 +69,85 @@ export function BranchMap({
     return () => observer.disconnect();
   }, []);
 
-  const positions = [
-    ...new Set(nodes.map((node) => node.position ?? 0)),
-  ].sort((left, right) => left - right);
-  const tracks = [...new Set(nodes.map(branchTrack).filter(Boolean))].sort();
-  const rows = Math.max(tracks.length, 1);
-  const sharedRow = Math.floor(rows / 2);
-  const columnOf = new Map(positions.map((position, index) => [position, index]));
+  const placements = branchPlacements(nodes);
+  const lastColumn = placements.reduce(
+    (max, placement) => Math.max(max, placement.column),
+    0,
+  );
+  const lastRow = placements.reduce(
+    (max, placement) => Math.max(max, placement.row),
+    0,
+  );
   // Budget the widest node so the computed graph always fits its column.
   const usable = Math.max(available - PAD_X * 2 - MAX_NODE_W, 0);
-  const columns = Math.max(positions.length - 1, 1);
   const colW = Math.min(
     MAX_COL_W,
-    Math.max(MIN_COL_W, usable > 0 ? usable / columns : MAX_COL_W),
+    Math.max(MIN_COL_W, usable > 0 ? usable / Math.max(lastColumn, 1) : MAX_COL_W),
   );
   const nodeW = Math.min(MAX_NODE_W, colW - 6);
 
-  const cells = new Map<string, StoryNodeEntity[]>();
-  for (const node of nodes) {
-    const column = columnOf.get(node.position ?? 0) ?? 0;
-    const track = branchTrack(node);
-    const row = track ? Math.max(tracks.indexOf(track), 0) : sharedRow;
-    const key = `${column}:${row}`;
-    const bucket = cells.get(key);
-    if (bucket) {
-      bucket.push(node);
-    } else {
-      cells.set(key, [node]);
-    }
-  }
-
-  const placed = new Map<string, Placement>();
-  for (const [key, bucket] of cells) {
-    const [columnText, rowText] = key.split(":");
-    const step = bucket.length > 1 ? STACK_STEP : 0;
-    // Several nodes share a cell at the merge columns; the game stacks them by
-    // `ViewSetting.Order`, so position 19 reads 20 (1) above 21 (2) above 11
-    // (3) instead of by id.
-    const stacked = [...bucket].sort(
-      (left, right) =>
-        (left.order ?? Number.MAX_SAFE_INTEGER) -
-          (right.order ?? Number.MAX_SAFE_INTEGER) ||
-        left.game_id.localeCompare(right.game_id),
+  const left = (column: number) => PAD_X + column * colW;
+  const top = (row: number) => PAD_Y + row * ROW_H;
+  const width = PAD_X * 2 + lastColumn * colW + nodeW;
+  const height = PAD_Y * 2 + lastRow * ROW_H + NODE_H;
+  const byId = new Map(placements.map((placement) => [placement.node.id, placement]));
+  const gapX = Math.max((colW - nodeW) / 2, 3);
+  /** Rows already used by a node strictly between two columns. */
+  const rowTaken = (
+    from: { column: number },
+    to: { column: number },
+    row: number,
+  ) =>
+    placements.some(
+      (placement) =>
+        placement.column > Math.min(from.column, to.column) &&
+        placement.column < Math.max(from.column, to.column) &&
+        Math.abs(placement.row - row) < 0.01,
     );
-    stacked.forEach((node, index) => {
-      placed.set(node.id, {
-        column: Number(columnText),
-        row: Number(rowText),
-        offset: (index - (stacked.length - 1) / 2) * step,
-      });
-    });
-  }
-
-  const left = (placement: Placement) => PAD_X + placement.column * colW;
-  const top = (placement: Placement) => PAD_Y + placement.row * ROW_H + placement.offset;
-  const width = PAD_X * 2 + Math.max(positions.length - 1, 0) * colW + nodeW;
-  const height = PAD_Y * 2 + Math.max(rows - 1, 0) * ROW_H + NODE_H;
 
   const edges: string[] = [];
-  for (const node of nodes) {
-    const from = placed.get(node.id);
-    if (!from) {
-      continue;
-    }
-    const x1 = left(from) + nodeW;
-    const y1 = top(from) + NODE_H / 2;
-    // A short elbow can bend in the gap between two columns; an edge that
-    // skips more than one column would otherwise run through the boxes of the
-    // row it starts in (and read as if it left the last visible node of that
-    // row). Those edges take a lane in the row gutter on the side the target
-    // sits on, so the detour never crosses the rows in between.
+  for (const placement of placements) {
+    const x1 = left(placement.column) + nodeW;
+    const y1 = top(placement.row) + NODE_H / 2;
+    // A short elbow bends in the gap between two columns; an edge that skips
+    // more than one column would run through the boxes of the row it starts
+    // in, so it takes a lane in the row gutter on the target's side instead.
     const gutter = Math.max(ROW_H - NODE_H - 14, 8);
-    for (const nextId of node.next ?? []) {
-      const to = placed.get(nextId);
+    for (const nextId of placement.node.next ?? []) {
+      const to = byId.get(nextId);
       if (!to) {
         continue;
       }
-      const x2 = left(to);
-      const y2 = top(to) + NODE_H / 2;
-      if (Math.abs(to.column - from.column) > 1) {
-        const exitX = Math.round(x1 + 6);
-        const entryX = Math.round(x2 - 6);
+      const x2 = left(to.column);
+      const y2 = top(to.row) + NODE_H / 2;
+      if (Math.abs(to.column - placement.column) > 1) {
+        // Two bends are enough when one of the two rows is empty between the
+        // columns: drop on the target's row and run in, otherwise run out on
+        // the source's row and drop at the end.
+        if (!rowTaken(placement, to, to.row)) {
+          const dropX = Math.round(x1 + gapX);
+          edges.push(`M ${x1} ${y1} L ${dropX} ${y1} L ${dropX} ${y2} L ${x2} ${y2}`);
+          continue;
+        }
+        if (!rowTaken(placement, to, placement.row)) {
+          const dropX = Math.round(x2 - gapX);
+          edges.push(`M ${x1} ${y1} L ${dropX} ${y1} L ${dropX} ${y2} L ${x2} ${y2}`);
+          continue;
+        }
+        // Both rows are occupied in between: take a lane in the row gutter on
+        // the target's side so the detour never crosses the rows.
+        const exitX = Math.round(x1 + gapX);
+        const entryX = Math.round(x2 - gapX);
+        const above = top(placement.row) - gutter;
         const laneY =
-          y2 > y1 || from.row === 0
-            ? top(from) + NODE_H + gutter
-            : top(from) - gutter;
+          y2 > y1 || above < NODE_H / 2
+            ? top(placement.row) + NODE_H + gutter
+            : above;
         edges.push(
           `M ${x1} ${y1} L ${exitX} ${y1} L ${exitX} ${laneY} L ${entryX} ${laneY} L ${entryX} ${y2} L ${x2} ${y2}`,
         );
         continue;
       }
-      // Mid-column elbow: the game draws Branching OS edges as square lines.
       const midX = Math.round((x1 + x2) / 2);
       edges.push(`M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`);
     }
@@ -189,13 +169,10 @@ export function BranchMap({
             <path key={path} d={path} />
           ))}
         </g>
-        {nodes.map((node) => {
-          const placement = placed.get(node.id);
-          if (!placement) {
-            return null;
-          }
-          const x = left(placement);
-          const y = top(placement);
+        {placements.map((placement) => {
+          const node = placement.node;
+          const x = left(placement.column);
+          const y = top(placement.row);
           return (
             <g
               key={node.id}
@@ -203,6 +180,7 @@ export function BranchMap({
               data-testid="branch-map-node"
               data-node-id={node.id}
               data-state={node.state_id ?? ""}
+              data-row={placement.row}
               role="link"
               tabIndex={0}
               aria-label={node.game_id}

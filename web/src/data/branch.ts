@@ -5,27 +5,42 @@ import type { Database, StoryNodeEntity } from "../types";
  * Branching OS projection helpers.
  *
  * The game ships Tairitsu's OS archive as `text/branchingosdata/<source>`: the
- * nodes carry `position` (graph column), `state_id`/`state_value` (the branch
- * state the game writes back) and `next` (the `LinkedFileIds` edges). Nothing
- * here hard-codes the current file, track letters or state numbers: a future
- * branch file shows up as another group, and unknown values fall back to the
- * neutral styling instead of failing.
+ * nodes carry `position` (graph column), `order` (the line the node sits on),
+ * `state_id`/`state_value` (the unlock state the game checks) and `next` (the
+ * `LinkedFileIds` edges). Nothing here hard-codes the current file or the
+ * `a`/`b`/`c` suffixes: a future branch file shows up as another group, and
+ * unknown values fall back to the neutral styling instead of failing.
  */
 export interface BranchGroup {
   readonly source: string;
   readonly nodes: StoryNodeEntity[];
   readonly positions: number[];
-  /** Track suffixes present in this file (`a`, `b`, `c`, ...), ordered. */
-  readonly tracks: string[];
   readonly chartRefs: string[];
 }
 
-const TRACK_SUFFIX = /([a-z])$/;
+/** One node placed on the graph: `column` is `position`, `row` is derived. */
+export interface BranchPlacement {
+  readonly node: StoryNodeEntity;
+  readonly column: number;
+  readonly row: number;
+}
 
-/** `taos001a` -> `a`; merge nodes such as `taos010` carry no track. */
-export function branchTrack(node: StoryNodeEntity): string {
-  const match = TRACK_SUFFIX.exec(node.game_id);
-  return match?.[1] ?? "";
+const DEFAULT_ORDER = 1;
+
+function orderOf(node: StoryNodeEntity): number {
+  return Math.max((node.order ?? DEFAULT_ORDER) - 1, 0);
+}
+
+function compareNodes(left: StoryNodeEntity, right: StoryNodeEntity): number {
+  const leftPosition = left.position ?? Number.MAX_SAFE_INTEGER;
+  const rightPosition = right.position ?? Number.MAX_SAFE_INTEGER;
+  if (leftPosition !== rightPosition) {
+    return leftPosition - rightPosition;
+  }
+  return (
+    (left.order ?? DEFAULT_ORDER) - (right.order ?? DEFAULT_ORDER) ||
+    left.game_id.localeCompare(right.game_id)
+  );
 }
 
 /**
@@ -40,27 +55,7 @@ export function branchGate(node: StoryNodeEntity): number | null {
   return node.level ?? null;
 }
 
-function compareNodes(left: StoryNodeEntity, right: StoryNodeEntity): number {
-  const leftPosition = left.position ?? Number.MAX_SAFE_INTEGER;
-  const rightPosition = right.position ?? Number.MAX_SAFE_INTEGER;
-  if (leftPosition !== rightPosition) {
-    return leftPosition - rightPosition;
-  }
-  const leftTrack = branchTrack(left);
-  const rightTrack = branchTrack(right);
-  if (leftTrack !== rightTrack) {
-    if (!leftTrack) {
-      return 1;
-    }
-    if (!rightTrack) {
-      return -1;
-    }
-    return leftTrack.localeCompare(rightTrack);
-  }
-  return left.game_id.localeCompare(right.game_id);
-}
-
-/** Every `story_node(kind=branch)`, ordered by position, then track. */
+/** Every `story_node(kind=branch)`, ordered by position, then order. */
 export function branchNodes(db: Database): StoryNodeEntity[] {
   return (db.entitiesByType.get("story_node") ?? [])
     .filter(
@@ -68,6 +63,78 @@ export function branchNodes(db: Database): StoryNodeEntity[] {
         isStoryNode(entity) && entity.kind === "branch",
     )
     .sort(compareNodes);
+}
+
+/**
+ * Rows come from the data, not from the id suffix: a column that holds several
+ * nodes puts them on the lines their `order` names (ties keep the id order and
+ * step down one line each), and a column that holds a single node sits on the
+ * average of its predecessors — so a merge point lands between its inputs and
+ * the final stubs stay aligned with the tracks they end (20 with 18a, 21 with
+ * 18b, 11 on the third line).
+ */
+export function branchPlacements(nodes: StoryNodeEntity[]): BranchPlacement[] {
+  const columns = new Map<number, StoryNodeEntity[]>();
+  for (const node of nodes) {
+    const position = node.position ?? 0;
+    const bucket = columns.get(position);
+    if (bucket) {
+      bucket.push(node);
+    } else {
+      columns.set(position, [node]);
+    }
+  }
+
+  const predecessors = new Map<string, StoryNodeEntity[]>();
+  for (const node of nodes) {
+    for (const nextId of node.next ?? []) {
+      const bucket = predecessors.get(nextId);
+      if (bucket) {
+        bucket.push(node);
+      } else {
+        predecessors.set(nextId, [node]);
+      }
+    }
+  }
+
+  const rowOf = new Map<string, number>();
+  for (const position of [...columns.keys()].sort((left, right) => left - right)) {
+    const column = columns.get(position) ?? [];
+    if (column.length === 1) {
+      const [node] = column;
+      if (!node) {
+        continue;
+      }
+      const rows = (predecessors.get(node.id) ?? [])
+        .map((predecessor) => rowOf.get(predecessor.id))
+        .filter((row): row is number => typeof row === "number");
+      rowOf.set(
+        node.id,
+        rows.length > 0
+          ? rows.reduce((sum, row) => sum + row, 0) / rows.length
+          : orderOf(node),
+      );
+      continue;
+    }
+    let previous: number | null = null;
+    for (const node of [...column].sort(compareNodes)) {
+      const row = Math.max(
+        orderOf(node),
+        previous === null ? 0 : previous + 1,
+      );
+      rowOf.set(node.id, row);
+      previous = row;
+    }
+  }
+
+  const columnOf = new Map(
+    [...columns.keys()].sort((left, right) => left - right).map((position, index) => [position, index]),
+  );
+  return nodes.map((node) => ({
+    node,
+    column: columnOf.get(node.position ?? 0) ?? 0,
+    row: rowOf.get(node.id) ?? orderOf(node),
+  }));
 }
 
 /** Branch nodes grouped by their source file, for the presence of future files. */
@@ -94,7 +161,6 @@ export function branchGroups(db: Database): BranchGroup[] {
             .filter((position): position is number => typeof position === "number"),
         ),
       ].sort((left, right) => left - right),
-      tracks: [...new Set(nodes.map(branchTrack).filter(Boolean))].sort(),
       chartRefs: [...new Set(nodes.flatMap((node) => node.charts ?? []))],
     }));
 }

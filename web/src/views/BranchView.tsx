@@ -5,7 +5,13 @@ import { BranchMap } from "../components/BranchMap";
 import { ChartLinks } from "../components/ChartLinks";
 import { LevelLockList } from "../components/Conditions";
 import { TextBody } from "../components/TextBody";
-import { branchGate, branchGroups, branchPredecessors, findBranchNode } from "../data/branch";
+import {
+  branchGate,
+  branchGroups,
+  branchPlacements,
+  branchPredecessors,
+  findBranchNode,
+} from "../data/branch";
 import { isChart, isStoryNode, textSnippet } from "../data/database";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
@@ -21,12 +27,12 @@ function stateText(node: StoryNodeEntity): string {
 function BranchAside({
   nodes,
   positions,
-  tracks,
+  rows,
   charts,
 }: {
   nodes: number;
   positions: number;
-  tracks: number;
+  rows: number;
   charts: number;
 }) {
   const i18n = useI18n();
@@ -60,7 +66,7 @@ function BranchAside({
           </div>
           <div className="fact">
             <dt>{i18n.t("branch.legendTrack")}</dt>
-            <dd>{i18n.formatNumber(tracks)}</dd>
+            <dd>{i18n.formatNumber(rows)}</dd>
           </div>
           <div className="fact">
             <dt>{i18n.t("sidebar.stats.charts")}</dt>
@@ -83,7 +89,11 @@ export function BranchIndexView({ db }: { db: Database }) {
   const groups = useMemo(() => branchGroups(db), [db]);
   const nodes = groups.reduce((sum, group) => sum + group.nodes.length, 0);
   const positions = new Set(groups.flatMap((group) => group.positions)).size;
-  const tracks = new Set(groups.flatMap((group) => group.tracks)).size;
+  const rows = new Set(
+    groups.flatMap((group) =>
+      branchPlacements(group.nodes).map((placement) => placement.row),
+    ),
+  ).size;
   const charts = groups.reduce((sum, group) => sum + group.chartRefs.length, 0);
   const openNode = (gameId: string) => navigate(`/branch/${encodeURIComponent(gameId)}`);
 
@@ -98,7 +108,7 @@ export function BranchIndexView({ db }: { db: Database }) {
             {i18n.t("branch.stats", {
               nodes: formatUnit(i18n, "nodes", nodes),
               positions: formatUnit(i18n, "positions", positions),
-              tracks: formatUnit(i18n, "tracks", tracks),
+              tracks: formatUnit(i18n, "tracks", rows),
               charts: formatUnit(i18n, "charts", charts),
             })}
           </div>
@@ -163,7 +173,7 @@ export function BranchIndexView({ db }: { db: Database }) {
       <BranchAside
         nodes={nodes}
         positions={positions}
-        tracks={tracks}
+        rows={rows}
         charts={charts}
       />
     </>
@@ -365,7 +375,13 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
       <BranchAside
         nodes={group?.nodes.length ?? 0}
         positions={group?.positions.length ?? 0}
-        tracks={group?.tracks.length ?? 0}
+        rows={
+          group
+            ? new Set(
+                branchPlacements(group.nodes).map((placement) => placement.row),
+              ).size
+            : 0
+        }
         charts={group?.chartRefs.length ?? 0}
       />
     </>

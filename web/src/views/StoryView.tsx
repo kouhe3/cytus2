@@ -1,33 +1,20 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { isStoryNode } from "../data/database";
-import {
-  storyEntries,
-  storySortMetaCount,
-  type StorySort,
-} from "../data/collections";
+import { storyEntries } from "../data/collections";
 import { useI18n } from "../data/i18n";
 import { useLanguage } from "../data/language";
 import { formatUnit } from "../data/messages";
-import type { MessageKey } from "../data/messages";
 import { entityHref } from "../data/selectors";
 import type { Database } from "../types";
-
-const SORT_OPTIONS: { value: StorySort; labelKey: MessageKey }[] = [
-  { value: "level", labelKey: "story.sort.level" },
-  { value: "version", labelKey: "story.sort.version" },
-  { value: "chapter", labelKey: "story.sort.chapter" },
-];
 
 export function StoryIndexView({ db }: { db: Database }) {
   const { lang } = useLanguage();
   const i18n = useI18n();
-  const [sort, setSort] = useState<StorySort>("level");
   const entries = useMemo(
-    () => storyEntries(db, lang, sort, i18n),
-    [db, lang, sort, i18n],
+    () => storyEntries(db, lang, i18n),
+    [db, lang, i18n],
   );
-  const metaCount = storySortMetaCount(db, sort);
   const eventCount =
     db.entitiesByType.get("story_node")?.filter(
       (node) => isStoryNode(node) && node.kind === "event",
@@ -47,38 +34,9 @@ export function StoryIndexView({ db }: { db: Database }) {
           </div>
         </header>
 
-        <div className="filter-bar">
-          <div className="segmented" data-testid="story-sort">
-            {SORT_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={sort === option.value ? "segment active" : "segment"}
-                aria-pressed={sort === option.value}
-                data-testid={`story-sort-${option.value}`}
-                onClick={() => setSort(option.value)}
-              >
-                {i18n.t(option.labelKey)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {sort !== "level" ? (
-          <p className="hint" data-testid="story-sort-note">
-            {i18n.t("story.sortMeta", {
-              meta: i18n.formatNumber(metaCount),
-              total: i18n.formatNumber(eventCount),
-              sort: i18n.t(
-                sort === "version" ? "story.sort.version" : "story.sort.chapter",
-              ),
-            })}
-          </p>
-        ) : (
-          <p className="hint" data-testid="story-sort-note">
-            {i18n.t("story.defaultNote")}
-          </p>
-        )}
+        <p className="hint" data-testid="story-order-note">
+          {i18n.t("story.orderNote")}
+        </p>
 
         <div className="feed" data-testid="story-feed">
           {entries.map((entry) => (
@@ -133,17 +91,6 @@ export function StoryIndexView({ db }: { db: Database }) {
       </main>
 
       <aside className="context" aria-label={i18n.t("story.detailsAria")}>
-        <section className="panel">
-          <h2>{i18n.t("story.sortModes")}</h2>
-          <p>
-            <strong>{i18n.t("story.sortLevelStrong")}</strong>{" "}
-            {i18n.t("story.sortLevelText")}
-          </p>
-          <p>
-            <strong>{i18n.t("story.sortOtherStrong")}</strong>{" "}
-            {i18n.t("story.sortOtherText")}
-          </p>
-        </section>
         <section className="panel">
           <h2>{i18n.t("story.branchingTitle")}</h2>
           <p>{i18n.t("story.branchingText")}</p>

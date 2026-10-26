@@ -2292,17 +2292,26 @@ try {
     "story index drops the Branching OS nodes",
   );
   check(storyIndex.kindFilter === 0, "story index has no event/Branching OS filter");
-  await cdp.evaluate(`document.querySelector('[data-testid="story-sort-version"]').click()`);
-  const versionNote = translate("zh-Hans", "story.sortMeta", {
-    meta: "4",
-    total: "43",
-    sort: translate("zh-Hans", "story.sort.version"),
-  });
-  await cdp.waitFor(
-    `(document.querySelector('[data-testid="story-sort-note"]')?.textContent ?? '').includes(${JSON.stringify(versionNote)})`,
-    "version sort notes annotated nodes",
+  const storyOrder = await cdp.evaluate(`(() => {
+    const cards = [...document.querySelectorAll('[data-testid="story-node-card"]')];
+    return {
+      sortBars: document.querySelectorAll('[data-testid="story-sort"]').length,
+      ids: cards.map((card) => card.dataset.nodeId),
+      orders: cards.map((card) => Number(card.dataset.order)),
+    };
+  })()`);
+  check(storyOrder.sortBars === 0, "story index offers no duplicate version/chapter sorts");
+  check(
+    new Set(storyOrder.ids).size === storyOrder.ids.length,
+    "story index lists every event exactly once",
   );
-  check(true, "version sort explains its reading-order fallback");
+  check(
+    storyOrder.orders.length === storyOrder.ids.length &&
+      storyOrder.orders.every(
+        (order, index) => Number.isFinite(order) && (index === 0 || storyOrder.orders[index - 1] < order),
+      ),
+    "story index follows the canonical reading order",
+  );
 
   // The flat entity page for Branching OS nodes is gone: `/story_node/<id>`
   // answers with the not-found view instead of a second copy of the node.

@@ -121,58 +121,16 @@ export function findGalleryGroup(db: Database, gameId: string): GalleryGroup | n
 }
 
 /* ------------------------------------------------------------------ story */
-export type StorySort = "level" | "version" | "chapter";
-
 export interface StoryEntry {
   readonly node: StoryNodeEntity;
   readonly row: ReadingOrderRow | null;
   readonly title: string;
   readonly snippet: string;
-  readonly sortKey: string;
-}
-
-function storySortKey(
-  row: ReadingOrderRow | null,
-  sort: StorySort,
-  levelOrder: number,
-): string {
-  // The effective level gate is the spoiler-deferred position. It stays the
-  // primary key in every mode so version/chapter sorting never promotes a
-  // node ahead of its prerequisites.
-  if (sort === "level") {
-    return String(levelOrder).padStart(8, "0");
-  }
-  const gate = String(row?.level_gate ?? 9999).padStart(4, "0");
-  const order = String(levelOrder).padStart(8, "0");
-  if (sort === "version") {
-    if (row?.version) {
-      const version = row.version_order.length
-        ? row.version_order.map((part) => String(part).padStart(4, "0")).join("-")
-        : row.version
-            .split(".")
-            .map((part) => String(Number(part) || 0).padStart(4, "0"))
-            .join(".");
-      return `${gate}\u00000\u0000${version}`;
-    }
-    return `${gate}\u00001\u0000${order}`;
-  }
-  if (sort === "chapter") {
-    if (row?.chapter_id) {
-      const chapterOrder =
-        row.chapter_order === null
-          ? 9999
-          : row.chapter_order;
-      return `${gate}\u00000\u0000${String(chapterOrder).padStart(6, "0")}\u0000${row.chapter_id}`;
-    }
-    return `${gate}\u00001\u0000${order}`;
-  }
-  return order;
 }
 
 export function storyEntries(
   db: Database,
   lang: Lang,
-  sort: StorySort,
   i18n: I18n,
 ): StoryEntry[] {
   const nodes = typed<StoryNodeEntity>(db, "story_node").filter(isStoryNode);
@@ -184,47 +142,26 @@ export function storyEntries(
       continue;
     }
     const row = db.readingOrderByEntity.get(node.id) ?? null;
-    if (sort === "level" && row?.chapter_staged) {
+    // test01/test02 staging rows stay out of the canonical reading order.
+    if (row?.chapter_staged) {
       continue;
     }
-    const levelOrder = row?.order ?? 100000 + entries.length;
-    const sortKey = storySortKey(row, sort, levelOrder);
     entries.push({
       node,
       row,
       title: entityTitle(db, node, lang, i18n),
       snippet: node.text_ref ? textSnippet(db, node.text_ref, lang) : "",
-      sortKey,
     });
   }
+  // Canonical projection order; rows without a projection keep their place
+  // after it, matching the reading-order card sequence elsewhere.
   entries.sort(
     (left, right) =>
-      left.sortKey.localeCompare(right.sortKey) ||
+      (left.row?.order ?? Number.MAX_SAFE_INTEGER) -
+        (right.row?.order ?? Number.MAX_SAFE_INTEGER) ||
       left.node.game_id.localeCompare(right.node.game_id),
   );
   return entries;
-}
-
-export function storySortMetaCount(
-  db: Database,
-  sort: StorySort,
-): number {
-  let count = 0;
-  for (const node of db.entitiesByType.get("story_node") ?? []) {
-    if (!isStoryNode(node) || node.kind !== "event") {
-      continue;
-    }
-    const row = db.readingOrderByEntity.get(node.id);
-    if (!row) {
-      continue;
-    }
-    if (sort === "version" && row.version) {
-      count += 1;
-    } else if (sort === "chapter" && row.chapter_id) {
-      count += 1;
-    }
-  }
-  return count;
 }
 
 export function findStoryNode(db: Database, gameId: string): StoryNodeEntity | null {

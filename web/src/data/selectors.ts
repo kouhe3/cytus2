@@ -703,6 +703,7 @@ export function formatLevelLocks(
   db: Database,
   locks: unknown,
   i18n: I18n,
+  levelOffset = 1,
 ): string[] {
   if (!Array.isArray(locks)) {
     return [];
@@ -720,7 +721,7 @@ export function formatLevelLocks(
     }
     values.push(
       `${characterName(db, character)} · ${i18n.t("common.level", {
-        level: level + 1,
+        level: level + levelOffset,
       })}`,
     );
   }

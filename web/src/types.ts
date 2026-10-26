@@ -269,6 +269,8 @@ export interface StoryNodeEntity extends BaseEntity {
   readonly deleted_topic_id?: string | null;
   readonly trigger_os_id?: string | null;
   readonly trigger_topic_id?: string | null;
+  /** Branching OS file id whose `TOUCH_BOS_<id>` step starts this story. */
+  readonly trigger_branch_id?: string | null;
   readonly trigger_topics?: string[];
   readonly boss_stages?: StoryBossStageRef[];
   readonly gallery_ref?: StoryGalleryRef | null;
@@ -305,8 +307,9 @@ export interface BossStageEntity extends BaseEntity {
   readonly display_name: string;
   readonly aliases: string[];
   readonly conditions: ConditionEntry[];
-  readonly folder_id: string;
-  readonly gallery_item_id: string;
+  /** Null when the stage is not a Backup Database entry (Branching OS). */
+  readonly folder_id: string | null;
+  readonly gallery_item_id: string | null;
   readonly provenance: ProvenanceEntry[];
 }
 

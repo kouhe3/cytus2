@@ -44,13 +44,20 @@ export function LevelLockList({
   db,
   locks,
   empty,
+  levelOffset = 1,
 }: {
   db: Database;
   locks: readonly LevelLock[] | undefined;
   empty?: string;
+  /**
+   * Display bias for the stored level. iM/OS gates store a 0-based level, so
+   * they render `+1`; Branching OS stores the level the game already shows, so
+   * it renders the raw value.
+   */
+  levelOffset?: number;
 }) {
   const i18n = useI18n();
-  const labels = formatLevelLocks(db, locks, i18n);
+  const labels = formatLevelLocks(db, locks, i18n, levelOffset);
   if (labels.length === 0) {
     return <p className="muted">{empty ?? i18n.t("common.none")}</p>;
   }

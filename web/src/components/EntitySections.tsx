@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ConditionList, LevelLockList } from "./Conditions";
+import { BranchConsequences, BranchStateText } from "./BranchStory";
 import { EntityLink, EntityList } from "./EntityLink";
 import { Fact, Facts } from "./Facts";
 import { MediaImage } from "./Media";
@@ -90,6 +91,26 @@ function EntityById({
   return (
     <Link to={entityHref(id)} className="inline-link">
       {entityTitle(db, entity, lang, i18n)}
+    </Link>
+  );
+}
+
+/**
+ * Branching OS file that starts a story (`trigger_branch_id`). The value is a
+ * raw data id, so it links only when the branch node exists.
+ */
+function BranchTriggerRef({ db, id }: { db: Database; id: string | null | undefined }) {
+  const i18n = useI18n();
+  if (!id) {
+    return <span className="muted">{i18n.t("common.none")}</span>;
+  }
+  const nodeId = `story_node/${id}`;
+  if (!db.entityById.get(nodeId)) {
+    return <code>{id}</code>;
+  }
+  return (
+    <Link to={entityHref(nodeId)} className="inline-link">
+      <code>{id}</code>
     </Link>
   );
 }
@@ -562,6 +583,11 @@ export function BossStageDetails({
   const i18n = useI18n();
   return (
     <Section title={i18n.t("section.bossStage")} testId="boss-stage-detail">
+      {entity.folder_id && entity.gallery_item_id ? null : (
+        <p className="hint" data-testid="boss-stage-no-gallery">
+          {i18n.t("bossStage.noGallery")}
+        </p>
+      )}
       <Facts>
         <Fact label={i18n.t("fact.displayName")}>{entity.display_name}</Fact>
         <Fact label={i18n.t("fact.aliases")}>
@@ -616,12 +642,17 @@ export function StoryNodeDetails({
               <code>{entity.source_file ?? "—"}</code>
             </Fact>
             <Fact label={i18n.t("fact.state")}>
+              <BranchStateText node={entity} />{" "}
               <code>
                 {entity.state_id ?? "—"} / {entity.state_value ?? "—"}
               </code>
             </Fact>
             <Fact label={i18n.t("fact.levelLocks")}>
-              <LevelLockList db={db} locks={entity.level_locks} />
+              <LevelLockList
+                db={db}
+                locks={entity.level_locks}
+                levelOffset={0}
+              />
             </Fact>
           </Facts>
         </Section>
@@ -633,6 +664,7 @@ export function StoryNodeDetails({
             empty={i18n.t("value.noNextNode")}
           />
         </Section>
+        <BranchConsequences db={db} node={entity} lang={lang} />
       </>
     );
   }
@@ -687,6 +719,9 @@ export function StoryNodeDetails({
               namespace="os"
               id={entity.trigger_os_id}
             />
+          </Fact>
+          <Fact label={i18n.t("fact.branchTrigger")}>
+            <BranchTriggerRef db={db} id={entity.trigger_branch_id} />
           </Fact>
           <Fact label={i18n.t("fact.actions")}>
             <StringChips values={entity.actions ?? []} />

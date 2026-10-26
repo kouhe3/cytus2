@@ -1,5 +1,5 @@
-import { isStoryNode } from "./database";
-import type { Database, StoryNodeEntity } from "../types";
+import { isBossStage, isStoryNode } from "./database";
+import type { BossStageEntity, Database, StoryNodeEntity } from "../types";
 
 /**
  * Branching OS projection helpers.
@@ -45,7 +45,11 @@ function compareNodes(left: StoryNodeEntity, right: StoryNodeEntity): number {
 
 /**
  * Unlock gate stored for a node (the owner level lock wins over the node's own
- * `level`). Both are 0-based; callers add 1 to match the level the game shows.
+ * `level`).
+ *
+ * The value is the level the game shows, not a 0-based index: the game's
+ * `BranchingOS.UnlockStateResolver` compares it against `Progress + 1`, the
+ * level this loop displays, so `7` means Lv 7.
  */
 export function branchGate(node: StoryNodeEntity): number | null {
   const lock = node.level_locks?.[0];
@@ -178,4 +182,86 @@ export function branchPredecessors(
   return branchNodes(db).filter((candidate) =>
     (candidate.next ?? []).includes(node.id),
   );
+}
+
+/**
+ * `UnlockCondition.StateId` semantics (the game's `BranchingOS.StateId` enum).
+ *
+ * `-1` means the node unlocks on level alone; `0`/`1` read the two loop group
+ * states, `2`/`3` the tap result of the matching branch point
+ * (`BranchingSelect`: 0 = Leave, 1 = Hit), and `4` lists file ids that must be
+ * read first. The SPA keeps the raw values and only names the field.
+ */
+export type BranchStateKind =
+  | "level"
+  | "group1"
+  | "group2"
+  | "select1"
+  | "select2"
+  | "afterFiles";
+
+export interface BranchState {
+  readonly kind: BranchStateKind;
+  /** Required values; empty for `level`. `afterFiles` values are file ids. */
+  readonly values: string[];
+}
+
+const STATE_KINDS: Record<number, BranchStateKind> = {
+  [-1]: "level",
+  0: "group1",
+  1: "group2",
+  2: "select1",
+  3: "select2",
+  4: "afterFiles",
+};
+
+export function branchState(node: StoryNodeEntity): BranchState {
+  const kind = STATE_KINDS[node.state_id ?? -1] ?? "level";
+  const values = (node.state_value ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  return { kind, values };
+}
+
+/**
+ * Stories the game starts when this node is picked: their `trigger_branch_id`
+ * comes from the `TOUCH_BOS_<file id>` step in the story class.
+ */
+export function branchStories(
+  db: Database,
+  node: StoryNodeEntity,
+): StoryNodeEntity[] {
+  return (db.entitiesByType.get("story_node") ?? [])
+    .filter(
+      (entity): entity is StoryNodeEntity =>
+        isStoryNode(entity) &&
+        entity.kind === "event" &&
+        entity.trigger_branch_id === node.game_id,
+    )
+    .sort((left, right) => left.game_id.localeCompare(right.game_id));
+}
+
+/** Boss stages the triggered stories play, in story order and deduped. */
+export function branchBossStages(
+  db: Database,
+  node: StoryNodeEntity,
+): BossStageEntity[] {
+  const stages: BossStageEntity[] = [];
+  const seen = new Set<string>();
+  for (const story of branchStories(db, node)) {
+    for (const reference of story.boss_stages ?? []) {
+      const id = reference.entity_id;
+      if (!id || seen.has(id)) {
+        continue;
+      }
+      const record = db.entityById.get(id);
+      if (!record || !isBossStage(record)) {
+        continue;
+      }
+      seen.add(id);
+      stages.push(record);
+    }
+  }
+  return stages;
 }

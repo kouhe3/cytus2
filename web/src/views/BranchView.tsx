@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { BackButton } from "../components/BackButton";
 import { BranchMap } from "../components/BranchMap";
+import { BranchConsequences, BranchStateText } from "../components/BranchStory";
 import { ChartLinks } from "../components/ChartLinks";
 import { LevelLockList } from "../components/Conditions";
 import { TextBody } from "../components/TextBody";
@@ -105,6 +106,9 @@ export function BranchIndexView({ db }: { db: Database }) {
           <p className="eyebrow">{i18n.t("branch.eyebrow")}</p>
           <h1>{i18n.t("branch.title")}</h1>
           <p className="lede">{i18n.t("branch.lede")}</p>
+          <p className="hint" data-testid="branch-level-hint">
+            {i18n.t("branch.levelHint")}
+          </p>
           <div className="page-stats" data-testid="branch-stats">
             {i18n.t("branch.stats", {
               nodes: formatUnit(i18n, "nodes", nodes),
@@ -155,7 +159,7 @@ export function BranchIndexView({ db }: { db: Database }) {
                       <code className="branch-row-id">{node.game_id}</code>
                       {gate === null ? null : (
                         <span className="level-badge">
-                          {i18n.t("common.level", { level: gate + 1 })}
+                          {i18n.t("common.level", { level: gate })}
                         </span>
                       )}
                       <span className="branch-row-state">{stateText(node)}</span>
@@ -250,7 +254,7 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
                 <>
                   {" · "}
                   <span className="level-badge">
-                    {i18n.t("common.level", { level: gate + 1 })}
+                    {i18n.t("common.level", { level: gate })}
                   </span>
                 </>
               )}
@@ -297,12 +301,13 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
                 <dd>
                   {node.level === undefined
                     ? "-"
-                    : i18n.t("common.level", { level: node.level + 1 })}
+                    : i18n.t("common.level", { level: node.level })}
                 </dd>
               </div>
               <div className="fact">
                 <dt>{i18n.t("fact.state")}</dt>
                 <dd>
+                  <BranchStateText node={node} />{" "}
                   <code>{stateText(node)}</code>
                 </dd>
               </div>
@@ -315,7 +320,7 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
               <div className="fact">
                 <dt>{i18n.t("fact.levelLocks")}</dt>
                 <dd>
-                  <LevelLockList db={db} locks={node.level_locks} />
+                  <LevelLockList db={db} locks={node.level_locks} levelOffset={0} />
                 </dd>
               </div>
             </dl>
@@ -374,6 +379,8 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
               </ul>
             )}
           </section>
+
+          <BranchConsequences db={db} node={node} lang={lang} />
 
           {charts.length === 0 ? null : (
             <section className="detail-section" data-testid="branch-charts">

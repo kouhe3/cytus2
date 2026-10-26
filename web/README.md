@@ -105,17 +105,22 @@ true-end scene (story design), so its bundle carries Miku's clip; this is
 metadata, not an export error. The song-select clips stay out of `videos` so
 the Cutscene Library does not list them as subtitle-less cutscenes.
 
-Song pages (`/song/<gameId>`) take their jacket from the manifest's
-`songCovers` bucket: every one of the 695 songs ships its own cover texture
-inside `split_base_assets.apk`, in an extensionless `assets/bin/Data/<hash>`
-serialized file whose Texture2D carries the song id. The export keeps the
-largest variant (1024² for most songs, 1920×1280 for seven collab tracks) and
-renders it at its own aspect — no crop, no stretch. `covers` (the
-`galleryimageviewer.ab` backup-database art, 22 base-game songs on a squeezed
-square canvas) stays as the fallback, and `pickImage(…, "cover")` never falls
-through to `illustrations`, because that map carries song-id aliases for
-character art (`cherry001_001` → `illustration_cherry001_s001`) and the page
-would show a gallery illustration under the cover frame.
+Song pages (`/song/<gameId>`) take their cover from the manifest's `songCovers`
+bucket: every one of the 695 songs ships its own textures inside
+`split_base_assets.apk`, in extensionless `assets/bin/Data/<hash>` serialized
+files whose Texture2D carries the song id. Each song has a small square
+no-lettering cover (350²/512²) — the art the game's "You got new chart" card
+and its square slots show — and, for most songs, a 1024² detail cover carrying
+the title and artist. The detail canvas squeezes the selection-screen artwork
+into a square, and that screen is a tilted 3D quad (Ivy's is a slanted panel),
+so neither the slot ratio nor the artwork's own ratio is recoverable from the
+data: showing the detail texture as-is makes figures look thin. The export
+therefore keeps the square cover, which is natively square and needs no crop or
+stretch. `covers` (the `galleryimageviewer.ab` backup-database art) stays as a
+fallback, and `pickImage(…, "cover")` never falls through to `illustrations`,
+because that map carries song-id aliases for character art (`cherry001_001` →
+`illustration_cherry001_s001`) and the page would show a gallery illustration
+under the cover frame.
 
 Every archive video — the OS and Branching OS cutscene sections, OS/OA inline
 `##movie` blocks and OA scene clips — renders through the shared `VideoPlayer`

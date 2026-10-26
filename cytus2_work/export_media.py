@@ -326,11 +326,15 @@ def export_covers(manifest):
 def export_song_covers(manifest):
     """每首歌的曲绘：`split_base_assets.apk` 里的 `assets/bin/Data/<hash>`。
 
-    这些 `<hash>` 是没有扩展名的 Unity 序列化文件，一首歌一个（旁边还有谱面和音频的
-    文件），里面的 Texture2D 名字就是 song_id。同一首歌可能有 350² / 512² / 1024²
-    多种尺寸（列表图标 / 曲包图标 / 详情图），取最大的一张原样输出到
-    `song-covers/<song_id>.png`；7 首联名曲的详情图是 1920×1280（3:2）。
-    曲绘的方形画布就是美术原始比例，不做裁剪或拉伸。
+    一首歌的文件里最多两张贴图（Texture2D 名 = song_id）：
+      - 350²/512²：**无字方形版**，原生方形画布，就是游戏 "You got new chart" 卡片
+        和方形槽位里显示的那张；
+      - 1024²（少数 1920×1280）：详情版，带曲名 / 作者，但方形画布是把角色选曲槽位
+        的宽幅图横向压扁装进去的。
+
+    选曲槽位是 3D 透视的（ivy 的屏幕是斜的），槽位比例无法从场景几何还原，也没有任何
+    数据字段记录，所以详情版没法可靠还原比例、原样显示会「人变瘦」。这里导出**无字
+    方形版**：原生方形、不裁不拉，比例天然正确。manifest 键 `songCovers`。
     """
     import UnityPy
 
@@ -340,8 +344,9 @@ def export_song_covers(manifest):
         capture_output=True,
     )
 
-    pattern = re.compile(r"^[a-z]+[0-9_]*\d+_[0-9]+[a-z]?$")
-    best = {}
+    song_pattern = re.compile(r"^[a-z]+[0-9_]*\d+_[0-9]+[a-z]?$")
+    # song_id -> {(w, h): (data file, object index)}
+    variants = {}
     for name in sorted(os.listdir(BASEDATA)):
         if not re.fullmatch(r"[0-9a-f]{32}", name):
             continue
@@ -352,7 +357,7 @@ def export_song_covers(manifest):
             env = UnityPy.load(path)
         except Exception:
             continue
-        for o in env.objects:
+        for index, o in enumerate(env.objects):
             if o.type.name != "Texture2D":
                 continue
             try:
@@ -360,22 +365,33 @@ def export_song_covers(manifest):
             except Exception:
                 continue
             key = d.get("m_Name") or ""
-            if not pattern.match(key):
+            if not song_pattern.match(key):
                 continue
             w, h = d.get("m_Width") or 0, d.get("m_Height") or 0
-            if key not in best or w * h > best[key][0]:
-                best[key] = (w * h, o)
+            if w and h:
+                variants.setdefault(key, {})[(w, h)] = (name, index)
+
+    def load(song_id, size):
+        name, index = variants[song_id][size]
+        env = UnityPy.load(os.path.join(BASEDATA, name))
+        o = [x for i, x in enumerate(env.objects) if i == index][0]
+        return o.read().image.convert("RGB")
 
     os.makedirs(os.path.join(OUT, "song-covers"), exist_ok=True)
     covers = {}
-    for key, (_, o) in sorted(best.items()):
+    for song_id, by_size in sorted(variants.items()):
+        sizes = sorted(by_size)
+        # Largest cover that still fits a square slot, so 350/1024 pairs keep the
+        # 350 and 512/1024 pairs keep the 512; a song with a lone texture uses it.
+        square = [size for size in sizes if size[0] <= 512]
+        size = square[-1] if square else sizes[0]
         try:
-            img = o.read().image.convert("RGBA")
+            img = load(song_id, size)
         except Exception:
             continue
-        rel = f"song-covers/{key}.png"
-        img.save(os.path.join(OUT, rel), optimize=True)
-        covers[key] = {
+        rel = f"song-covers/{song_id}.webp"
+        img.save(os.path.join(OUT, rel), "WEBP", quality=92, method=4)
+        covers[song_id] = {
             "file": rel,
             "w": img.width,
             "h": img.height,

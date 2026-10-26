@@ -114,7 +114,7 @@ OS 文本是**块结构**而不是 Markdown：游戏脚本里的 `##conversation
 | `videos/` | `video_{story,trueend,endplay,oasystem}_*.ab` | 116 个 mp4（1111 MB），原始 H.264 + AAC 流，直接切 `VideoClip` 的 `.resource` 段 |
 | `titles/` | `video_title_*.ab` | 12 段标题画面动画（1136×852 等，附录「标题画面演进」按 Type 挂载） |
 | `covers/` | `galleryimageviewer.ab` | 23 张备份数据库图（Format 3 / `icon_image`）。贴图是方形画布，但游戏按 gallerydata 的 `Location`（`"宽,高"`）拉伸显示，故导出时缩放到该尺寸：neko 组 2048×1365（3:2）、paff 组 3072×1134（2.71:1）、`rayark_10th` 2048×1365 |
-| `song-covers/` | `split_base_assets.apk` → `assets/bin/Data/<hash>` | 695 首歌各自的曲绘。这些 `<hash>` 是无扩展名的 Unity 序列化文件，Texture2D 名即 `song_id`；同曲可能有 350² / 512² / 1024² 多档（列表图标 / 曲包图标 / 详情图），导出取最大一件原样输出（多数 1024²，7 首联名曲 1920×1280），manifest 键 `songCovers`。方形画布就是美术原始比例，不裁不拉 |
+| `song-covers/` | `split_base_assets.apk` → `assets/bin/Data/<hash>` | 695 首歌的**无字方形曲绘**（350²/512²，游戏 "You got new chart" 卡片与方形槽位显示的那张）。同曲另有 1024² 详情版（带曲名 / 作者），但它是把透视选曲屏上的宽幅图压进方形画布，槽位本身是 3D 斜置（ivy 是斜屏幕），比例无从还原，故不导出；这里只出原生方形、不裁不拉的那版。manifest 键 `songCovers`，输出 WebP |
 | `subs/` | `srtfile_{cn,zh,en,ja,ko}.ab` | 55 部过场影片的字幕，SRT → WebVTT（273 个文件），按语言切换 |
 | `audio/sound/` | `ossounds.ab` | `##sound=` 音效（WAV → MP3 VBR） |
 | `audio/bgm/` | `osbgms.ab` | `##bgm=` 背景音乐（WAV → MP3 VBR） |

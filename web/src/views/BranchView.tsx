@@ -5,6 +5,7 @@ import { BranchMap } from "../components/BranchMap";
 import { ChartLinks } from "../components/ChartLinks";
 import { LevelLockList } from "../components/Conditions";
 import { TextBody } from "../components/TextBody";
+import { VideoPlayer } from "../components/VideoPlayer";
 import {
   branchGate,
   branchGroups,
@@ -262,6 +263,17 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
               activeId={node.id}
               onOpen={openNode}
             />
+          ) : null}
+
+          {node.cutscene ? (
+            <section
+              className="detail-section"
+              data-testid="branch-cutscene"
+              data-clip={node.cutscene}
+            >
+              <h2>{i18n.t("section.osCutscene")}</h2>
+              <VideoPlayer clip={node.cutscene} />
+            </section>
           ) : null}
 
           <section className="detail-section" data-testid="branch-node-body">

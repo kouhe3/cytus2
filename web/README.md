@@ -37,7 +37,7 @@ repository root when the default `python` does not have UnityPy;
 | `/backup/<gameId>` | folder header logo, then items grouped as a media retrospective; kind filter, conditions, boss-stage links |
 | `/story` | story nodes ordered by reading order; level/version/chapter sort, event/Branching OS filter |
 | `/branch` | Branching OS view: every `story_node(kind=branch)` grouped by its `source_file`, drawn as the game's branch graph. Both axes come from the projection: columns are `position`, rows are the node's `order` (ties in one column step down a line), and a column holding a single node sits on the mean of its predecessors so merge points land between their inputs and the ending stubs stay aligned with the tracks they end (20 with 18a, 21 with 18b, 11 on the third line). `next` / `LinkedFileIds` edges are routed as right-angle elbows: an edge that skips several columns drops on the target's row (or runs out on the source's row) when that row is empty in between, and only falls back to a row-gutter lane when both rows are taken. Columns are sized to the reader's width so the whole graph stays visible; the same nodes follow as a list with position, 1-based unlock level, `state_id` / `state_value` and a text snippet |
-| `/branch/<gameId>` | Branching OS node reader: the graph with the open node highlighted, the node text, its position/order/level/state/level-lock facts, predecessors and successors as in-view links (no jump back to `/story_node/...`), and the charts the node unlocks |
+| `/branch/<gameId>` | Branching OS node reader: the graph with the open node highlighted, a first-open cutscene player when the node has one (`taos001a` plays `taos0101`), the node text, its position/order/level/state/level-lock facts, predecessors and successors as in-view links (no jump back to `/story_node/...`), and the charts the node unlocks |
 | `/shop` | CAPSO packs, gacha machine and shop bundles; Black Market badge |
 | `/extras` | appendix hub: assistant dialogues, title-screen evolution, song-select media and the cutscene subtitle library |
 | `/extras/assistants` | iM assistant dialogue groups, pages and trigger/target, all five languages |
@@ -105,8 +105,8 @@ true-end scene (story design), so its bundle carries Miku's clip; this is
 metadata, not an export error. The song-select clips stay out of `videos` so
 the Cutscene Library does not list them as subtitle-less cutscenes.
 
-Every archive video — the OS cutscene section, OS/OA inline `##movie` blocks
-and OA scene clips — renders through the shared `VideoPlayer`
+Every archive video — the OS and Branching OS cutscene sections, OS/OA inline
+`##movie` blocks and OA scene clips — renders through the shared `VideoPlayer`
 (`src/components/VideoPlayer.tsx`). It resolves the clip through
 `/media/manifest.json` (`movies` first, then `videos`), attaches the exact
 subtitle group's VTT for the active language, never autoplays, and explains a

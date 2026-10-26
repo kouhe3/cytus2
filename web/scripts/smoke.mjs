@@ -2702,6 +2702,11 @@ try {
     prevNote: document.querySelector('[data-testid="branch-prev"]')?.textContent ?? '',
     next: [...document.querySelectorAll('[data-testid="branch-next-link"]')].map((link) => link.getAttribute('href')),
     back: document.querySelector('[data-testid="back-to-branch"]')?.getAttribute('href') ?? '',
+    cutsceneClip: document.querySelector('[data-testid="branch-cutscene"]')?.getAttribute('data-clip') ?? '',
+    cutsceneTitle: document.querySelector('[data-testid="branch-cutscene"] h2')?.textContent ?? '',
+    cutscenePlayer: document.querySelector('[data-testid="branch-cutscene"] [data-testid="video-player"]')?.getAttribute('data-clip') ?? '',
+    cutsceneSrc: document.querySelector('[data-testid="branch-cutscene"] video')?.getAttribute('src') ?? '',
+    cutsceneAutoplay: document.querySelector('[data-testid="branch-cutscene"] video')?.autoplay ?? null,
   }))()`);
   check(
     branchText.chars > 100,
@@ -2717,6 +2722,20 @@ try {
     "branch node links its successor inside the same view",
   );
   check(branchText.back === "/branch", "branch reader links back to the graph");
+  check(
+    branchText.cutsceneClip === "taos0101" &&
+      branchText.cutsceneTitle === translate("zh-Hans", "section.osCutscene"),
+    `branch node shows its first-open cutscene (got ${branchText.cutsceneClip} / ${branchText.cutsceneTitle})`,
+  );
+  check(
+    branchText.cutscenePlayer === "taos0101" &&
+      branchText.cutsceneSrc.includes("videos/taos0101.mp4"),
+    `branch cutscene resolves through the media manifest (got ${branchText.cutscenePlayer} / ${branchText.cutsceneSrc})`,
+  );
+  check(
+    branchText.cutsceneAutoplay === false,
+    "branch cutscene never autoplays",
+  );
 
   await cdp.navigate(`${appBase}/branch/taos008a`);
   await cdp.waitFor(

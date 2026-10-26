@@ -273,6 +273,8 @@ export interface StoryNodeEntity extends BaseEntity {
   readonly boss_stages?: StoryBossStageRef[];
   readonly gallery_ref?: StoryGalleryRef | null;
   readonly movie_files?: string[];
+  /** First-open cutscene clip; only Branching OS nodes carry one. */
+  readonly cutscene?: string;
   readonly charts?: string[];
   readonly level?: number;
   readonly level_locks?: LevelLock[];

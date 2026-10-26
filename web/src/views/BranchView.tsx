@@ -10,8 +10,10 @@ import { VideoPlayer } from "../components/VideoPlayer";
 import {
   branchGate,
   branchGroups,
+  branchOpensReader,
   branchPlacements,
   branchPredecessors,
+  branchStoryMovies,
   findBranchNode,
 } from "../data/branch";
 import { isChart, isStoryNode, textSnippet } from "../data/database";
@@ -143,7 +145,8 @@ export function BranchIndexView({ db }: { db: Database }) {
             <ol className="branch-list" data-testid="branch-list">
               {group.nodes.map((node) => {
                 const gate = branchGate(node);
-                const snippet = node.text_ref
+                const snippet =
+                  node.text_ref && branchOpensReader(node)
                   ? textSnippet(db, node.text_ref, lang)
                   : "";
                 return (
@@ -164,7 +167,10 @@ export function BranchIndexView({ db }: { db: Database }) {
                       )}
                       <span className="branch-row-state">{stateText(node)}</span>
                       <span className="branch-row-snippet">
-                        {snippet || i18n.t("story.noText")}
+                        {snippet ||
+                          (branchOpensReader(node)
+                            ? i18n.t("story.noText")
+                            : i18n.t("branch.rowStoryOnly"))}
                       </span>
                     </Link>
                   </li>
@@ -229,6 +235,7 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
         record !== undefined && isChart(record),
     );
   const gate = branchGate(node);
+  const movieFiles = branchStoryMovies(db, node);
   const openNode = (id: string) => navigate(`/branch/${encodeURIComponent(id)}`);
 
   return (
@@ -282,8 +289,27 @@ export function BranchNodeView({ db, gameId }: { db: Database; gameId: string })
 
           <section className="detail-section" data-testid="branch-node-body">
             <h2>{i18n.t("branch.bodyTitle")}</h2>
-            <TextBody textRef={node.text_ref ?? null} lang={lang} />
+            {branchOpensReader(node) ? (
+              <TextBody textRef={node.text_ref ?? null} lang={lang} />
+            ) : (
+              <p className="hint" data-testid="branch-body-skipped">
+                {i18n.t("branch.storyOnly")}
+              </p>
+            )}
           </section>
+
+          {movieFiles.length === 0 ? null : (
+            <section className="detail-section" data-testid="branch-movies">
+              <h2>{i18n.t("section.storyMovies")}</h2>
+              <ul className="link-list">
+                {movieFiles.map((movie) => (
+                  <li key={movie}>
+                    <code>{movie}</code>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="detail-section" data-testid="branch-node-facts">
             <h2>{i18n.t("branch.factsTitle")}</h2>

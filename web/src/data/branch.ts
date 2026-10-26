@@ -265,3 +265,32 @@ export function branchBossStages(
   }
   return stages;
 }
+
+/**
+ * Whether selecting the node opens the OS file reader.
+ *
+ * The game's `BranchingOSPresenter._ShouldSkipByStory` is
+ * `(file.Type & ~1) == 8`, i.e. `BranchingPoint` (8) and `Ending` (9) nodes
+ * never show their body: selecting them starts the node's story, which plays
+ * the cutscene / boss stage and settles the reward. `TrueEnding` (10) still
+ * opens the reader.
+ */
+export function branchOpensReader(node: StoryNodeEntity): boolean {
+  return ((node.node_type ?? 0) & ~1) !== 8;
+}
+
+/** Cutscene clips the node's stories play, deduped. */
+export function branchStoryMovies(
+  db: Database,
+  node: StoryNodeEntity,
+): string[] {
+  const movies: string[] = [];
+  for (const story of branchStories(db, node)) {
+    for (const movie of story.movie_files ?? []) {
+      if (!movies.includes(movie)) {
+        movies.push(movie);
+      }
+    }
+  }
+  return movies;
+}

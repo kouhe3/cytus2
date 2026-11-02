@@ -194,6 +194,24 @@ export function branchPredecessors(
 }
 
 /**
+ * The game draws no line for this edge: the source hides its outgoing lines
+ * (`ViewSetting.ShouldHideLine`) or the target chip has no in-port
+ * (`ViewSetting.HasLineIn`). `next` keeps the edge; the map decides how to
+ * draw it.
+ */
+export function branchEdgeHidden(
+  source: StoryNodeEntity,
+  target: StoryNodeEntity,
+): boolean {
+  return source.hide_outgoing_line === true || target.has_line_in === false;
+}
+
+/** The game's elbow offset for the `index`-th outgoing line, in canvas pixels. */
+export function branchLineOffset(node: StoryNodeEntity, index: number): number {
+  return node.line_offsets?.[index] ?? 0;
+}
+
+/**
  * `UnlockCondition.StateId` semantics (the game's `BranchingOS.StateId` enum).
  *
  * `-1` means the node unlocks on level alone; `0`/`1` read the two loop group

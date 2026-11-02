@@ -56,6 +56,10 @@ function BranchAside({
           <span className="branch-swatch is-end" aria-hidden="true" />{" "}
           {i18n.t("branch.legendEnd")}
         </p>
+        <p>
+          <span className="branch-swatch is-hidden" aria-hidden="true" />{" "}
+          {i18n.t("branch.legendHidden")}
+        </p>
       </section>
       <section className="panel">
         <h2>{i18n.t("story.counts")}</h2>

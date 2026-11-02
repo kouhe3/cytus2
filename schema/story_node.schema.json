@@ -73,6 +73,19 @@
     "order": {
       "type": "integer"
     },
+    "hide_outgoing_line": {
+      "type": "boolean",
+      "description": "The game draws no line out of this node (ViewSetting.ShouldHideLine); `next` stays intact and consumers decide the rendering."
+    },
+    "line_offsets": {
+      "type": "array",
+      "items": {"type": "number"},
+      "description": "Per `next` entry: the elbow offset the game applies to that outgoing line (ViewSetting.LineOffsets[i]), in game canvas pixels."
+    },
+    "has_line_in": {
+      "type": "boolean",
+      "description": "The node's chip has an incoming-line port (ViewSetting.HasLineIn); false means no line can enter it."
+    },
     "charts": {
       "type": "array",
       "items": {

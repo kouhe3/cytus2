@@ -16,8 +16,24 @@
 ├── web/                    Vite + React 本地 SPA（唯一阅读入口）
 ├── cytus2_work/            APK 解包 / 文本提取 / 逆向辅助脚本（Python）
 ├── viewer/                 旧阅览器（已冻结，不参与构建、不产出数据）
-└── docs/adr/               架构决策
+├── docs/adr/               架构决策
+└── docs/screenshots/       README 预览截图
 ```
+
+## 预览
+
+下面是 `web/` 在本地 `build/` 投影上的实际界面（1440×1000，简体中文，
+经 Edge DevTools 协议截取）。截图里的插画与影片来自本地导出的游戏媒体；
+媒体本身仍按 §5 的规则留在库外。
+
+| 界面 | 界面 |
+|:--:|:--:|
+| ![时间线](docs/screenshots/timeline.png) | ![iM 帖子](docs/screenshots/im.png) |
+| **时间线** `/timeline`：824 条 iM 帖子与 OS 日志按阅读顺序排列，右栏是等级门槛、类型、档位与账户筛选 | **iM 帖子** `/im/P0101`：插画附件、正文与 21 条回复，右栏保留赞数、回复数与来源 |
+| ![角色档案](docs/screenshots/character.png) | ![OS 手机聊天](docs/screenshots/os-chat.png) |
+| **角色档案** `/character/paff001`：立绘、全灭结局变体与按版本排序的 OS 日志，右栏是 IM 入口 | **OS 手机聊天** `/os/nos021`：`##json=msgs` 记录按消息侧渲染成聊天，带头像、时间和表情 |
+| ![分支 OS](docs/screenshots/branch.png) | ![选曲界面媒体](docs/screenshots/songselect.png) |
+| **分支 OS** `/branch`：列是位置、行是分支，`LinkedFileIds` 连线按直角折线路由 | **选曲界面媒体** `/extras/songselect`：36 段普通选曲背景按曲包分组，14 个真结局场景按游戏内顺序排列，影片不自动播放 |
 
 ## 1. 准备
 

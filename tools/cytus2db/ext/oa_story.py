@@ -878,10 +878,18 @@ def _branch_nodes(source: InputSource) -> list[dict[str, Any]]:
                         f"{difficulty_index}"
                     )
                 charts.append(chart_key(song_id, DIFFICULTIES[difficulty_index]))
+            linked_ids = [str(value) for value in view.get("LinkedFileIds") or []]
             next_ids = [
-                entity_key("story_node", str(value))
-                for value in view.get("LinkedFileIds") or []
-                if str(value)
+                entity_key("story_node", value) for value in linked_ids if value
+            ]
+            # `LineOffsets[i]` belongs to `LinkedFileIds[i]`: a placeholder
+            # (`""`, used by terminal files) drops its offset together with the
+            # edge, so `line_offsets` stays aligned with `next`.
+            raw_offsets = view.get("LineOffsets") or []
+            line_offsets = [
+                float(raw_offsets[index])
+                for index, value in enumerate(linked_ids)
+                if value and index < len(raw_offsets)
             ]
             node = {
                 "id": entity_key("story_node", node_id),
@@ -897,6 +905,12 @@ def _branch_nodes(source: InputSource) -> list[dict[str, Any]]:
                 "next": _unique(next_ids),
                 "position": int(view.get("Position") or 0),
                 "order": int(view.get("Order") or 0),
+                # ViewSetting line fields: the game's ShouldHideLine drops every
+                # outgoing line of a node, HasLineIn picks the chip style with
+                # an in-port, and LineOffsets spaces the elbows of a fan-out.
+                "hide_outgoing_line": bool(view.get("ShouldHideLine") or False),
+                "line_offsets": line_offsets,
+                "has_line_in": bool(view.get("HasLineIn") or False),
                 # Branching OS unlock levels belong to the lineage character
                 # (the table name), never to a song pack.
                 "level_locks": [

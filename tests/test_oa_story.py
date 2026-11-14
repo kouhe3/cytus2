@@ -293,6 +293,9 @@ def test_story_nodes_cover_events_and_branch_nodes(built_db: Path) -> None:
     assert branch["position"] == 1
     assert branch["order"] == 1
     assert branch["next"] == ["story_node/taos002a"]
+    assert branch["hide_outgoing_line"] is False
+    assert branch["has_line_in"] is False
+    assert branch["line_offsets"] == [0.0]
     assert branch["charts"] == [
         "song/alpha001_000@Easy",
         "song/alpha001_000@Hard",
@@ -300,6 +303,10 @@ def test_story_nodes_cover_events_and_branch_nodes(built_db: Path) -> None:
 
     end = next(row for row in branches if row["id"] == "story_node/taos002a")
     assert end["next"] == []
+    # The fixture's only `LinkedFileIds` entry is the `""` terminal placeholder,
+    # so the edge list (and with it the per-edge offsets) is empty.
+    assert end["line_offsets"] == []
+    assert end["has_line_in"] is True
     assert end["charts"] == []
 
 

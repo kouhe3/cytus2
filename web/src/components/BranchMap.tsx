@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { branchPlacements } from "../data/branch";
+import { branchEdgeHidden, branchLineOffset, branchPlacements } from "../data/branch";
 import { useI18n } from "../data/i18n";
 import type { StoryNodeEntity } from "../types";
 
@@ -8,6 +8,10 @@ import type { StoryNodeEntity } from "../types";
  * `position`, and `branchPlacements` derives the row from `order` plus the
  * `next` edges (see that helper), so the graph never parses the id suffix.
  * Edges are right-angle elbows like the in-game graph, not curves.
+ *
+ * The game skips some edges (`ShouldHideLine`, or a target without an in-port);
+ * those stay reachable but are drawn faded and dashed, so the graph reads as one
+ * route without claiming the game draws them.
  */
 const MAX_COL_W = 58;
 /** Below this a short id such as `12a` stops fitting inside the node. */
@@ -36,6 +40,20 @@ function classNames(node: StoryNodeEntity, activeId: string | undefined): string
     classes.push("is-active");
   }
   return classes.join(" ");
+}
+
+/**
+ * `LineOffsets[i]` spaces the elbows of a fan-out in the game's canvas pixels.
+ * Scale each offset into this graph's column gap so two edges that leave the
+ * same node toward the same column stop sharing one elbow.
+ */
+function elbowShift(node: StoryNodeEntity, index: number, gapX: number): number {
+  const offsets = node.line_offsets ?? [];
+  const largest = offsets.reduce((max, offset) => Math.max(max, Math.abs(offset)), 0);
+  if (largest <= 0) {
+    return 0;
+  }
+  return (branchLineOffset(node, index) / largest) * gapX * 0.8;
 }
 
 export function BranchMap({
@@ -105,19 +123,25 @@ export function BranchMap({
         Math.abs(placement.row - row) < 0.01,
     );
 
-  const edges: string[] = [];
+  const edges: { path: string; from: string; to: string; hidden: boolean }[] = [];
   for (const placement of placements) {
     const x1 = left(placement.column) + nodeW;
     const y1 = top(placement.row) + NODE_H / 2;
-    // A short elbow bends in the gap between two columns; an edge that skips
-    // more than one column would run through the boxes of the row it starts
-    // in, so it takes a lane in the row gutter on the target's side instead.
     const gutter = Math.max(ROW_H - NODE_H - 14, 8);
-    for (const nextId of placement.node.next ?? []) {
+    for (const [index, nextId] of (placement.node.next ?? []).entries()) {
       const to = byId.get(nextId);
       if (!to) {
         continue;
       }
+      const shift = elbowShift(placement.node, index, gapX);
+      const hidden = branchEdgeHidden(placement.node, to.node);
+      const push = (path: string) =>
+        edges.push({
+          path,
+          from: placement.node.game_id,
+          to: to.node.game_id,
+          hidden,
+        });
       const x2 = left(to.column);
       const y2 = top(to.row) + NODE_H / 2;
       if (Math.abs(to.column - placement.column) > 1) {
@@ -125,31 +149,31 @@ export function BranchMap({
         // columns: drop on the target's row and run in, otherwise run out on
         // the source's row and drop at the end.
         if (!rowTaken(placement, to, to.row)) {
-          const dropX = Math.round(x1 + gapX);
-          edges.push(`M ${x1} ${y1} L ${dropX} ${y1} L ${dropX} ${y2} L ${x2} ${y2}`);
+          const dropX = Math.round(x1 + gapX + shift);
+          push(`M ${x1} ${y1} L ${dropX} ${y1} L ${dropX} ${y2} L ${x2} ${y2}`);
           continue;
         }
         if (!rowTaken(placement, to, placement.row)) {
           const dropX = Math.round(x2 - gapX);
-          edges.push(`M ${x1} ${y1} L ${dropX} ${y1} L ${dropX} ${y2} L ${x2} ${y2}`);
+          push(`M ${x1} ${y1} L ${dropX} ${y1} L ${dropX} ${y2} L ${x2} ${y2}`);
           continue;
         }
         // Both rows are occupied in between: take a lane in the row gutter on
         // the target's side so the detour never crosses the rows.
-        const exitX = Math.round(x1 + gapX);
+        const exitX = Math.round(x1 + gapX + shift);
         const entryX = Math.round(x2 - gapX);
         const above = top(placement.row) - gutter;
         const laneY =
           y2 > y1 || above < NODE_H / 2
             ? top(placement.row) + NODE_H + gutter
             : above;
-        edges.push(
+        push(
           `M ${x1} ${y1} L ${exitX} ${y1} L ${exitX} ${laneY} L ${entryX} ${laneY} L ${entryX} ${y2} L ${x2} ${y2}`,
         );
         continue;
       }
-      const midX = Math.round((x1 + x2) / 2);
-      edges.push(`M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`);
+      const midX = Math.round((x1 + x2) / 2 + shift);
+      push(`M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`);
     }
   }
 
@@ -165,8 +189,14 @@ export function BranchMap({
         data-testid="branch-map"
       >
         <g className="branch-edges" aria-hidden="true">
-          {edges.map((path) => (
-            <path key={path} d={path} />
+          {edges.map((edge, index) => (
+            <path
+              key={`${edge.from}->${edge.to}#${index}`}
+              d={edge.path}
+              className={edge.hidden ? "is-hidden-edge" : undefined}
+              data-from={edge.from}
+              data-to={edge.to}
+            />
           ))}
         </g>
         {placements.map((placement) => {

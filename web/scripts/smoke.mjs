@@ -2591,6 +2591,39 @@ try {
     branchLongEdges.long === 0,
     `no edge needs a multi-bend detour (got ${branchLongEdges.long})`,
   );
+  const branchHiddenEdges = await cdp.evaluate(`(() => {
+    const paths = [...document.querySelectorAll('.branch-edges path')];
+    const hidden = paths.filter((path) => path.classList.contains('is-hidden-edge'));
+    const dashes = hidden.map((path) => getComputedStyle(path).strokeDasharray);
+    const legend = [...document.querySelectorAll('.context .panel p')].map(
+      (item) => item.textContent?.trim() ?? '',
+    );
+    return {
+      hidden: hidden.length,
+      from: hidden.map((path) => path.getAttribute('data-from')).sort().join(','),
+      dashed: dashes.length > 0 && dashes.every((value) => value !== 'none' && value !== ''),
+      legend: legend.some((text) =>
+        text.includes(${JSON.stringify(translate("zh-Hans", "branch.legendHidden"))}),
+      ),
+    };
+  })()`);
+  check(
+    branchHiddenEdges.hidden === 3 &&
+      branchHiddenEdges.from === "taos011,taos020,taos021",
+    `only the three endings hide their line into taos022 (got ${branchHiddenEdges.hidden}: ${branchHiddenEdges.from})`,
+  );
+  check(branchHiddenEdges.dashed, "game-hidden edges are drawn dashed");
+  check(branchHiddenEdges.legend, "the legend names the game-hidden line");
+  const branchElbows = await cdp.evaluate(`(() => {
+    const elbows = [...document.querySelectorAll('.branch-edges path[data-from="taos019"]')].map(
+      (path) => (path.getAttribute('d') ?? '').match(/-?\\d+(?:\\.\\d+)?/g)?.[2] ?? '',
+    );
+    return { count: elbows.length, distinct: new Set(elbows).size, elbows };
+  })()`);
+  check(
+    branchElbows.count === 2 && branchElbows.distinct === 2,
+    `LineOffsets keep the two elbows out of taos019 apart (got ${branchElbows.elbows})`,
+  );
   const branchStack = await cdp.evaluate(`(() => {
     const top = (id) => {
       const rect = document.querySelector('[data-testid="branch-map-node"][data-node-id="story_node/' + id + '"] rect');

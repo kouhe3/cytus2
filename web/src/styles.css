@@ -1564,6 +1564,13 @@ kbd {
   stroke-width: 1.2;
 }
 
+/* The game itself draws nothing for these edges; the graph keeps the route
+   readable but marks it as a projection choice, not in-game art. */
+.branch-edges path.is-hidden-edge {
+  stroke-dasharray: 3 3;
+  opacity: 0.45;
+}
+
 .branch-node {
   cursor: pointer;
   outline: none;
@@ -1663,6 +1670,16 @@ kbd {
 
 .branch-swatch.is-end {
   border-color: var(--accent);
+}
+
+.branch-swatch.is-hidden {
+  width: 18px;
+  height: 10px;
+  border: 0;
+  border-top: 1px dashed var(--line-strong);
+  border-radius: 0;
+  background: transparent;
+  opacity: 0.45;
 }
 
 .media-video {

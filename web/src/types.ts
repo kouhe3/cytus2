@@ -284,6 +284,12 @@ export interface StoryNodeEntity extends BaseEntity {
   readonly node_type?: number;
   readonly order?: number;
   readonly position?: number;
+  /** The game draws no outgoing line from this node (`ViewSetting.ShouldHideLine`). */
+  readonly hide_outgoing_line?: boolean;
+  /** Per `next` entry: the elbow offset the game applies, in canvas pixels. */
+  readonly line_offsets?: number[];
+  /** The node's chip has an in-port (`ViewSetting.HasLineIn`); false = no line enters. */
+  readonly has_line_in?: boolean;
   readonly source_file?: string;
   readonly state_id?: number;
   readonly state_value?: string;
